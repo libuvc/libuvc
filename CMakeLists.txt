@@ -16,9 +16,9 @@ add_library(uvc SHARED src/ctrl.c src/device.c src/diag.c
 
 target_link_libraries(uvc ${LIBUSB_LIBRARY_NAMES})
 
-add_executable(test src/test.c)
-target_link_libraries(test uvc ${LIBUSB_LIBRARY_NAMES} opencv_highgui
-  opencv_core)
+#add_executable(test src/test.c)
+#target_link_libraries(test uvc ${LIBUSB_LIBRARY_NAMES} opencv_highgui
+#  opencv_core)
 
 install(TARGETS uvc
   LIBRARY DESTINATION lib
