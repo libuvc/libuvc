@@ -67,6 +67,24 @@ enum uvc_color_format {
   UVC_COLOR_FORMAT_MJPEG,
 };
 
+/** UVC request code (A.8) */
+enum uvc_req_code {
+  UVC_RC_UNDEFINED = 0x00,
+  UVC_SET_CUR = 0x01,
+  UVC_GET_CUR = 0x81,
+  UVC_GET_MIN = 0x82,
+  UVC_GET_MAX = 0x83,
+  UVC_GET_RES = 0x84,
+  UVC_GET_LEN = 0x85,
+  UVC_GET_INFO = 0x86,
+  UVC_GET_DEF = 0x87
+};
+
+enum uvc_device_power_mode {
+  UVC_VC_VIDEO_POWER_MODE_FULL = 0x000b,
+  UVC_VC_VIDEO_POWER_MODE_DEVICE_DEPENDENT = 0x001b,
+};
+
 /** Camera terminal control selector (A.9.4) */
 enum uvc_ct_ctrl_selector {
   UVC_CT_CONTROL_UNDEFINED = 0x00,
@@ -267,6 +285,21 @@ uvc_error_t uvc_get_frame(
 );
 
 void uvc_stop_streaming(uvc_device_handle_t *devh);
+
+uvc_error_t uvc_get_power_mode(uvc_device_handle_t *devh, enum uvc_device_power_mode *mode, enum uvc_req_code req_code);
+uvc_error_t uvc_set_power_mode(uvc_device_handle_t *devh, enum uvc_device_power_mode mode);
+uvc_error_t uvc_get_ae_mode(uvc_device_handle_t *devh, int *mode, enum uvc_req_code req_code);
+uvc_error_t uvc_set_ae_mode(uvc_device_handle_t *devh, int mode);
+uvc_error_t uvc_get_ae_priority(uvc_device_handle_t *devh, uint8_t *priority, enum uvc_req_code req_code);
+uvc_error_t uvc_set_ae_priority(uvc_device_handle_t *devh, uint8_t priority);
+uvc_error_t uvc_get_exposure_abs(uvc_device_handle_t *devh, int *time, enum uvc_req_code req_code);
+uvc_error_t uvc_set_exposure_abs(uvc_device_handle_t *devh, int time);
+uvc_error_t uvc_get_exposure_rel(uvc_device_handle_t *devh, int *step, enum uvc_req_code req_code);
+uvc_error_t uvc_set_exposure_rel(uvc_device_handle_t *devh, int step);
+uvc_error_t uvc_get_focus_abs(uvc_device_handle_t *devh, short *focus, enum uvc_req_code req_code);
+uvc_error_t uvc_set_focus_abs(uvc_device_handle_t *devh, short focus);
+uvc_error_t uvc_get_pantilt_abs(uvc_device_handle_t *devh, int *pan, int *tilt, enum uvc_req_code req_code);
+uvc_error_t uvc_set_pantilt_abs(uvc_device_handle_t *devh, int pan, int tilt);
 
 void uvc_perror(uvc_error_t err, const char *msg);
 void uvc_print_diag(uvc_device_handle_t *devh, FILE *stream);

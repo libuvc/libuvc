@@ -97,29 +97,11 @@ enum uvc_ep_desc_subtype {
   UVC_EP_INTERRUPT = 0x03
 };
 
-/** UVC request code (A.8) */
-enum uvc_req_code {
-  UVC_RC_UNDEFINED = 0x00,
-  UVC_SET_CUR = 0x01,
-  UVC_GET_CUR = 0x81,
-  UVC_GET_MIN = 0x82,
-  UVC_GET_MAX = 0x83,
-  UVC_GET_RES = 0x84,
-  UVC_GET_LEN = 0x85,
-  UVC_GET_INFO = 0x86,
-  UVC_GET_DEF = 0x87
-};
-
 /** VideoControl interface control selector (A.9.1) */
 enum uvc_vc_ctrl_selector {
   UVC_VC_CONTROL_UNDEFINED = 0x00,
   UVC_VC_VIDEO_POWER_MODE_CONTROL = 0x01,
   UVC_VC_REQUEST_ERROR_CODE_CONTROL = 0x02
-};
-
-enum uvc_device_power_mode {
-  UVC_VC_VIDEO_POWER_MODE_FULL = 0x000b,
-  UVC_VC_VIDEO_POWER_MODE_DEVICE_DEPENDENT = 0x001b,
 };
 
 /** Terminal control selector (A.9.2) */
