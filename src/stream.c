@@ -464,6 +464,7 @@ uvc_error_t uvc_start_streaming(
     uvc_device_handle_t *devh,
     uvc_stream_ctrl_t *ctrl,
     uvc_frame_callback_t *cb,
+    void *user_ptr,
     uint8_t isochronous
 ) {
   /* USB interface we'll be using */
@@ -605,6 +606,7 @@ uvc_error_t uvc_start_streaming(
   pthread_cond_init(&devh->stream.cb_cond, NULL);
 
   devh->stream.user_cb = cb;
+  devh->stream.user_ptr = user_ptr;
 
   /* If the user wants it, set up a thread that calls the user's function
    * with the contents of each frame.
@@ -647,9 +649,10 @@ uvc_error_t uvc_start_streaming(
 uvc_error_t uvc_start_iso_streaming(
     uvc_device_handle_t *devh,
     uvc_stream_ctrl_t *ctrl,
-    uvc_frame_callback_t *cb
+    uvc_frame_callback_t *cb,
+    void *user_ptr
 ) {
-  return uvc_start_streaming(devh, ctrl, cb, 1);
+  return uvc_start_streaming(devh, ctrl, cb, user_ptr, 1);
 }
 
 /** @internal
@@ -679,7 +682,7 @@ void *_uvc_user_caller(void *arg) {
     
     pthread_mutex_unlock(&devh->stream.cb_mutex);
     
-    devh->stream.user_cb(&devh->stream.frame);
+    devh->stream.user_cb(&devh->stream.frame, devh->stream.user_ptr);
   } while(1);
 }
 

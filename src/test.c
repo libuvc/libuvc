@@ -3,12 +3,12 @@
 
 #include "libuvc/libuvc.h"
 
-void cb(uvc_frame_t *frame) {
+void cb(uvc_frame_t *frame, void *ptr) {
   uvc_frame_t *bgr;
   uvc_error_t ret;
   IplImage* cvImg;
 
-  /* printf("callback! length = %u\n", frame->data_bytes); */
+  printf("callback! length = %u, ptr = %d\n", frame->data_bytes, (int) ptr);
 
   bgr = uvc_allocate_frame(frame->width * frame->height * 3);
   if (!bgr) {
@@ -82,7 +82,7 @@ int main(int argc, char **argv) {
       if (res < 0) {
         uvc_perror(res, "get_mode");
       } else {
-        res = uvc_start_iso_streaming(devh, &ctrl, cb);
+        res = uvc_start_iso_streaming(devh, &ctrl, cb, 12345);
 
         if (res < 0) {
           uvc_perror(res, "start_streaming");

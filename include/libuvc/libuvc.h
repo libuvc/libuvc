@@ -183,7 +183,7 @@ typedef struct uvc_frame {
 /** A callback function to handle incoming assembled UVC frames
  * @ingroup streaming
  */
-typedef void(uvc_frame_callback_t)(struct uvc_frame *frame);
+typedef void(uvc_frame_callback_t)(struct uvc_frame *frame, void *user_ptr);
 
 /** Streaming mode, includes all information needed to select stream
  * @ingroup streaming
@@ -251,12 +251,14 @@ uvc_error_t uvc_start_streaming(
     uvc_device_handle_t *devh,
     uvc_stream_ctrl_t *ctrl,
     uvc_frame_callback_t *cb,
+    void *user_ptr,
     uint8_t isochronous);
 
 uvc_error_t uvc_start_iso_streaming(
     uvc_device_handle_t *devh,
     uvc_stream_ctrl_t *ctrl,
-    uvc_frame_callback_t *cb);
+    uvc_frame_callback_t *cb,
+    void *user_ptr);
 
 uvc_error_t uvc_get_frame(
     uvc_device_handle_t *devh,

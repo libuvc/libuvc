@@ -389,6 +389,7 @@ struct uvc_device_handle {
     pthread_t cb_thread;
     uint32_t last_polled_seq;
     uvc_frame_callback_t *user_cb;
+    void *user_ptr;
     struct libusb_transfer *transfers[5];
     uint8_t *transfer_bufs[5];
     struct uvc_frame frame;

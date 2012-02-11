@@ -958,6 +958,8 @@ void uvc_close(uvc_device_handle_t *devh) {
 
   DL_DELETE(devh->dev->ctx->open_devices, devh);
 
+  uvc_unref_device(devh->dev);
+
   uvc_free_devh(devh);
 }
 
