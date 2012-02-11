@@ -154,6 +154,30 @@ typedef struct uvc_device uvc_device_t;
 struct uvc_device_handle;
 typedef struct uvc_device_handle uvc_device_handle_t;
 
+
+enum uvc_status_class {
+  UVC_STATUS_CLASS_CONTROL = 0x10,
+  UVC_STATUS_CLASS_CONTROL_CAMERA = 0x11,
+  UVC_STATUS_CLASS_CONTROL_PROCESSING = 0x11,
+};
+
+enum uvc_status_attribute {
+  UVC_STATUS_ATTRIBUTE_VALUE_CHANGE = 0x00,
+  UVC_STATUS_ATTRIBUTE_INFO_CHANGE = 0x01,
+  UVC_STATUS_ATTRIBUTE_FAILURE_CHANGE = 0x02,
+  UVC_STATUS_ATTRIBUTE_UNKNOWN = 0xff
+};
+
+/** A callback function to accept status updates
+ * @ingroup device
+ */
+typedef void(uvc_status_callback_t)(enum uvc_status_class status_class,
+                                    int event,
+                                    int selector,
+                                    enum uvc_status_attribute status_attribute,
+                                    void *data, size_t data_len,
+                                    void *user_ptr);
+
 /** Structure representing a UVC device descriptor.
  *
  * (This isn't a standard structure.)
@@ -252,6 +276,10 @@ uvc_device_t *uvc_get_device(uvc_device_handle_t *devh);
 
 void uvc_ref_device(uvc_device_t *dev);
 void uvc_unref_device(uvc_device_t *dev);
+
+void uvc_set_status_callback(uvc_device_handle_t *devh,
+                             uvc_status_callback_t cb,
+                             void *user_ptr);
 
 uvc_error_t uvc_get_stream_ctrl_format_size(
     uvc_device_handle_t *devh,

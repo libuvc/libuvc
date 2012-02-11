@@ -177,7 +177,7 @@ uvc_error_t uvc_open(
                                    sizeof(internal_devh->status_buf),
                                    _uvc_status_callback,
                                    internal_devh,
-                                     0);
+                                   0);
     ret = libusb_submit_transfer(internal_devh->status_xfer);
 
     if (ret) {
@@ -979,7 +979,51 @@ size_t uvc_num_devices(uvc_context_t *ctx) {
 }
 
 void uvc_process_status_xfer(uvc_device_handle_t *devh, struct libusb_transfer *transfer) {
-  printf("Got valid transfer of aLen = %d\n", transfer->actual_length);
+  uint8_t originator = 0, selector = 0, event = 0;
+  enum uvc_status_attribute attribute = UVC_STATUS_ATTRIBUTE_UNKNOWN;
+  void *data = NULL;
+  size_t data_len = 0;
+
+  printf("Got transfer of aLen = %d\n", transfer->actual_length);
+
+  if (transfer->actual_length < 4) {
+    printf("Short read of status update (%d bytes)\n", transfer->actual_length);
+    return;
+  }
+
+  originator = transfer->buffer[1];
+
+  switch (transfer->buffer[0] & 0x0f) {
+  case 1: {  /* VideoControl interface */
+    if (transfer->actual_length < 5)
+      return;
+
+    event = transfer->buffer[2];
+    selector = transfer->buffer[3];
+
+    if (originator == 0)
+      return;  /* @todo VideoControl virtual entity interface updates */
+
+    if (event != 0)
+      return;
+
+    printf("bSelector: %d\n", selector);
+
+    attribute = transfer->buffer[4];
+    data = transfer->buffer + 5;
+    data_len = transfer->actual_length - 5;
+    break;
+  }
+  case 2:  /* VideoStreaming interface */
+    return;  /* @todo VideoStreaming updates */
+  }
+
+  devh->status_cb(transfer->buffer[0] & 0x0f,
+                  event,
+                  selector,
+                  attribute,
+                  data, data_len,
+                  devh->status_user_ptr);
 }
 
 /** @internal
@@ -995,7 +1039,19 @@ void _uvc_status_callback(struct libusb_transfer *transfer) {
     return;
   case LIBUSB_TRANSFER_COMPLETED:
     uvc_process_status_xfer(devh, transfer);
-  default:
-    libusb_submit_transfer(transfer);
+    break;
   }
+
+  libusb_submit_transfer(transfer);
+}
+
+/** @brief Set a callback function to receive status updates
+ *
+ * @ingroup device
+ */
+void uvc_set_status_callback(uvc_device_handle_t *devh,
+                             uvc_status_callback_t cb,
+                             void *user_ptr) {
+  devh->status_cb = cb;
+  devh->status_user_ptr = user_ptr;
 }

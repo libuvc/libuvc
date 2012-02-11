@@ -349,7 +349,10 @@ struct uvc_device_handle {
   libusb_device_handle *usb_devh;
   struct uvc_device_info *info;
   struct libusb_transfer *status_xfer;
-  uint8_t status_buf[8];
+  uint8_t status_buf[32];
+  /** Function to call when we receive status updates from the camera */
+  uvc_status_callback_t *status_cb;
+  void *status_user_ptr;
   /** if true, device is streaming video to host */
   uint8_t streaming;
   /** Current control block, valid iff streaming */
