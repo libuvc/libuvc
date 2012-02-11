@@ -158,7 +158,7 @@ typedef struct uvc_device_handle uvc_device_handle_t;
 enum uvc_status_class {
   UVC_STATUS_CLASS_CONTROL = 0x10,
   UVC_STATUS_CLASS_CONTROL_CAMERA = 0x11,
-  UVC_STATUS_CLASS_CONTROL_PROCESSING = 0x11,
+  UVC_STATUS_CLASS_CONTROL_PROCESSING = 0x12,
 };
 
 enum uvc_status_attribute {

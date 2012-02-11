@@ -979,6 +979,7 @@ size_t uvc_num_devices(uvc_context_t *ctx) {
 }
 
 void uvc_process_status_xfer(uvc_device_handle_t *devh, struct libusb_transfer *transfer) {
+  enum uvc_status_class status_class;
   uint8_t originator = 0, selector = 0, event = 0;
   enum uvc_status_attribute attribute = UVC_STATUS_ATTRIBUTE_UNKNOWN;
   void *data = NULL;
@@ -995,6 +996,10 @@ void uvc_process_status_xfer(uvc_device_handle_t *devh, struct libusb_transfer *
 
   switch (transfer->buffer[0] & 0x0f) {
   case 1: {  /* VideoControl interface */
+    int found_entity = 0;
+    struct uvc_input_terminal *input_terminal;
+    struct uvc_processing_unit *processing_unit;
+
     if (transfer->actual_length < 5)
       return;
 
@@ -1009,6 +1014,30 @@ void uvc_process_status_xfer(uvc_device_handle_t *devh, struct libusb_transfer *
 
     printf("bSelector: %d\n", selector);
 
+    DL_FOREACH(devh->info->ctrl_if.input_term_descs, input_terminal) {
+      if (input_terminal->bTerminalID == originator) {
+        status_class = UVC_STATUS_CLASS_CONTROL_CAMERA;
+        found_entity = 1;
+        break;
+      }
+    }
+
+    if (!found_entity) {
+      DL_FOREACH(devh->info->ctrl_if.processing_unit_descs, processing_unit) {
+        if (processing_unit->bUnitID == originator) {
+          status_class = UVC_STATUS_CLASS_CONTROL_PROCESSING;
+          found_entity = 1;
+          break;
+        }
+      }
+    }
+
+    if (!found_entity) {
+      fprintf(stderr, "uvc: Got status update for unknown VideoControl entity %d\n",
+              originator);
+      return;
+    }
+
     attribute = transfer->buffer[4];
     data = transfer->buffer + 5;
     data_len = transfer->actual_length - 5;
@@ -1018,7 +1047,7 @@ void uvc_process_status_xfer(uvc_device_handle_t *devh, struct libusb_transfer *
     return;  /* @todo VideoStreaming updates */
   }
 
-  devh->status_cb(transfer->buffer[0] & 0x0f,
+  devh->status_cb(status_class,
                   event,
                   selector,
                   attribute,
