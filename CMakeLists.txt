@@ -7,6 +7,8 @@ find_library(LIBUSB_LIBRARY_NAMES usb-1.0
 find_path(LIBUSB_INCLUDE_DIR libusb-1.0/libusb.h
 	PATHS /opt/local/include)
 
+SET(CMAKE_C_FLAGS_DEBUG "-g -DUVC_DEBUGGING")
+
 include_directories(${libuvc_SOURCE_DIR}/include ${LIBUSB_INCLUDE_DIR})
 link_directories(${LIBUSB_LIBRARY_NAMES})
 
