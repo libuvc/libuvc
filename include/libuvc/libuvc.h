@@ -324,7 +324,7 @@ uvc_error_t uvc_get_exposure_abs(uvc_device_handle_t *devh, int *time, enum uvc_
 uvc_error_t uvc_set_exposure_abs(uvc_device_handle_t *devh, int time);
 uvc_error_t uvc_get_exposure_rel(uvc_device_handle_t *devh, int *step, enum uvc_req_code req_code);
 uvc_error_t uvc_set_exposure_rel(uvc_device_handle_t *devh, int step);
-uvc_error_t uvc_get_scanning_mode(uvc_device_handle_t *devh, int mode, enum uvc_req_code req_code);
+uvc_error_t uvc_get_scanning_mode(uvc_device_handle_t *devh, int *step, enum uvc_req_code req_code);
 uvc_error_t uvc_set_scanning_mode(uvc_device_handle_t *devh, int mode);
 uvc_error_t uvc_get_focus_abs(uvc_device_handle_t *devh, short *focus, enum uvc_req_code req_code);
 uvc_error_t uvc_set_focus_abs(uvc_device_handle_t *devh, short focus);
