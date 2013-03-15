@@ -293,27 +293,6 @@ uvc_error_t uvc_set_scanning_mode(uvc_device_handle_t *devh, int mode) {
     return ret;
 }
 
-uvc_error_t uvc_set_scanning_mode(uvc_device_handle_t *devh, int mode) {
-  uint8_t data[1];
-  uvc_error_t ret;
-
-  data[0] = mode;
-
-  ret = libusb_control_transfer(
-    devh->usb_devh,
-    REQ_TYPE_SET, UVC_SET_CUR,
-    UVC_CT_SCANNING_MODE_CONTROL << 8,
-    1 << 8,
-    data,
-    sizeof(data),
-    0);
-
-  if (ret == sizeof(data))
-    return UVC_SUCCESS;
-  else
-    return ret;
-}
-
 uvc_error_t uvc_get_focus_abs(uvc_device_handle_t *devh, short *focus, enum uvc_req_code req_code) {
   uint8_t data[2];
   uvc_error_t ret;
