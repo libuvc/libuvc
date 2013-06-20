@@ -51,7 +51,7 @@ struct format_table_entry {
 };
 
 static enum uvc_color_format UVC_COLOR_FORMAT_UNCOMPRESSED_children[] = {
-  UVC_COLOR_FORMAT_YUYV, UVC_COLOR_FORMAT_UYVY, 0
+  UVC_COLOR_FORMAT_YUYV, UVC_COLOR_FORMAT_UYVY, UVC_COLOR_FORMAT_GRAY8, 0
 };
 
 static enum uvc_color_format UVC_COLOR_FORMAT_YUYV_children[] = {
@@ -59,6 +59,10 @@ static enum uvc_color_format UVC_COLOR_FORMAT_YUYV_children[] = {
 };
 
 static enum uvc_color_format UVC_COLOR_FORMAT_UYVY_children[] = {
+  0
+};
+
+static enum uvc_color_format UVC_COLOR_FORMAT_GRAY8_children[] = {
   0
 };
 
@@ -77,9 +81,11 @@ static enum uvc_color_format UVC_COLOR_FORMAT_UYVY_children[] = {
 static struct format_table_entry _format_table[] = {
   ABS_FMT(UVC_COLOR_FORMAT_UNCOMPRESSED),
   FMT(UVC_COLOR_FORMAT_YUYV,
-      'Y',  'U',  'Y',  '2', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71),
+    'Y',  'U',  'Y',  '2', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71),
   FMT(UVC_COLOR_FORMAT_UYVY,
-      'U',  'Y',  'V',  'Y', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71),
+    'U',  'Y',  'V',  'Y', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71),
+  FMT(UVC_COLOR_FORMAT_GRAY8,
+    'Y',  '8',  '0',  '0', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71),
 };
 
 static uint8_t _uvc_color_format_matches_guid(enum uvc_color_format fmt, uint8_t guid[16]) {

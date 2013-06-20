@@ -65,6 +65,7 @@ enum uvc_color_format {
   UVC_COLOR_FORMAT_BGR,
   /** Motion-JPEG (or JPEG) encoded images */
   UVC_COLOR_FORMAT_MJPEG,
+  UVC_COLOR_FORMAT_GRAY8
 };
 
 /** UVC request code (A.8) */
