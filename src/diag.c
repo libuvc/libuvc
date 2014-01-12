@@ -75,7 +75,7 @@ void uvc_perror(uvc_error_t err, const char *msg) {
     fputs(": ", stderr);
   }
 
-  fprintf(stderr, "%s (%d)\n", uvc_strerror(err));
+  fprintf(stderr, "%s (%d)\n", uvc_strerror(err), err);
 }
 
 /** @brief Return a string explaining an error in the UVC driver
