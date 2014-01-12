@@ -115,12 +115,8 @@ uvc_error_t uvc_init(uvc_context_t **pctx, struct libusb_context *usb_ctx) {
     ctx->usb_ctx = usb_ctx;
   }
 
-  if (ctx != NULL) {
-    ctx->kill_handler_thread = 0;
-    if (ctx->own_usb_ctx)
-      pthread_create(&ctx->handler_thread, NULL, _uvc_handle_events, (void*) ctx);
+  if (ctx != NULL)
     *pctx = ctx;
-  }
 
   return ret;
 }
@@ -144,14 +140,22 @@ void uvc_exit(uvc_context_t *ctx) {
     uvc_close(devh);
   }
 
-  ctx->kill_handler_thread = 1;
-
-  if (ctx->own_usb_ctx) {
-    pthread_kill(ctx->handler_thread, SIGINT);
-    pthread_join(ctx->handler_thread, NULL);
+  if (ctx->own_usb_ctx)
     libusb_exit(ctx->usb_ctx);
-  }
 
   free(ctx);
+}
+
+/**
+ * @internal
+ * @brief Spawns a handler thread for the context
+ * @ingroup init
+ *
+ * This should be called at the end of a successful uvc_open if no devices
+ * are already open (and being handled).
+ */
+void uvc_start_handler_thread(uvc_context_t *ctx) {
+  if (ctx->own_usb_ctx)
+    pthread_create(&ctx->handler_thread, NULL, _uvc_handle_events, (void*) ctx);
 }
 

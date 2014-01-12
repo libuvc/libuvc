@@ -233,6 +233,11 @@ uvc_error_t uvc_open(
     }
   }
 
+  if (dev->ctx->own_usb_ctx && dev->ctx->open_devices == NULL) {
+    /* Since this is our first device, we need to spawn the event handler thread */
+    uvc_start_handler_thread(dev->ctx);
+  }
+
   DL_APPEND(dev->ctx->open_devices, internal_devh);
   *devh = internal_devh;
 
@@ -1105,15 +1110,26 @@ void uvc_free_devh(uvc_device_handle_t *devh) {
  */
 void uvc_close(uvc_device_handle_t *devh) {
   UVC_ENTER();
+  uvc_context_t *ctx = devh->dev->ctx;
 
   if (devh->streaming)
     uvc_stop_streaming(devh);
 
   uvc_release_ifs(devh);
 
-  libusb_close(devh->usb_devh);
+  /* If we are managing the libusb context and this is the last open device,
+   * then we need to cancel the handler thread. When we call libusb_close,
+   * it'll cause a return from the thread's libusb_handle_events call, after
+   * which the handler thread will check the flag we set and then exit. */
+  if (ctx->own_usb_ctx && ctx->open_devices == devh && devh->next == NULL) {
+    ctx->kill_handler_thread = 1;
+    libusb_close(devh->usb_devh);
+    pthread_join(ctx->handler_thread, NULL);
+  } else {
+    libusb_close(devh->usb_devh);
+  }
 
-  DL_DELETE(devh->dev->ctx->open_devices, devh);
+  DL_DELETE(ctx->open_devices, devh);
 
   uvc_unref_device(devh->dev);
 

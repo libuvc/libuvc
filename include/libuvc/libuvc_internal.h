@@ -413,6 +413,8 @@ uvc_error_t uvc_query_stream_ctrl(
     uint8_t probe,
     enum uvc_req_code req);
 
+void uvc_start_handler_thread(uvc_context_t *ctx);
+
 #endif // !def(LIBUVC_INTERNAL_H)
 /** @endcond */
 
