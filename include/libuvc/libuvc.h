@@ -333,6 +333,7 @@ uvc_error_t uvc_get_pantilt_abs(uvc_device_handle_t *devh, int *pan, int *tilt, 
 uvc_error_t uvc_set_pantilt_abs(uvc_device_handle_t *devh, int pan, int tilt);
 
 void uvc_perror(uvc_error_t err, const char *msg);
+const char* uvc_strerror(uvc_error_t err);
 void uvc_print_diag(uvc_device_handle_t *devh, FILE *stream);
 void uvc_print_stream_ctrl(uvc_stream_ctrl_t *ctrl, FILE *stream);
 

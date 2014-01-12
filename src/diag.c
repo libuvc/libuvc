@@ -70,21 +70,30 @@ static const _uvc_error_msg_t uvc_error_msgs[] = {
  * @param msg Optional custom message, prepended to output
  */
 void uvc_perror(uvc_error_t err, const char *msg) {
-  size_t idx;
-  
   if (msg && *msg) {
     fputs(msg, stderr);
     fputs(": ", stderr);
   }
 
+  fprintf(stderr, "%s (%d)\n", uvc_strerror(err));
+}
+
+/** @brief Return a string explaining an error in the UVC driver
+ * @ingroup diag
+ *
+ * @param err UVC error code
+ * @return error message
+ */
+const char* uvc_strerror(uvc_error_t err) {
+  size_t idx;
+
   for (idx = 0; idx < sizeof(uvc_error_msgs) / sizeof(*uvc_error_msgs); ++idx) {
     if (uvc_error_msgs[idx].err == err) {
-      fprintf(stderr, "%s (%d)\n", uvc_error_msgs[idx].msg, err);
-      return;
+      return uvc_error_msgs[idx].msg;
     }
   }
-  
-  fprintf(stderr, "Unknown error (%d)\n", err);
+
+  return "Unknown error";
 }
 
 /** @brief Print the values in a stream control block
