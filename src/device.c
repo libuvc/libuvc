@@ -165,6 +165,20 @@ uvc_error_t uvc_find_device(
   }
 }
 
+/** @brief Get the number of the bus to which the device is attached
+ * @ingroup device
+ */
+uint8_t uvc_get_bus_number(uvc_device_t *dev) {
+  return libusb_get_bus_number(dev->usb_dev);
+}
+
+/** @brief Get the number assigned to the device within its bus
+ * @ingroup device
+ */
+uint8_t uvc_get_device_address(uvc_device_t *dev) {
+  return libusb_get_device_address(dev->usb_dev);
+}
+
 /** @brief Open a UVC device
  * @ingroup device
  *
