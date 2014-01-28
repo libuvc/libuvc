@@ -7,6 +7,7 @@ extern "C" {
 
 #include <stdio.h> // FILE
 #include <libusb-1.0/libusb.h>
+#include <libuvc/libuvc_config.h>
 
 /** UVC error types, based on libusb errors
  * @ingroup diag
