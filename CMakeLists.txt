@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 2.8)
 project(libuvc)
 
+if (NOT CMAKE_BUILD_TYPE)
+  message(STATUS "No build type selected, default to Release")
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
+endif ()
+
 set(libuvc_VERSION_MAJOR 0)
 set(libuvc_VERSION_MINOR 0)
 set(libuvc_VERSION_PATCH 2)
