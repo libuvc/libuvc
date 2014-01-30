@@ -467,10 +467,10 @@ uvc_error_t uvc_get_device_list(
   uvc_error_t ret;
   struct libusb_device **usb_dev_list;
   struct libusb_device *usb_dev;
-  size_t num_usb_devices;
+  int num_usb_devices;
 
   uvc_device_t **list_internal;
-  size_t num_uvc_devices;
+  int num_uvc_devices;
 
   /* per device */
   int dev_idx;

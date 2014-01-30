@@ -87,6 +87,7 @@ void *_uvc_handle_events(void *arg) {
 
   while (!ctx->kill_handler_thread)
     libusb_handle_events(ctx->usb_ctx);
+  return NULL;
 }
 
 /** @brief Initializes the UVC context

@@ -723,6 +723,8 @@ void *_uvc_user_caller(void *arg) {
     
     devh->stream.user_cb(&devh->stream.frame, devh->stream.user_ptr);
   } while(1);
+
+  return NULL; // return value ignored
 }
 
 /** @internal
