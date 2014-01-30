@@ -643,6 +643,10 @@ uvc_error_t uvc_release_if(uvc_device_handle_t *devh, int idx) {
 
   UVC_ENTER();
   UVC_DEBUG("releasing interface %d", idx);
+  /* libusb_release_interface *should* reset the alternate setting to the first available,
+     but sometimes (e.g. on Darwin) it doesn't. Thus, we do it explicitly here.
+     This is needed to de-initialize certain cameras. */
+  libusb_set_interface_alt_setting(devh->usb_devh, idx, 0);
   ret = libusb_release_interface(devh->usb_devh, idx);
 
   UVC_EXIT(ret);
