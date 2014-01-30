@@ -89,17 +89,18 @@ static struct format_table_entry _format_table[] = {
 };
 
 static uint8_t _uvc_color_format_matches_guid(enum uvc_color_format fmt, uint8_t guid[16]) {
+  struct format_table_entry *format;
+  enum uvc_color_format *child;
   int format_idx;
-  int child_idx;
 
   for (format_idx = 0; format_idx < ARRAYSIZE(_format_table); ++format_idx) {
-
-    if (_format_table[format_idx].format == fmt) {
-      if (!_format_table[format_idx].abstract_fmt && !memcmp(guid, _format_table[format_idx].guid, 16))
+    format = &_format_table[format_idx];
+    if (format->format == fmt) {
+      if (!format->abstract_fmt && !memcmp(guid, format->guid, 16))
         return 1;
 
-      for (child_idx = 0; _format_table[format_idx].children[child_idx] != 0; ++child_idx) {
-        if (_uvc_color_format_matches_guid(_format_table[format_idx].children[child_idx], guid))
+      for (child = format->children; *child; child++) {
+        if (_uvc_color_format_matches_guid(*child, guid))
           return 1;
       }
 
@@ -111,11 +112,13 @@ static uint8_t _uvc_color_format_matches_guid(enum uvc_color_format fmt, uint8_t
 }
 
 static enum uvc_color_format uvc_color_format_for_guid(uint8_t guid[16]) {
+  struct format_table_entry *format;
   int format_idx;
 
   for (format_idx = 0; format_idx < ARRAYSIZE(_format_table); ++format_idx) {
-    if (!memcmp(_format_table[format_idx].guid, guid, 16))
-      return _format_table[format_idx].format;
+    format = &_format_table[format_idx];
+    if (!memcmp(format->guid, guid, 16))
+      return format->format;
   }
 
   return UVC_COLOR_FORMAT_UNKNOWN;
