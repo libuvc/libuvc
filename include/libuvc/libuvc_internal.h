@@ -337,6 +337,8 @@ typedef struct uvc_control_interface {
   struct uvc_extension_unit *extension_unit_descs;
   uint16_t bcdUVC;
   uint8_t bEndpointAddress;
+  /** Interface number */
+  uint8_t bInterfaceNumber;
 } uvc_control_interface_t;
 
 struct uvc_stream_ctrl;
@@ -356,6 +358,36 @@ typedef struct uvc_device_info {
   uvc_streaming_interface_t *stream_ifs;
 } uvc_device_info_t;
 
+struct uvc_stream_handle {
+  struct uvc_device_handle *devh;
+  struct uvc_stream_handle *prev, *next;
+  struct uvc_streaming_interface *stream_if;
+
+  /** if true, stream is running (streaming video to host) */
+  uint8_t running;
+  /** Current control block */
+  struct uvc_stream_ctrl cur_ctrl;
+
+  /* listeners may only access hold*, and only when holding a 
+   * lock on cb_mutex (probably signaled with cb_cond) */
+  uint8_t fid;
+  uint32_t seq, hold_seq;
+  uint32_t pts, hold_pts;
+  uint32_t last_scr, hold_last_scr;
+  size_t got_bytes, hold_bytes;
+  uint8_t *outbuf, *holdbuf;
+  pthread_mutex_t cb_mutex;
+  pthread_cond_t cb_cond;
+  pthread_t cb_thread;
+  uint32_t last_polled_seq;
+  uvc_frame_callback_t *user_cb;
+  void *user_ptr;
+  struct libusb_transfer *transfers[5];
+  uint8_t *transfer_bufs[5];
+  struct uvc_frame frame;
+  enum uvc_color_format color_format;
+};
+
 /** Handle on an open UVC device
  *
  * @todo move most of this into a uvc_device struct?
@@ -371,33 +403,10 @@ struct uvc_device_handle {
   /** Function to call when we receive status updates from the camera */
   uvc_status_callback_t *status_cb;
   void *status_user_ptr;
-  /** if true, device is streaming video to host */
-  uint8_t streaming;
-  /** Current control block, valid iff streaming */
-  struct uvc_stream_ctrl cur_ctrl;
+
+  uvc_stream_handle_t *streams;
   /** Whether the camera is an iSight that sends one header per frame */
   uint8_t is_isight;
-  struct {
-    /* listeners may only access hold*, and only when holding a 
-     * lock on cb_mutex (probably signaled with cb_cond) */
-    uint8_t stop;
-    uint8_t fid;
-    uint32_t seq, hold_seq;
-    uint32_t pts, hold_pts;
-    uint32_t last_scr, hold_last_scr;
-    size_t got_bytes, hold_bytes;
-    uint8_t *outbuf, *holdbuf;
-    pthread_mutex_t cb_mutex;
-    pthread_cond_t cb_cond;
-    pthread_t cb_thread;
-    uint32_t last_polled_seq;
-    uvc_frame_callback_t *user_cb;
-    void *user_ptr;
-    struct libusb_transfer *transfers[5];
-    uint8_t *transfer_bufs[5];
-    struct uvc_frame frame;
-    enum uvc_color_format color_format;
-  } stream;
 };
 
 /** Context within which we communicate with devices */
@@ -419,6 +428,8 @@ uvc_error_t uvc_query_stream_ctrl(
     enum uvc_req_code req);
 
 void uvc_start_handler_thread(uvc_context_t *ctx);
+uvc_error_t uvc_claim_if(uvc_device_handle_t *devh, int idx);
+uvc_error_t uvc_release_if(uvc_device_handle_t *devh, int idx);
 
 #endif // !def(LIBUVC_INTERNAL_H)
 /** @endcond */

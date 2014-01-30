@@ -143,7 +143,7 @@ void uvc_print_diag(uvc_device_handle_t *devh, FILE *stream) {
 
     uvc_free_device_descriptor(desc);
 
-    fprintf(stream, "Status: %s\n", devh->streaming ? "streaming" : "idle");
+    fprintf(stream, "Status: %s\n", devh->streams ? "streaming" : "idle");
 
     fprintf(stream, "VideoControl:\n"
         "\tbcdUVC: 0x%04x\n",

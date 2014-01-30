@@ -39,8 +39,6 @@
 #include "libuvc/libuvc_internal.h"
 
 int uvc_already_open(uvc_context_t *ctx, struct libusb_device *usb_dev);
-uvc_error_t uvc_claim_ifs(uvc_device_handle_t *devh);
-void uvc_release_ifs(uvc_device_handle_t *devh);
 void uvc_free_devh(uvc_device_handle_t *devh);
 
 uvc_error_t uvc_get_device_info(uvc_device_t *dev, uvc_device_info_t **info);
@@ -215,7 +213,10 @@ uvc_error_t uvc_open(
   if (ret != UVC_SUCCESS)
     goto fail;
 
-  ret = uvc_claim_ifs(internal_devh);
+  /* Automatically attach/detach kernel driver on supported platforms */
+  libusb_set_auto_detach_kernel_driver(usb_devh, 1);
+
+  ret = uvc_claim_if(internal_devh, internal_devh->info->ctrl_if.bInterfaceNumber);
   if (ret != UVC_SUCCESS)
     goto fail;
 
@@ -260,7 +261,7 @@ uvc_error_t uvc_open(
   return ret;
 
  fail:
-  uvc_release_ifs(internal_devh);
+  uvc_release_if(internal_devh, internal_devh->info->ctrl_if.bInterfaceNumber);
   libusb_close(usb_devh);
   uvc_unref_device(dev);
   uvc_free_devh(internal_devh);
@@ -654,72 +655,6 @@ uvc_error_t uvc_release_if(uvc_device_handle_t *devh, int idx) {
 }
 
 /** @internal
- * Iterate through UVC control and streaming interfaces.
- * @ingroup device
- * 
- * @param devh UVC device handle
- * @param cb callback to execute for each matching interface
- */
-uvc_error_t uvc_foreach_if(uvc_device_handle_t *devh, uvc_error_t (*cb)(uvc_device_handle_t *, int)) {
-  uvc_error_t ret;
-  int interface_idx, altsetting_idx;
-  const struct libusb_interface *interface;
-  const struct libusb_interface_descriptor *if_desc;
-
-  for (interface_idx = 0; interface_idx < devh->info->config->bNumInterfaces; ++interface_idx) {
-    interface = &devh->info->config->interface[interface_idx];
-
-    for (altsetting_idx = 0; altsetting_idx < interface->num_altsetting; ++altsetting_idx) {
-	  if_desc = &interface->altsetting[altsetting_idx];
-
-      if (if_desc->bInterfaceClass == 14) { // Video
-        if (if_desc->bInterfaceSubClass == 1 || if_desc->bInterfaceSubClass == 2) { // Control or Streaming
-          ret = cb(devh, interface_idx);
-          if (ret != UVC_SUCCESS)
-            return ret;
-          break;
-        }
-      }
-    }
-  }
-
-  return 0;
-}
-
-/** @internal
- * Claim UVC interfaces, detaching kernel driver if necessary
- * @ingroup device
- *
- * @param devh UVC device handle
- */
-uvc_error_t uvc_claim_ifs(uvc_device_handle_t *devh) {
-  uvc_error_t ret;
-
-  UVC_ENTER();
-
-  libusb_set_auto_detach_kernel_driver(devh->usb_devh, 1);
-
-  ret = uvc_foreach_if(devh, uvc_claim_if);
-
-  UVC_EXIT(ret);
-  return ret;
-}
-
-/** @internal
- * Release UVC interfaces
- * @ingroup device
- *
- * @param devh UVC device handle
- */
-void uvc_release_ifs(uvc_device_handle_t *devh) {
-  UVC_ENTER();
-
-  uvc_foreach_if(devh, uvc_release_if);
-
-  UVC_EXIT_VOID();
-}
-
-/** @internal
  * Find a device's VideoControl interface and process its descriptor
  * @ingroup device
  */
@@ -749,6 +684,7 @@ uvc_error_t uvc_scan_control(uvc_device_t *dev, uvc_device_info_t *info) {
     return UVC_ERROR_INVALID_DEVICE;
   }
 
+  info->ctrl_if.bInterfaceNumber = interface_idx;
   if (if_desc->bNumEndpoints != 0) {
     info->ctrl_if.bEndpointAddress = if_desc->endpoint[0].bEndpointAddress;
   }
@@ -1140,10 +1076,6 @@ void uvc_free_devh(uvc_device_handle_t *devh) {
   if (devh->status_xfer)
     libusb_free_transfer(devh->status_xfer);
 
-  /* free the frame data (exists if any frames came through) */
-  if (devh->stream.frame.data)
-    free(devh->stream.frame.data);
-  
   free(devh);
 
   UVC_EXIT_VOID();
@@ -1161,10 +1093,10 @@ void uvc_close(uvc_device_handle_t *devh) {
   UVC_ENTER();
   uvc_context_t *ctx = devh->dev->ctx;
 
-  if (devh->streaming)
+  if (devh->streams)
     uvc_stop_streaming(devh);
 
-  uvc_release_ifs(devh);
+  uvc_release_if(devh, devh->info->ctrl_if.bInterfaceNumber);
 
   /* If we are managing the libusb context and this is the last open device,
    * then we need to cancel the handler thread. When we call libusb_close,

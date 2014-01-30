@@ -156,6 +156,13 @@ typedef struct uvc_device uvc_device_t;
 struct uvc_device_handle;
 typedef struct uvc_device_handle uvc_device_handle_t;
 
+/** Handle on an open UVC stream.
+ *
+ * Get one of these from uvc_stream_open*().
+ * Once you uvc_stream_close() it, it will no longer be valid.
+ */
+struct uvc_stream_handle;
+typedef struct uvc_stream_handle uvc_stream_handle_t;
 
 enum uvc_status_class {
   UVC_STATUS_CLASS_CONTROL = 0x10,
@@ -309,13 +316,24 @@ uvc_error_t uvc_start_iso_streaming(
     uvc_frame_callback_t *cb,
     void *user_ptr);
 
-uvc_error_t uvc_get_frame(
-    uvc_device_handle_t *devh,
+void uvc_stop_streaming(uvc_device_handle_t *devh);
+
+uvc_error_t uvc_stream_open_ctrl(uvc_device_handle_t *devh, uvc_stream_handle_t **strmh, uvc_stream_ctrl_t *ctrl);
+uvc_error_t uvc_stream_ctrl(uvc_stream_handle_t *strmh, uvc_stream_ctrl_t *ctrl);
+uvc_error_t uvc_stream_start(uvc_stream_handle_t *strmh,
+    uvc_frame_callback_t *cb,
+    void *user_ptr,
+    uint8_t isochronous);
+uvc_error_t uvc_stream_start_iso(uvc_stream_handle_t *strmh,
+    uvc_frame_callback_t *cb,
+    void *user_ptr);
+uvc_error_t uvc_stream_get_frame(
+    uvc_stream_handle_t *strmh,
     uvc_frame_t **frame,
     int32_t timeout_us
 );
-
-void uvc_stop_streaming(uvc_device_handle_t *devh);
+uvc_error_t uvc_stream_stop(uvc_stream_handle_t *strmh);
+void uvc_stream_close(uvc_stream_handle_t *strmh);
 
 uvc_error_t uvc_get_power_mode(uvc_device_handle_t *devh, enum uvc_device_power_mode *mode, enum uvc_req_code req_code);
 uvc_error_t uvc_set_power_mode(uvc_device_handle_t *devh, enum uvc_device_power_mode mode);
