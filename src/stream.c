@@ -92,7 +92,7 @@ static uint8_t _uvc_color_format_matches_guid(enum uvc_color_format fmt, uint8_t
   int format_idx;
   int child_idx;
 
-  for (format_idx = 0; format_idx < sizeof(_format_table)/sizeof(_format_table[0]); ++format_idx) {
+  for (format_idx = 0; format_idx < ARRAYSIZE(_format_table); ++format_idx) {
 
     if (_format_table[format_idx].format == fmt) {
       if (!_format_table[format_idx].abstract_fmt && !memcmp(guid, _format_table[format_idx].guid, 16))
@@ -113,7 +113,7 @@ static uint8_t _uvc_color_format_matches_guid(enum uvc_color_format fmt, uint8_t
 static enum uvc_color_format uvc_color_format_for_guid(uint8_t guid[16]) {
   int format_idx;
 
-  for (format_idx = 0; format_idx < sizeof(_format_table)/sizeof(_format_table[0]); ++format_idx) {
+  for (format_idx = 0; format_idx < ARRAYSIZE(_format_table); ++format_idx) {
     if (!memcmp(_format_table[format_idx].guid, guid, 16))
       return _format_table[format_idx].format;
   }
@@ -628,9 +628,7 @@ uvc_error_t uvc_start_streaming(
       return ret;
 
     /* Set up the transfers */
-    for (transfer_id = 0;
-         transfer_id < sizeof(devh->stream.transfers) / sizeof(devh->stream.transfers[0]);
-         ++transfer_id) {
+    for (transfer_id = 0; transfer_id < ARRAYSIZE(devh->stream.transfers); ++transfer_id) {
       transfer = libusb_alloc_transfer(packets_per_transfer);
       devh->stream.transfers[transfer_id] = transfer;      
       devh->stream.transfer_bufs[transfer_id] = malloc(total_transfer_size);
@@ -662,9 +660,7 @@ uvc_error_t uvc_start_streaming(
   if (isochronous) {
     int transfer_id;
 
-    for (transfer_id = 0;
-         transfer_id < sizeof(devh->stream.transfers) / sizeof(devh->stream.transfers[0]);
-         transfer_id++) {
+    for (transfer_id = 0; transfer_id < ARRAYSIZE(devh->stream.transfers); transfer_id++) {
       ret = libusb_submit_transfer(devh->stream.transfers[transfer_id]);
       if (ret != UVC_SUCCESS)
         break;
@@ -857,7 +853,7 @@ void uvc_stop_streaming(uvc_device_handle_t *devh) {
   
   devh->stream.stop = 1;
 
-  for (transfer_idx = 0; transfer_idx < 5; ++transfer_idx) {
+  for (transfer_idx = 0; transfer_idx < ARRAYSIZE(devh->stream.transfers); ++transfer_idx) {
     if (devh->stream.transfers[transfer_idx]) {
       if (libusb_cancel_transfer(devh->stream.transfers[transfer_idx])
 	  == LIBUSB_ERROR_NOT_FOUND) {
