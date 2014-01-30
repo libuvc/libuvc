@@ -117,6 +117,7 @@ void uvc_print_stream_ctrl(uvc_stream_ctrl_t *ctrl, FILE *stream) {
   fprintf(stream, "wDelay: %d\n", ctrl->wDelay);
   fprintf(stream, "dwMaxVideoFrameSize: %u\n", ctrl->dwMaxVideoFrameSize);
   fprintf(stream, "dwMaxPayloadTransferSize: %u\n", ctrl->dwMaxPayloadTransferSize);
+  fprintf(stream, "bInterfaceNumber: %d\n", ctrl->bInterfaceNumber);
 }
 
 /** @brief Print camera capabilities and configuration.
