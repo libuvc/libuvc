@@ -170,7 +170,7 @@ uvc_error_t uvc_query_stream_ctrl(
       req == UVC_SET_CUR ? 0x21 : 0xA1,
       req,
       probe ? (UVC_VS_PROBE_CONTROL << 8) : (UVC_VS_COMMIT_CONTROL << 8),
-      devh->info->stream_ifs->bInterfaceNumber, /** @todo support multiple stream ifs */
+      ctrl->bInterfaceNumber,
       buf, len, 0
   );
 
@@ -218,20 +218,23 @@ uvc_error_t uvc_query_stream_ctrl(
  */
 uvc_frame_desc_t *uvc_find_frame_desc(uvc_device_handle_t *devh,
     uint16_t format_id, uint16_t frame_id) {
-  uvc_format_desc_t *format;
-  uvc_frame_desc_t *frame;
+ 
+  uvc_streaming_interface_t *stream_if;
+  uvc_format_desc_t *format = NULL;
+  uvc_frame_desc_t *frame = NULL;
 
-  DL_FOREACH(devh->info->stream_ifs->format_descs, format)
-    if (format->bFormatIndex == format_id)
-      break;
+  DL_FOREACH(devh->info->stream_ifs, stream_if) {
+    DL_FOREACH(stream_if->format_descs, format) {
+      if (format->bFormatIndex == format_id) {
+        DL_FOREACH(format->frame_descs, frame) {
+          if (frame->bFrameIndex == frame_id)
+            return frame;
+        }
+      }
+    }
+  }
 
-  if (format)
-    DL_FOREACH(format->frame_descs, frame)
-      if (frame->bFrameIndex == frame_id)
-        break;
-
-  if (frame)
-    return frame;
+  return NULL;
 }
 
 /** @internal
@@ -303,6 +306,7 @@ uvc_error_t uvc_get_stream_ctrl_format_size(
               ctrl->bmHint = (1 << 0); /* don't negotiate interval */
               ctrl->bFormatIndex = format->bFormatIndex;
               ctrl->bFrameIndex = frame->bFrameIndex;
+              ctrl->bInterfaceNumber = stream_if->bInterfaceNumber;
               ctrl->dwFrameInterval = *interval;
 
               found_frame = 1;
@@ -319,6 +323,7 @@ uvc_error_t uvc_get_stream_ctrl_format_size(
             ctrl->bmHint = (1 << 0);
             ctrl->bFormatIndex = format->bFormatIndex;
             ctrl->bFrameIndex = frame->bFrameIndex;
+            ctrl->bInterfaceNumber = stream_if->bInterfaceNumber;
             ctrl->dwFrameInterval = interval_100ns;
 
             found_frame = 1;
@@ -587,7 +592,7 @@ uvc_error_t uvc_start_streaming(
       for (ep_idx = 0; ep_idx < altsetting->bNumEndpoints; ep_idx++) {
         endpoint = altsetting->endpoint + ep_idx;
 
-        if (endpoint->bEndpointAddress == devh->info->stream_ifs->bEndpointAddress) {
+        if (endpoint->bEndpointAddress == format_desc->parent->bEndpointAddress) {
           endpoint_bytes_per_packet = endpoint->wMaxPacketSize;
           // wMaxPacketSize: [unused:2 (multiplier-1):3 size:11]
           endpoint_bytes_per_packet = (endpoint_bytes_per_packet & 0x07ff) *
@@ -631,7 +636,7 @@ uvc_error_t uvc_start_streaming(
       devh->stream.transfer_bufs[transfer_id] = malloc(total_transfer_size);
 
       libusb_fill_iso_transfer(
-        transfer, devh->usb_devh, devh->info->stream_ifs->bEndpointAddress,
+        transfer, devh->usb_devh, format_desc->parent->bEndpointAddress,
         devh->stream.transfer_bufs[transfer_id],
         total_transfer_size, packets_per_transfer, _uvc_iso_callback, (void*) devh, 5000);
 

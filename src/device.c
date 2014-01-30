@@ -614,11 +614,77 @@ void uvc_unref_device(uvc_device_t *dev) {
 }
 
 /** @internal
- * Claim UVC interfaces, detaching kernel driver if necessary
+ * Claim a UVC interface, detaching the kernel driver if necessary.
  * @ingroup device
  *
- * @todo Use the right interface numbers...
- * @todo Make a note of detachment so we can reattach later
+ * @param devh UVC device handle
+ * @param idx UVC interface index
+ */
+uvc_error_t uvc_claim_if(uvc_device_handle_t *devh, int idx) {
+  int ret;
+
+  UVC_ENTER();
+  UVC_DEBUG("claiming interface %d", idx);
+  ret = libusb_claim_interface(devh->usb_devh, idx);
+
+  UVC_EXIT(ret);
+  return ret;
+}
+
+/** @internal
+ * Release a UVC interface.
+ * @ingroup device
+ *
+ * @param devh UVC device handle
+ * @param idx UVC interface index
+ */
+uvc_error_t uvc_release_if(uvc_device_handle_t *devh, int idx) {
+  int ret;
+
+  UVC_ENTER();
+  UVC_DEBUG("releasing interface %d", idx);
+  ret = libusb_release_interface(devh->usb_devh, idx);
+
+  UVC_EXIT(ret);
+  return ret;
+}
+
+/** @internal
+ * Iterate through UVC control and streaming interfaces.
+ * @ingroup device
+ * 
+ * @param devh UVC device handle
+ * @param cb callback to execute for each matching interface
+ */
+uvc_error_t uvc_foreach_if(uvc_device_handle_t *devh, uvc_error_t (*cb)(uvc_device_handle_t *, int)) {
+  uvc_error_t ret;
+  int interface_idx, altsetting_idx;
+  const struct libusb_interface *interface;
+  const struct libusb_interface_descriptor *if_desc;
+
+  for (interface_idx = 0; interface_idx < devh->info->config->bNumInterfaces; ++interface_idx) {
+    interface = &devh->info->config->interface[interface_idx];
+
+    for (altsetting_idx = 0; altsetting_idx < interface->num_altsetting; ++altsetting_idx) {
+	  if_desc = &interface->altsetting[altsetting_idx];
+
+      if (if_desc->bInterfaceClass == 14) { // Video
+        if (if_desc->bInterfaceSubClass == 1 || if_desc->bInterfaceSubClass == 2) { // Control or Streaming
+          ret = cb(devh, interface_idx);
+          if (ret != UVC_SUCCESS)
+            return ret;
+          break;
+        }
+      }
+    }
+  }
+
+  return 0;
+}
+
+/** @internal
+ * Claim UVC interfaces, detaching kernel driver if necessary
+ * @ingroup device
  *
  * @param devh UVC device handle
  */
@@ -627,40 +693,9 @@ uvc_error_t uvc_claim_ifs(uvc_device_handle_t *devh) {
 
   UVC_ENTER();
 
-  /* VideoControl interface */
-  if (libusb_kernel_driver_active(devh->usb_devh, 0)) {
-    ret = libusb_detach_kernel_driver(devh->usb_devh, 0);
+  libusb_set_auto_detach_kernel_driver(devh->usb_devh, 1);
 
-    if (ret != UVC_SUCCESS) {
-      UVC_EXIT(ret);
-      return ret;
-    }
-  }
-
-  ret = libusb_claim_interface(devh->usb_devh, 0);
-  
-  if (ret != UVC_SUCCESS) {
-    UVC_EXIT(ret);
-    return ret;
-  }
-
-  /* VideoStreaming interface */
-
-  if (libusb_kernel_driver_active(devh->usb_devh, 1)) {
-    ret = libusb_detach_kernel_driver(devh->usb_devh, 1);
-
-    if (ret != UVC_SUCCESS) {
-      UVC_EXIT(ret);
-      return ret;
-    }
-  }
-
-  if (ret != UVC_SUCCESS) {
-    UVC_EXIT(ret);
-    return ret;
-  }
-
-  ret = libusb_claim_interface(devh->usb_devh, 1);
+  ret = uvc_foreach_if(devh, uvc_claim_if);
 
   UVC_EXIT(ret);
   return ret;
@@ -670,16 +705,12 @@ uvc_error_t uvc_claim_ifs(uvc_device_handle_t *devh) {
  * Release UVC interfaces
  * @ingroup device
  *
- * @todo Use the right interface numbers
- * @todo Reattach kernel drivers
- *
  * @param devh UVC device handle
  */
 void uvc_release_ifs(uvc_device_handle_t *devh) {
   UVC_ENTER();
 
-  libusb_release_interface(devh->usb_devh, 0);
-  libusb_release_interface(devh->usb_devh, 1);
+  uvc_foreach_if(devh, uvc_release_if);
 
   UVC_EXIT_VOID();
 }
