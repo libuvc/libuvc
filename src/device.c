@@ -1290,13 +1290,18 @@ void uvc_process_status_xfer(uvc_device_handle_t *devh, struct libusb_transfer *
     return;  /* @todo VideoStreaming updates */
   }
 
-  UVC_DEBUG("Running user-supplied status callback");
-  devh->status_cb(status_class,
-                  event,
-                  selector,
-                  attribute,
-                  data, data_len,
-                  devh->status_user_ptr);
+  UVC_DEBUG("Event: class=%d, event=%d, selector=%d, attribute=%d, data_len=%zd",
+    status_class, event, selector, attribute, data_len);
+
+  if(devh->status_cb) {
+    UVC_DEBUG("Running user-supplied status callback");
+    devh->status_cb(status_class,
+                    event,
+                    selector,
+                    attribute,
+                    data, data_len,
+                    devh->status_user_ptr);
+  }
 
   UVC_EXIT_VOID();
 }
