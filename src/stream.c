@@ -475,6 +475,11 @@ void _uvc_iso_callback(struct libusb_transfer *transfer) {
           continue; // don't look for data after an iSight header
       }
 
+      if (pkt->actual_length < header_len) {
+        /* Bogus packet received */
+        printf("bogus packet: actual_len=%d, header_len=%zd\n", pkt->actual_length, header_len);
+        continue;
+      }
       if (pkt->actual_length - header_len > 0)
         memcpy(devh->stream.outbuf + devh->stream.got_bytes, pktbuf + header_len, pkt->actual_length - header_len);
 
