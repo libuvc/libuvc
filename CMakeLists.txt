@@ -17,10 +17,16 @@ find_library(LIBUSB_LIBRARY_NAMES usb-1.0
 find_path(LIBUSB_INCLUDE_DIR libusb-1.0/libusb.h
 	PATHS /opt/local/include)
 
+find_package(jpeg)
+
 SET(CMAKE_C_FLAGS_DEBUG "-g -DUVC_DEBUGGING")
 
 SET(INSTALL_CMAKE_DIR "${CMAKE_INSTALL_PREFIX}/lib/cmake/libuvc" CACHE PATH
 	"Installation directory for CMake files")
+
+SET(SOURCES src/ctrl.c src/device.c src/diag.c
+           src/frame.c src/init.c src/stream.c
+           src/misc.c)
 
 include_directories(
   ${libuvc_SOURCE_DIR}/include
@@ -28,17 +34,23 @@ include_directories(
   ${LIBUSB_INCLUDE_DIR}
 )
 
-link_directories(${LIBUSB_LIBRARY_NAMES})
+if(JPEG_FOUND)
+  include_directories(${JPEG_INCLUDE_DIR})
+  SET(HAVE_JPEG TRUE)
+  SET(SOURCES ${SOURCES} src/frame-mjpeg.c)
+endif(JPEG_FOUND)
 
-add_library(uvc SHARED src/ctrl.c src/device.c src/diag.c
-                       src/frame.c src/init.c src/stream.c
-                       src/misc.c)
+add_library(uvc SHARED ${SOURCES})
 
 configure_file(include/libuvc/libuvc_config.h.in
   ${PROJECT_BINARY_DIR}/include/libuvc/libuvc_config.h @ONLY)
 
 set_target_properties(uvc PROPERTIES
   PUBLIC_HEADER "include/libuvc/libuvc.h;${libuvc_BINARY_DIR}/include/libuvc/libuvc_config.h" )
+
+if(JPEG_FOUND)
+  target_link_libraries (uvc ${JPEG_LIBRARIES})
+endif(JPEG_FOUND)
 
 target_link_libraries(uvc ${LIBUSB_LIBRARY_NAMES})
 
