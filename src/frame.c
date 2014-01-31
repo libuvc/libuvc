@@ -37,6 +37,23 @@
 #include "libuvc/libuvc.h"
 #include "libuvc/libuvc_internal.h"
 
+/** @internal */
+uvc_error_t uvc_ensure_frame_size(uvc_frame_t *frame, size_t need_bytes) {
+  if (frame->library_owns_data) {
+    if (!frame->data || frame->data_bytes != need_bytes) {
+      frame->data_bytes = need_bytes;
+      frame->data = realloc(frame->data, frame->data_bytes);
+    }
+    if (!frame->data)
+      return UVC_ERROR_NO_MEM;
+    return UVC_SUCCESS;
+  } else {
+    if (!frame->data || frame->data_bytes < need_bytes)
+      return UVC_ERROR_NO_MEM;
+    return UVC_SUCCESS;
+  }
+}
+
 /** @brief Allocate a frame structure
  * @ingroup frame
  *
@@ -50,6 +67,8 @@ uvc_frame_t *uvc_allocate_frame(size_t data_bytes) {
     return NULL;
 
   bzero(frame, sizeof(*frame));
+
+  frame->library_owns_data = 1;
 
   if (data_bytes > 0) {
     frame->data_bytes = data_bytes;
@@ -70,7 +89,7 @@ uvc_frame_t *uvc_allocate_frame(size_t data_bytes) {
  * @param frame Frame to destroy
  */
 void uvc_free_frame(uvc_frame_t *frame) {
-  if (frame->data_bytes > 0)
+  if (frame->data_bytes > 0 && frame->library_owns_data)
     free(frame->data);
 
   free(frame);
@@ -87,6 +106,9 @@ static inline unsigned char sat(int i) {
  * @param out Duplicate frame
  */
 uvc_error_t uvc_duplicate_frame(uvc_frame_t *in, uvc_frame_t *out) {
+  if (uvc_ensure_frame_size(out, in->data_bytes) < 0)
+    return UVC_ERROR_NO_MEM;
+
   out->width = in->width;
   out->height = in->height;
   out->color_format = in->color_format;
@@ -94,14 +116,6 @@ uvc_error_t uvc_duplicate_frame(uvc_frame_t *in, uvc_frame_t *out) {
   out->sequence = in->sequence;
   out->capture_time = in->capture_time;
   out->source = in->source;
-
-  if (!out->data || out->data_bytes != in->data_bytes) {
-    out->data_bytes = in->data_bytes;
-    out->data = realloc(out->data, out->data_bytes);
-  }
-
-  if (!out->data)
-    return UVC_ERROR_NO_MEM;
 
   memcpy(out->data, in->data, in->data_bytes);
 
@@ -141,10 +155,11 @@ uvc_error_t uvc_duplicate_frame(uvc_frame_t *in, uvc_frame_t *out) {
  * @param out RGB frame
  */
 uvc_error_t uvc_yuyv2rgb(uvc_frame_t *in, uvc_frame_t *out) {
-  size_t need_bytes;
-
   if (in->color_format != UVC_COLOR_FORMAT_YUYV)
     return UVC_ERROR_INVALID_PARAM;
+
+  if (uvc_ensure_frame_size(out, in->width * in->height * 3) < 0)
+    return UVC_ERROR_NO_MEM;
 
   out->width = in->width;
   out->height = in->height;
@@ -153,16 +168,6 @@ uvc_error_t uvc_yuyv2rgb(uvc_frame_t *in, uvc_frame_t *out) {
   out->sequence = in->sequence;
   out->capture_time = in->capture_time;
   out->source = in->source;
-
-  need_bytes = out->step * out->height;
-
-  if (!out->data || out->data_bytes != need_bytes) {
-    out->data_bytes = out->step * out->height;
-    out->data = realloc(out->data, out->data_bytes);
-  }
-
-  if (!out->data)
-    return UVC_ERROR_NO_MEM;
 
   uint8_t *pyuv = in->data;
   uint8_t *prgb = out->data;
@@ -200,10 +205,11 @@ uvc_error_t uvc_yuyv2rgb(uvc_frame_t *in, uvc_frame_t *out) {
  * @param out BGR frame
  */
 uvc_error_t uvc_yuyv2bgr(uvc_frame_t *in, uvc_frame_t *out) {
-  size_t need_bytes;
-
   if (in->color_format != UVC_COLOR_FORMAT_YUYV)
     return UVC_ERROR_INVALID_PARAM;
+
+  if (uvc_ensure_frame_size(out, in->width * in->height * 3) < 0)
+    return UVC_ERROR_NO_MEM;
 
   out->width = in->width;
   out->height = in->height;
@@ -212,16 +218,6 @@ uvc_error_t uvc_yuyv2bgr(uvc_frame_t *in, uvc_frame_t *out) {
   out->sequence = in->sequence;
   out->capture_time = in->capture_time;
   out->source = in->source;
-
-  need_bytes = out->step * out->height;
-
-  if (!out->data || out->data_bytes != need_bytes) {
-    out->data_bytes = out->step * out->height;
-    out->data = realloc(out->data, out->data_bytes);
-  }
-
-  if (!out->data)
-    return UVC_ERROR_NO_MEM;
 
   uint8_t *pyuv = in->data;
   uint8_t *pbgr = out->data;
@@ -258,10 +254,11 @@ uvc_error_t uvc_yuyv2bgr(uvc_frame_t *in, uvc_frame_t *out) {
  * @param out RGB frame
  */
 uvc_error_t uvc_uyvy2rgb(uvc_frame_t *in, uvc_frame_t *out) {
-  size_t need_bytes;
-
   if (in->color_format != UVC_COLOR_FORMAT_UYVY)
     return UVC_ERROR_INVALID_PARAM;
+
+  if (uvc_ensure_frame_size(out, in->width * in->height * 3) < 0)
+    return UVC_ERROR_NO_MEM;
 
   out->width = in->width;
   out->height = in->height;
@@ -270,16 +267,6 @@ uvc_error_t uvc_uyvy2rgb(uvc_frame_t *in, uvc_frame_t *out) {
   out->sequence = in->sequence;
   out->capture_time = in->capture_time;
   out->source = in->source;
-
-  need_bytes = out->step * out->height;
-
-  if (!out->data || out->data_bytes != need_bytes) {
-    out->data_bytes = need_bytes;
-    out->data = realloc(out->data, need_bytes);
-  }
-
-  if (!out->data)
-    return UVC_ERROR_NO_MEM;
 
   uint8_t *pyuv = in->data;
   uint8_t *prgb = out->data;
@@ -316,10 +303,11 @@ uvc_error_t uvc_uyvy2rgb(uvc_frame_t *in, uvc_frame_t *out) {
  * @param out BGR frame
  */
 uvc_error_t uvc_uyvy2bgr(uvc_frame_t *in, uvc_frame_t *out) {
-  size_t need_bytes;
-
   if (in->color_format != UVC_COLOR_FORMAT_UYVY)
     return UVC_ERROR_INVALID_PARAM;
+
+  if (uvc_ensure_frame_size(out, in->width * in->height * 3) < 0)
+    return UVC_ERROR_NO_MEM;
 
   out->width = in->width;
   out->height = in->height;
@@ -328,16 +316,6 @@ uvc_error_t uvc_uyvy2bgr(uvc_frame_t *in, uvc_frame_t *out) {
   out->sequence = in->sequence;
   out->capture_time = in->capture_time;
   out->source = in->source;
-
-  need_bytes = out->step * out->height;
-
-  if (!out->data || out->data_bytes != need_bytes) {
-    out->data_bytes = need_bytes;
-    out->data = realloc(out->data, need_bytes);
-  }
-
-  if (!out->data)
-    return UVC_ERROR_NO_MEM;
 
   uint8_t *pyuv = in->data;
   uint8_t *pbgr = out->data;

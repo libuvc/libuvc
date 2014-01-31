@@ -646,6 +646,7 @@ uvc_error_t uvc_stream_open_ctrl(uvc_device_handle_t *devh, uvc_stream_handle_t 
   }
   strmh->devh = devh;
   strmh->stream_if = stream_if;
+  strmh->frame.library_owns_data = 1;
 
   ret = uvc_stream_ctrl(strmh, ctrl);
   if (ret != UVC_SUCCESS)

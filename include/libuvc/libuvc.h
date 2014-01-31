@@ -229,6 +229,13 @@ typedef struct uvc_frame {
   /** Handle on the device that produced the image.
    * @warning You must not call any uvc_* functions during a callback. */
   uvc_device_handle_t *source;
+  /** Is the data buffer owned by the library?
+   * If 1, the data buffer can be arbitrarily reallocated by frame conversion
+   * functions.
+   * If 0, the data buffer will not be reallocated or freed by the library.
+   * Set this field to zero if you are supplying the buffer.
+   */
+  uint8_t library_owns_data;
 } uvc_frame_t;
 
 /** A callback function to handle incoming assembled UVC frames
