@@ -68,6 +68,12 @@ static enum uvc_color_format UVC_COLOR_FORMAT_GRAY8_children[] = {
   0
 };
 
+#define FOURCC_FMT(_fmt, a, b, c, d) \
+  {.format = _fmt, \
+   .abstract_fmt = 0, \
+   .guid = {a, b, c, d, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, \
+   .children = NULL}
+
 #define FMT(_fmt, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) \
   {.format = _fmt, \
    .abstract_fmt = 0, \
@@ -88,6 +94,8 @@ static struct format_table_entry _format_table[] = {
     'U',  'Y',  'V',  'Y', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71),
   FMT(UVC_COLOR_FORMAT_GRAY8,
     'Y',  '8',  '0',  '0', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71),
+  FOURCC_FMT(UVC_COLOR_FORMAT_MJPEG,
+    'M',  'J',  'P',  'G'),
 };
 
 static uint8_t _uvc_color_format_matches_guid(enum uvc_color_format fmt, uint8_t guid[16]) {
@@ -712,9 +720,8 @@ uvc_error_t uvc_stream_start(
   }
   format_desc = frame_desc->parent;
 
-  if (format_desc->bDescriptorSubtype == UVC_VS_FORMAT_UNCOMPRESSED) {
-    strmh->color_format = uvc_color_format_for_guid(format_desc->guidFormat);
-  } else {
+  strmh->color_format = uvc_color_format_for_guid(format_desc->guidFormat);
+  if (strmh->color_format == UVC_COLOR_FORMAT_UNKNOWN) {
     ret = UVC_ERROR_NOT_SUPPORTED;
     goto fail;
   }

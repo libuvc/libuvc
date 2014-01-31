@@ -74,6 +74,9 @@ uvc_error_t uvc_parse_vs(uvc_device_t *dev,
 uvc_error_t uvc_parse_vs_format_uncompressed(uvc_streaming_interface_t *stream_if,
 					     const unsigned char *block,
 					     size_t block_size);
+uvc_error_t uvc_parse_vs_format_mjpeg(uvc_streaming_interface_t *stream_if,
+					     const unsigned char *block,
+					     size_t block_size);
 uvc_error_t uvc_parse_vs_frame_uncompressed(uvc_streaming_interface_t *stream_if,
 					    const unsigned char *block,
 					    size_t block_size);
@@ -976,6 +979,35 @@ uvc_error_t uvc_parse_vs_format_uncompressed(uvc_streaming_interface_t *stream_i
 }
 
 /** @internal
+ * @brief Parse a VideoStreaming MJPEG format block.
+ * @ingroup device
+ */
+uvc_error_t uvc_parse_vs_format_mjpeg(uvc_streaming_interface_t *stream_if,
+					     const unsigned char *block,
+					     size_t block_size) {
+  UVC_ENTER();
+
+  uvc_format_desc_t *format = calloc(1, sizeof(*format));
+
+  format->parent = stream_if;
+  format->bDescriptorSubtype = block[2];
+  format->bFormatIndex = block[3];
+  memcpy(format->fourccFormat, "MJPG", 4);
+  format->bmFlags = block[5];
+  format->bBitsPerPixel = 0;
+  format->bDefaultFrameIndex = block[6];
+  format->bAspectRatioX = block[7];
+  format->bAspectRatioY = block[8];
+  format->bmInterlaceFlags = block[9];
+  format->bCopyProtect = block[10];
+
+  DL_APPEND(stream_if->format_descs, format);
+
+  UVC_EXIT(UVC_SUCCESS);
+  return UVC_SUCCESS;
+}
+
+/** @internal
  * @brief Parse a VideoStreaming uncompressed frame block.
  * @ingroup device
  */
@@ -1051,7 +1083,11 @@ uvc_error_t uvc_parse_vs(
   case UVC_VS_FORMAT_UNCOMPRESSED:
     ret = uvc_parse_vs_format_uncompressed(stream_if, block, block_size);
     break;
+  case UVC_VS_FORMAT_MJPEG:
+    ret = uvc_parse_vs_format_mjpeg(stream_if, block, block_size);
+    break;
   case UVC_VS_FRAME_UNCOMPRESSED:
+  case UVC_VS_FRAME_MJPEG:
     ret = uvc_parse_vs_frame_uncompressed(stream_if, block, block_size);
     break;
   default:

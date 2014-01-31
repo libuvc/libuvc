@@ -256,12 +256,15 @@ typedef struct uvc_format_desc {
   enum uvc_vs_desc_subtype bDescriptorSubtype;
   /** Identifier of this format within the VS interface's format list */
   uint8_t bFormatIndex;
+  /** Format specifier */
   union {
-    /** Format and depth specification for uncompressed stream */
-    struct {
-      uint8_t guidFormat[16];
-      uint8_t bBitsPerPixel;
-    };
+    uint8_t guidFormat[16];
+    uint8_t fourccFormat[4];
+  };
+  /** Format-specific data */
+  union {
+    /** BPP for uncompressed stream */
+    uint8_t bBitsPerPixel;
     /** Flags for JPEG stream */
     uint8_t bmFlags;
   };

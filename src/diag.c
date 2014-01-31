@@ -120,6 +120,17 @@ void uvc_print_stream_ctrl(uvc_stream_ctrl_t *ctrl, FILE *stream) {
   fprintf(stream, "bInterfaceNumber: %d\n", ctrl->bInterfaceNumber);
 }
 
+static const char *_uvc_name_for_format_subtype(uint8_t subtype) {
+  switch (subtype) {
+  case UVC_VS_FORMAT_UNCOMPRESSED:
+    return "UncompressedFormat";
+  case UVC_VS_FORMAT_MJPEG:
+    return "MJPEGFormat";
+  default:
+    return "Unknown";
+  }
+}
+
 /** @brief Print camera capabilities and configuration.
  * @ingroup diag
  *
@@ -164,10 +175,12 @@ void uvc_print_diag(uvc_device_handle_t *devh, FILE *stream) {
 
         switch (fmt_desc->bDescriptorSubtype) {
           case UVC_VS_FORMAT_UNCOMPRESSED:
+          case UVC_VS_FORMAT_MJPEG:
             fprintf(stream,
-                "\t\tUncompressedFormat(%d)\n"
+                "\t\%s(%d)\n"
                 "\t\t  bits per pixel: %d\n"
                 "\t\t  GUID: ",
+                _uvc_name_for_format_subtype(fmt_desc->bDescriptorSubtype),
                 fmt_desc->bFormatIndex,
                 fmt_desc->bBitsPerPixel);
 
@@ -230,7 +243,6 @@ void uvc_print_diag(uvc_device_handle_t *devh, FILE *stream) {
               }
             }
             break;
-          case UVC_VS_FORMAT_MJPEG:
             fprintf(stream, "\t-MJPEGFormat\n");
             break;
           default:
