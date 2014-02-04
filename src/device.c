@@ -584,6 +584,35 @@ void uvc_free_device_list(uvc_device_t **list, uint8_t unref_devices) {
 }
 
 /**
+ * @brief Get the uvc_device_t corresponding to an open device
+ * @ingroup device
+ *
+ * @note Unref the uvc_device_t when you're done with it
+ *
+ * @param devh Device handle to an open UVC device
+ */
+uvc_device_t *uvc_get_device(uvc_device_handle_t *devh) {
+  uvc_ref_device(devh->dev);
+  return devh->dev;
+}
+
+/**
+ * @brief Get the underlying libusb device handle for an open device
+ * @ingroup device
+ *
+ * This can be used to access other interfaces on the same device, e.g.
+ * a webcam microphone.
+ *
+ * @note The libusb device handle is only valid while the UVC device is open;
+ * it will be invalidated upon calling uvc_close.
+ *
+ * @param devh UVC device handle to an open device
+ */
+libusb_device_handle *uvc_get_libusb_handle(uvc_device_handle_t *devh) {
+  return devh->usb_devh;
+}
+
+/**
  * @brief Increment the reference count for a device
  * @ingroup device
  *
