@@ -395,3 +395,75 @@ uvc_error_t uvc_set_pantilt_abs(uvc_device_handle_t *devh, int pan, int tilt) {
 
 /***** PROCESSING UNIT CONTROLS *****/
 
+/***** GENERIC CONTROLS *****/
+/**
+ * @brief Get the length of a control on a terminal or unit.
+ * 
+ * @param devh UVC device handle
+ * @param unit Unit or Terminal ID; obtain this from the uvc_extension_unit_t describing the extension unit
+ * @param ctrl Vendor-specific control number to query
+ * @return On success, the length of the control as reported by the device. Otherwise,
+ *   a uvc_error_t error describing the error encountered.
+ */
+int uvc_get_ctrl_len(uvc_device_handle_t *devh, uint8_t unit, uint8_t ctrl) {
+  unsigned char buf[2];
+
+  int ret = libusb_control_transfer(
+    devh->usb_devh,
+    REQ_TYPE_GET, UVC_GET_LEN,
+    ctrl << 8,
+    unit << 8,
+    buf,
+    2,
+    0 /* timeout */);
+
+  if (ret < 0)
+    return ret;
+  else
+    return (unsigned short)SW_TO_SHORT(buf);
+}
+
+/**
+ * @brief Perform a GET_* request from an extension unit.
+ * 
+ * @param devh UVC device handle
+ * @param unit Unit ID; obtain this from the uvc_extension_unit_t describing the extension unit
+ * @param ctrl Control number to query
+ * @param data Data buffer to be filled by the device
+ * @param len Size of data buffer
+ * @param req_code GET_* request to execute
+ * @return On success, the number of bytes actually transferred. Otherwise,
+ *   a uvc_error_t error describing the error encountered.
+ */
+int uvc_get_ctrl(uvc_device_handle_t *devh, uint8_t unit, uint8_t ctrl, void *data, int len, enum uvc_req_code req_code) {
+  return libusb_control_transfer(
+    devh->usb_devh,
+    REQ_TYPE_GET, req_code,
+    ctrl << 8,
+    unit << 8,
+    data,
+    len,
+    0 /* timeout */);
+}
+
+/**
+ * @brief Perform a SET_CUR request to a terminal or unit.
+ * 
+ * @param devh UVC device handle
+ * @param unit Unit or Terminal ID
+ * @param ctrl Control number to set
+ * @param data Data buffer to be sent to the device
+ * @param len Size of data buffer
+ * @return On success, the number of bytes actually transferred. Otherwise,
+ *   a uvc_error_t error describing the error encountered.
+ */
+int uvc_set_ctrl(uvc_device_handle_t *devh, uint8_t unit, uint8_t ctrl, void *data, int len) {
+  return libusb_control_transfer(
+    devh->usb_devh,
+    REQ_TYPE_SET, UVC_SET_CUR,
+    ctrl << 8,
+    unit << 8,
+    data,
+    len,
+    0 /* timeout */);
+}

@@ -434,6 +434,10 @@ uvc_error_t uvc_set_focus_abs(uvc_device_handle_t *devh, short focus);
 uvc_error_t uvc_get_pantilt_abs(uvc_device_handle_t *devh, int *pan, int *tilt, enum uvc_req_code req_code);
 uvc_error_t uvc_set_pantilt_abs(uvc_device_handle_t *devh, int pan, int tilt);
 
+int uvc_get_ctrl_len(uvc_device_handle_t *devh, uint8_t unit, uint8_t ctrl);
+int uvc_get_ctrl(uvc_device_handle_t *devh, uint8_t unit, uint8_t ctrl, void *data, int len, enum uvc_req_code req_code);
+int uvc_set_ctrl(uvc_device_handle_t *devh, uint8_t unit, uint8_t ctrl, void *data, int len);
+
 void uvc_perror(uvc_error_t err, const char *msg);
 const char* uvc_strerror(uvc_error_t err);
 void uvc_print_diag(uvc_device_handle_t *devh, FILE *stream);
