@@ -529,12 +529,20 @@ void _uvc_iso_callback(struct libusb_transfer *transfer) {
     }
     break;
   case LIBUSB_TRANSFER_CANCELLED: 
+  case LIBUSB_TRANSFER_ERROR:
+  case LIBUSB_TRANSFER_NO_DEVICE:
+    UVC_DEBUG("not retrying transfer, status = %d", transfer->status);
     pthread_mutex_lock(&strmh->cb_mutex);
     pthread_cond_signal(&strmh->cb_cond);
     pthread_mutex_unlock(&strmh->cb_mutex);
 
     free(transfer->buffer);
     libusb_free_transfer(transfer);
+    break;
+  case LIBUSB_TRANSFER_TIMED_OUT:
+  case LIBUSB_TRANSFER_STALL:
+  case LIBUSB_TRANSFER_OVERFLOW:
+    UVC_DEBUG("retrying transfer, status = %d", transfer->status);
     break;
   }
   

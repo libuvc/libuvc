@@ -1373,6 +1373,11 @@ void _uvc_status_callback(struct libusb_transfer *transfer) {
   case LIBUSB_TRANSFER_COMPLETED:
     uvc_process_status_xfer(devh, transfer);
     break;
+  case LIBUSB_TRANSFER_TIMED_OUT:
+  case LIBUSB_TRANSFER_STALL:
+  case LIBUSB_TRANSFER_OVERFLOW:
+    UVC_DEBUG("retrying transfer, status = %d", transfer->status);
+    break;
   }
 
   uvc_error_t ret = libusb_submit_transfer(transfer);
