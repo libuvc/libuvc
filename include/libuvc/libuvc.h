@@ -54,6 +54,8 @@ typedef enum uvc_error {
  */
 enum uvc_frame_format {
   UVC_FRAME_FORMAT_UNKNOWN = 0,
+  /** Any supported format */
+  UVC_FRAME_FORMAT_ANY = 0,
   UVC_FRAME_FORMAT_UNCOMPRESSED,
   UVC_FRAME_FORMAT_COMPRESSED,
   /** YUVV/YUV2/YUV422: YUV encoding with one luminance value per pixel and
@@ -66,7 +68,9 @@ enum uvc_frame_format {
   UVC_FRAME_FORMAT_BGR,
   /** Motion-JPEG (or JPEG) encoded images */
   UVC_FRAME_FORMAT_MJPEG,
-  UVC_FRAME_FORMAT_GRAY8
+  UVC_FRAME_FORMAT_GRAY8,
+  /** Number of formats understood */
+  UVC_FRAME_FORMAT_COUNT,
 };
 
 /** UVC request code (A.8) */

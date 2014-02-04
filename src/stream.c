@@ -49,73 +49,65 @@ struct format_table_entry {
   enum uvc_frame_format format;
   uint8_t abstract_fmt;
   uint8_t guid[16];
+  int children_count;
   enum uvc_frame_format *children;
 };
 
-static enum uvc_frame_format UVC_FRAME_FORMAT_UNCOMPRESSED_children[] = {
-  UVC_FRAME_FORMAT_YUYV, UVC_FRAME_FORMAT_UYVY, UVC_FRAME_FORMAT_GRAY8, 0
-};
+struct format_table_entry *_get_format_entry(enum uvc_frame_format format) {
+  #define ABS_FMT(_fmt, ...) \
+    case _fmt: { \
+    static enum uvc_frame_format _fmt##_children[] = __VA_ARGS__; \
+    static struct format_table_entry _fmt##_entry = { \
+      _fmt, 0, {}, ARRAYSIZE(_fmt##_children), _fmt##_children }; \
+    return &_fmt##_entry; }
 
-static enum uvc_frame_format UVC_FRAME_FORMAT_YUYV_children[] = {
-  0
-};
+  #define FMT(_fmt, ...) \
+    case _fmt: { \
+    static struct format_table_entry _fmt##_entry = { \
+      _fmt, 0, __VA_ARGS__, 0, NULL }; \
+    return &_fmt##_entry; }
 
-static enum uvc_frame_format UVC_FRAME_FORMAT_UYVY_children[] = {
-  0
-};
+  switch(format) {
+    /* Define new formats here */
+    ABS_FMT(UVC_FRAME_FORMAT_ANY,
+      {UVC_FRAME_FORMAT_UNCOMPRESSED, UVC_FRAME_FORMAT_COMPRESSED})
 
-static enum uvc_frame_format UVC_FRAME_FORMAT_GRAY8_children[] = {
-  0
-};
+    ABS_FMT(UVC_FRAME_FORMAT_UNCOMPRESSED,
+      {UVC_FRAME_FORMAT_YUYV, UVC_FRAME_FORMAT_UYVY, UVC_FRAME_FORMAT_GRAY8})
+    FMT(UVC_FRAME_FORMAT_YUYV,
+      {'Y',  'U',  'Y',  '2', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+    FMT(UVC_FRAME_FORMAT_UYVY,
+      {'U',  'Y',  'V',  'Y', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+    FMT(UVC_FRAME_FORMAT_GRAY8,
+      {'Y',  '8',  '0',  '0', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
 
-#define FOURCC_FMT(_fmt, a, b, c, d) \
-  {.format = _fmt, \
-   .abstract_fmt = 0, \
-   .guid = {a, b, c, d, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, \
-   .children = NULL}
+    ABS_FMT(UVC_FRAME_FORMAT_COMPRESSED,
+      {UVC_FRAME_FORMAT_MJPEG})
+    FMT(UVC_FRAME_FORMAT_MJPEG,
+      {'M',  'J',  'P',  'G'})
 
-#define FMT(_fmt, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) \
-  {.format = _fmt, \
-   .abstract_fmt = 0, \
-   .guid = {a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p}, \
-   .children = _fmt ## _children}
+    default:
+      return NULL;
+  }
 
-#define ABS_FMT(_fmt) \
-  {.format = _fmt, \
-   .abstract_fmt = 1, \
-   .guid = {}, \
-   .children = _fmt ## _children}
-
-static struct format_table_entry _format_table[] = {
-  ABS_FMT(UVC_FRAME_FORMAT_UNCOMPRESSED),
-  FMT(UVC_FRAME_FORMAT_YUYV,
-    'Y',  'U',  'Y',  '2', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71),
-  FMT(UVC_FRAME_FORMAT_UYVY,
-    'U',  'Y',  'V',  'Y', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71),
-  FMT(UVC_FRAME_FORMAT_GRAY8,
-    'Y',  '8',  '0',  '0', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71),
-  FOURCC_FMT(UVC_FRAME_FORMAT_MJPEG,
-    'M',  'J',  'P',  'G'),
-};
+  #undef ABS_FMT
+  #undef FMT
+}
 
 static uint8_t _uvc_frame_format_matches_guid(enum uvc_frame_format fmt, uint8_t guid[16]) {
   struct format_table_entry *format;
-  enum uvc_frame_format *child;
-  int format_idx;
+  int child_idx;
 
-  for (format_idx = 0; format_idx < ARRAYSIZE(_format_table); ++format_idx) {
-    format = &_format_table[format_idx];
-    if (format->format == fmt) {
-      if (!format->abstract_fmt && !memcmp(guid, format->guid, 16))
-        return 1;
+  format = _get_format_entry(fmt);
+  if (!format)
+    return 0;
 
-      for (child = format->children; *child; child++) {
-        if (_uvc_frame_format_matches_guid(*child, guid))
-          return 1;
-      }
+  if (!format->abstract_fmt && !memcmp(guid, format->guid, 16))
+    return 1;
 
-      return 0;
-    }
+  for (child_idx = 0; child_idx < format->children_count; child_idx++) {
+    if (_uvc_frame_format_matches_guid(format->children[child_idx], guid))
+      return 1;
   }
 
   return 0;
@@ -123,10 +115,12 @@ static uint8_t _uvc_frame_format_matches_guid(enum uvc_frame_format fmt, uint8_t
 
 static enum uvc_frame_format uvc_frame_format_for_guid(uint8_t guid[16]) {
   struct format_table_entry *format;
-  int format_idx;
+  enum uvc_frame_format fmt;
 
-  for (format_idx = 0; format_idx < ARRAYSIZE(_format_table); ++format_idx) {
-    format = &_format_table[format_idx];
+  for (fmt = 0; fmt < UVC_FRAME_FORMAT_COUNT; ++fmt) {
+    format = _get_format_entry(fmt);
+    if (!format || format->abstract_fmt)
+      continue;
     if (!memcmp(format->guid, guid, 16))
       return format->format;
   }
