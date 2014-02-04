@@ -613,6 +613,58 @@ libusb_device_handle *uvc_get_libusb_handle(uvc_device_handle_t *devh) {
 }
 
 /**
+ * @brief Get input terminal descriptors for the open device.
+ *
+ * @note Do not modify the returned structure.
+ * @note The returned structure is part of a linked list. Iterate through
+ *       it by using the 'next' pointers.
+ *
+ * @param devh Device handle to an open UVC device
+ */
+const uvc_input_terminal_t *uvc_get_input_terminals(uvc_device_handle_t *devh) {
+  return devh->info->ctrl_if.input_term_descs;
+}
+
+/**
+ * @brief Get output terminal descriptors for the open device.
+ *
+ * @note Do not modify the returned structure.
+ * @note The returned structure is part of a linked list. Iterate through
+ *       it by using the 'next' pointers.
+ *
+ * @param devh Device handle to an open UVC device
+ */
+const uvc_output_terminal_t *uvc_get_output_terminals(uvc_device_handle_t *devh) {
+  return NULL; /* @todo */
+}
+
+/**
+ * @brief Get processing unit descriptors for the open device.
+ *
+ * @note Do not modify the returned structure.
+ * @note The returned structure is part of a linked list. Iterate through
+ *       it by using the 'next' pointers.
+ *
+ * @param devh Device handle to an open UVC device
+ */
+const uvc_processing_unit_t *uvc_get_processing_units(uvc_device_handle_t *devh) {
+  return devh->info->ctrl_if.processing_unit_descs;
+}
+
+/**
+ * @brief Get extension unit descriptors for the open device.
+ *
+ * @note Do not modify the returned structure.
+ * @note The returned structure is part of a linked list. Iterate through
+ *       it by using the 'next' pointers.
+ *
+ * @param devh Device handle to an open UVC device
+ */
+const uvc_extension_unit_t *uvc_get_extension_units(uvc_device_handle_t *devh) {
+  return devh->info->ctrl_if.extension_unit_descs;
+}
+
+/**
  * @brief Increment the reference count for a device
  * @ingroup device
  *

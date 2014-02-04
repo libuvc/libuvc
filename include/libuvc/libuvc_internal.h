@@ -152,34 +152,6 @@ enum uvc_vs_ctrl_selector {
   UVC_VS_SYNC_DELAY_CONTROL = 0x09
 };
 
-/** USB terminal type (B.1) */
-enum uvc_term_type {
-  UVC_TT_VENDOR_SPECIFIC = 0x0100,
-  UVC_TT_STREAMING = 0x0101
-};
-
-/** Input terminal type (B.2) */
-enum uvc_it_type {
-  UVC_ITT_VENDOR_SPECIFIC = 0x0200,
-  UVC_ITT_CAMERA = 0x0201,
-  UVC_ITT_MEDIA_TRANSPORT_INPUT = 0x0202
-};
-
-/** Output terminal type (B.3) */
-enum uvc_ot_type {
-  UVC_OTT_VENDOR_SPECIFIC = 0x0300,
-  UVC_OTT_DISPLAY = 0x0301,
-  UVC_OTT_MEDIA_TRANSPORT_OUTPUT = 0x0302
-};
-
-/** External terminal type (B.4) */
-enum uvc_et_type {
-  UVC_EXTERNAL_VENDOR_SPECIFIC = 0x0400,
-  UVC_COMPOSITE_CONNECTOR = 0x0401,
-  UVC_SVIDEO_CONNECTOR = 0x0402,
-  UVC_COMPONENT_CONNECTOR = 0x0403
-};
-
 /** Status packet type (2.4.2.2) */
 enum uvc_status_type {
   UVC_STATUS_TYPE_CONTROL = 1,
@@ -292,46 +264,7 @@ typedef struct uvc_streaming_interface {
   uint8_t bTerminalLink;
 } uvc_streaming_interface_t;
 
-/** Representation of the interface that brings data into the UVC device */
-typedef struct uvc_input_terminal {
-  struct uvc_input_terminal *prev, *next;
-  /** Index of the terminal within the device */
-  uint8_t bTerminalID;
-  /** Type of terminal (e.g., camera) */
-  enum uvc_it_type wTerminalType;
-  uint16_t wObjectiveFocalLengthMin;
-  uint16_t wObjectiveFocalLengthMax;
-  uint16_t wOcularFocalLength;
-  /** Camera controls (meaning of bits given in {uvc_ct_ctrl_selector}) */
-  uint64_t bmControls;
-} uvc_input_terminal_t;
-
-typedef struct uvc_output_terminal {
-  struct uvc_output_terminal *prev, *next;
-} uvc_output_terminal_t;
-
-/** Represents post-capture processing functions */
-typedef struct uvc_processing_unit {
-  struct uvc_processing_unit *prev, *next;
-  /** Index of the processing unit within the device */
-  uint8_t bUnitID;
-  /** Index of the terminal from which the device accepts images */
-  uint8_t bSourceID;
-  /** Processing controls (meaning of bits given in {uvc_pu_ctrl_selector}) */
-  uint64_t bmControls;
-} uvc_processing_unit_t;
-
-/** Custom processing or camera-control functions */
-typedef struct uvc_extension_unit {
-  struct uvc_extension_unit *prev, *next;
-  /** Index of the extension unit within the device */
-  uint8_t bUnitID;
-  /** GUID identifying the extension unit */
-  uint8_t guidExtensionCode[16];
-  /** Bitmap of available controls (manufacturer-dependent) */
-  uint64_t bmControls;
-} uvc_extension_unit_t;
-
+/** VideoControl interface */
 typedef struct uvc_control_interface {
   struct uvc_device_info *parent;
   struct uvc_input_terminal *input_term_descs;
