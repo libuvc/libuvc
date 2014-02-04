@@ -133,7 +133,7 @@ uvc_error_t uvc_mjpeg2rgb(uvc_frame_t *in, uvc_frame_t *out) {
   struct error_mgr jerr;
   size_t lines_read;
 
-  if (in->color_format != UVC_COLOR_FORMAT_MJPEG)
+  if (in->frame_format != UVC_FRAME_FORMAT_MJPEG)
     return UVC_ERROR_INVALID_PARAM;
 
   if (uvc_ensure_frame_size(out, in->width * in->height * 3) < 0)
@@ -141,7 +141,7 @@ uvc_error_t uvc_mjpeg2rgb(uvc_frame_t *in, uvc_frame_t *out) {
 
   out->width = in->width;
   out->height = in->height;
-  out->color_format = UVC_COLOR_FORMAT_RGB;
+  out->frame_format = UVC_FRAME_FORMAT_RGB;
   out->step = in->width * 3;
   out->sequence = in->sequence;
   out->capture_time = in->capture_time;

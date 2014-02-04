@@ -52,21 +52,21 @@ typedef enum uvc_error {
 /** Color coding of stream, transport-independent
  * @ingroup streaming
  */
-enum uvc_color_format {
-  UVC_COLOR_FORMAT_UNKNOWN = 0,
-  UVC_COLOR_FORMAT_UNCOMPRESSED,
-  UVC_COLOR_FORMAT_COMPRESSED,
+enum uvc_frame_format {
+  UVC_FRAME_FORMAT_UNKNOWN = 0,
+  UVC_FRAME_FORMAT_UNCOMPRESSED,
+  UVC_FRAME_FORMAT_COMPRESSED,
   /** YUVV/YUV2/YUV422: YUV encoding with one luminance value per pixel and
    * one UV (chrominance) pair for every two pixels.
    */
-  UVC_COLOR_FORMAT_YUYV,
-  UVC_COLOR_FORMAT_UYVY,
+  UVC_FRAME_FORMAT_YUYV,
+  UVC_FRAME_FORMAT_UYVY,
   /** 24-bit RGB */
-  UVC_COLOR_FORMAT_RGB,
-  UVC_COLOR_FORMAT_BGR,
+  UVC_FRAME_FORMAT_RGB,
+  UVC_FRAME_FORMAT_BGR,
   /** Motion-JPEG (or JPEG) encoded images */
-  UVC_COLOR_FORMAT_MJPEG,
-  UVC_COLOR_FORMAT_GRAY8
+  UVC_FRAME_FORMAT_MJPEG,
+  UVC_FRAME_FORMAT_GRAY8
 };
 
 /** UVC request code (A.8) */
@@ -288,7 +288,7 @@ typedef struct uvc_frame {
   /** Height of image in pixels */
   uint32_t height;
   /** Pixel data format */
-  enum uvc_color_format color_format;
+  enum uvc_frame_format frame_format;
   /** Number of bytes per horizontal line (undefined for compressed format) */
   size_t step;
   /** Frame number (may skip, but is strictly monotonically increasing) */
@@ -376,7 +376,7 @@ const uvc_extension_unit_t *uvc_get_extension_units(uvc_device_handle_t *devh);
 uvc_error_t uvc_get_stream_ctrl_format_size(
     uvc_device_handle_t *devh,
     uvc_stream_ctrl_t *ctrl,
-    enum uvc_color_format format,
+    enum uvc_frame_format format,
     int width, int height,
     int fps
     );

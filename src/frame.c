@@ -111,7 +111,7 @@ uvc_error_t uvc_duplicate_frame(uvc_frame_t *in, uvc_frame_t *out) {
 
   out->width = in->width;
   out->height = in->height;
-  out->color_format = in->color_format;
+  out->frame_format = in->frame_format;
   out->step = in->step;
   out->sequence = in->sequence;
   out->capture_time = in->capture_time;
@@ -155,7 +155,7 @@ uvc_error_t uvc_duplicate_frame(uvc_frame_t *in, uvc_frame_t *out) {
  * @param out RGB frame
  */
 uvc_error_t uvc_yuyv2rgb(uvc_frame_t *in, uvc_frame_t *out) {
-  if (in->color_format != UVC_COLOR_FORMAT_YUYV)
+  if (in->frame_format != UVC_FRAME_FORMAT_YUYV)
     return UVC_ERROR_INVALID_PARAM;
 
   if (uvc_ensure_frame_size(out, in->width * in->height * 3) < 0)
@@ -163,7 +163,7 @@ uvc_error_t uvc_yuyv2rgb(uvc_frame_t *in, uvc_frame_t *out) {
 
   out->width = in->width;
   out->height = in->height;
-  out->color_format = UVC_COLOR_FORMAT_RGB;
+  out->frame_format = UVC_FRAME_FORMAT_RGB;
   out->step = in->width * 3;
   out->sequence = in->sequence;
   out->capture_time = in->capture_time;
@@ -205,7 +205,7 @@ uvc_error_t uvc_yuyv2rgb(uvc_frame_t *in, uvc_frame_t *out) {
  * @param out BGR frame
  */
 uvc_error_t uvc_yuyv2bgr(uvc_frame_t *in, uvc_frame_t *out) {
-  if (in->color_format != UVC_COLOR_FORMAT_YUYV)
+  if (in->frame_format != UVC_FRAME_FORMAT_YUYV)
     return UVC_ERROR_INVALID_PARAM;
 
   if (uvc_ensure_frame_size(out, in->width * in->height * 3) < 0)
@@ -213,7 +213,7 @@ uvc_error_t uvc_yuyv2bgr(uvc_frame_t *in, uvc_frame_t *out) {
 
   out->width = in->width;
   out->height = in->height;
-  out->color_format = UVC_COLOR_FORMAT_BGR;
+  out->frame_format = UVC_FRAME_FORMAT_BGR;
   out->step = in->width * 3;
   out->sequence = in->sequence;
   out->capture_time = in->capture_time;
@@ -254,7 +254,7 @@ uvc_error_t uvc_yuyv2bgr(uvc_frame_t *in, uvc_frame_t *out) {
  * @param out RGB frame
  */
 uvc_error_t uvc_uyvy2rgb(uvc_frame_t *in, uvc_frame_t *out) {
-  if (in->color_format != UVC_COLOR_FORMAT_UYVY)
+  if (in->frame_format != UVC_FRAME_FORMAT_UYVY)
     return UVC_ERROR_INVALID_PARAM;
 
   if (uvc_ensure_frame_size(out, in->width * in->height * 3) < 0)
@@ -262,7 +262,7 @@ uvc_error_t uvc_uyvy2rgb(uvc_frame_t *in, uvc_frame_t *out) {
 
   out->width = in->width;
   out->height = in->height;
-  out->color_format = UVC_COLOR_FORMAT_RGB;
+  out->frame_format = UVC_FRAME_FORMAT_RGB;
   out->step = in->width *3;
   out->sequence = in->sequence;
   out->capture_time = in->capture_time;
@@ -303,7 +303,7 @@ uvc_error_t uvc_uyvy2rgb(uvc_frame_t *in, uvc_frame_t *out) {
  * @param out BGR frame
  */
 uvc_error_t uvc_uyvy2bgr(uvc_frame_t *in, uvc_frame_t *out) {
-  if (in->color_format != UVC_COLOR_FORMAT_UYVY)
+  if (in->frame_format != UVC_FRAME_FORMAT_UYVY)
     return UVC_ERROR_INVALID_PARAM;
 
   if (uvc_ensure_frame_size(out, in->width * in->height * 3) < 0)
@@ -311,7 +311,7 @@ uvc_error_t uvc_uyvy2bgr(uvc_frame_t *in, uvc_frame_t *out) {
 
   out->width = in->width;
   out->height = in->height;
-  out->color_format = UVC_COLOR_FORMAT_BGR;
+  out->frame_format = UVC_FRAME_FORMAT_BGR;
   out->step = in->width *3;
   out->sequence = in->sequence;
   out->capture_time = in->capture_time;
@@ -338,12 +338,12 @@ uvc_error_t uvc_uyvy2bgr(uvc_frame_t *in, uvc_frame_t *out) {
  * @param out RGB frame
  */
 uvc_error_t uvc_any2rgb(uvc_frame_t *in, uvc_frame_t *out) {
-  switch (in->color_format) {
-    case UVC_COLOR_FORMAT_YUYV:
+  switch (in->frame_format) {
+    case UVC_FRAME_FORMAT_YUYV:
       return uvc_yuyv2rgb(in, out);
-    case UVC_COLOR_FORMAT_UYVY:
+    case UVC_FRAME_FORMAT_UYVY:
       return uvc_uyvy2rgb(in, out);
-    case UVC_COLOR_FORMAT_RGB:
+    case UVC_FRAME_FORMAT_RGB:
       return uvc_duplicate_frame(in, out);
     default:
       return UVC_ERROR_NOT_SUPPORTED;
@@ -357,12 +357,12 @@ uvc_error_t uvc_any2rgb(uvc_frame_t *in, uvc_frame_t *out) {
  * @param out BGR frame
  */
 uvc_error_t uvc_any2bgr(uvc_frame_t *in, uvc_frame_t *out) {
-  switch (in->color_format) {
-    case UVC_COLOR_FORMAT_YUYV:
+  switch (in->frame_format) {
+    case UVC_FRAME_FORMAT_YUYV:
       return uvc_yuyv2bgr(in, out);
-    case UVC_COLOR_FORMAT_UYVY:
+    case UVC_FRAME_FORMAT_UYVY:
       return uvc_uyvy2bgr(in, out);
-    case UVC_COLOR_FORMAT_BGR:
+    case UVC_FRAME_FORMAT_BGR:
       return uvc_duplicate_frame(in, out);
     default:
       return UVC_ERROR_NOT_SUPPORTED;

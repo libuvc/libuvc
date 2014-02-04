@@ -99,7 +99,7 @@ int main(int argc, char **argv) {
       /* Try to negotiate a 640x480 30 fps YUYV stream profile */
       res = uvc_get_stream_ctrl_format_size(
           devh, &ctrl, /* result stored in ctrl */
-          UVC_COLOR_FORMAT_YUYV, /* YUV 422, aka YUV 4:2:2. try _COMPRESSED */
+          UVC_FRAME_FORMAT_YUYV, /* YUV 422, aka YUV 4:2:2. try _COMPRESSED */
           640, 480, 30 /* width, height, fps */
       );
 

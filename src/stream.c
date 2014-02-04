@@ -46,25 +46,25 @@ void *_uvc_user_caller(void *arg);
 void _uvc_populate_frame(uvc_stream_handle_t *strmh);
 
 struct format_table_entry {
-  enum uvc_color_format format;
+  enum uvc_frame_format format;
   uint8_t abstract_fmt;
   uint8_t guid[16];
-  enum uvc_color_format *children;
+  enum uvc_frame_format *children;
 };
 
-static enum uvc_color_format UVC_COLOR_FORMAT_UNCOMPRESSED_children[] = {
-  UVC_COLOR_FORMAT_YUYV, UVC_COLOR_FORMAT_UYVY, UVC_COLOR_FORMAT_GRAY8, 0
+static enum uvc_frame_format UVC_FRAME_FORMAT_UNCOMPRESSED_children[] = {
+  UVC_FRAME_FORMAT_YUYV, UVC_FRAME_FORMAT_UYVY, UVC_FRAME_FORMAT_GRAY8, 0
 };
 
-static enum uvc_color_format UVC_COLOR_FORMAT_YUYV_children[] = {
+static enum uvc_frame_format UVC_FRAME_FORMAT_YUYV_children[] = {
   0
 };
 
-static enum uvc_color_format UVC_COLOR_FORMAT_UYVY_children[] = {
+static enum uvc_frame_format UVC_FRAME_FORMAT_UYVY_children[] = {
   0
 };
 
-static enum uvc_color_format UVC_COLOR_FORMAT_GRAY8_children[] = {
+static enum uvc_frame_format UVC_FRAME_FORMAT_GRAY8_children[] = {
   0
 };
 
@@ -87,20 +87,20 @@ static enum uvc_color_format UVC_COLOR_FORMAT_GRAY8_children[] = {
    .children = _fmt ## _children}
 
 static struct format_table_entry _format_table[] = {
-  ABS_FMT(UVC_COLOR_FORMAT_UNCOMPRESSED),
-  FMT(UVC_COLOR_FORMAT_YUYV,
+  ABS_FMT(UVC_FRAME_FORMAT_UNCOMPRESSED),
+  FMT(UVC_FRAME_FORMAT_YUYV,
     'Y',  'U',  'Y',  '2', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71),
-  FMT(UVC_COLOR_FORMAT_UYVY,
+  FMT(UVC_FRAME_FORMAT_UYVY,
     'U',  'Y',  'V',  'Y', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71),
-  FMT(UVC_COLOR_FORMAT_GRAY8,
+  FMT(UVC_FRAME_FORMAT_GRAY8,
     'Y',  '8',  '0',  '0', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71),
-  FOURCC_FMT(UVC_COLOR_FORMAT_MJPEG,
+  FOURCC_FMT(UVC_FRAME_FORMAT_MJPEG,
     'M',  'J',  'P',  'G'),
 };
 
-static uint8_t _uvc_color_format_matches_guid(enum uvc_color_format fmt, uint8_t guid[16]) {
+static uint8_t _uvc_frame_format_matches_guid(enum uvc_frame_format fmt, uint8_t guid[16]) {
   struct format_table_entry *format;
-  enum uvc_color_format *child;
+  enum uvc_frame_format *child;
   int format_idx;
 
   for (format_idx = 0; format_idx < ARRAYSIZE(_format_table); ++format_idx) {
@@ -110,7 +110,7 @@ static uint8_t _uvc_color_format_matches_guid(enum uvc_color_format fmt, uint8_t
         return 1;
 
       for (child = format->children; *child; child++) {
-        if (_uvc_color_format_matches_guid(*child, guid))
+        if (_uvc_frame_format_matches_guid(*child, guid))
           return 1;
       }
 
@@ -121,7 +121,7 @@ static uint8_t _uvc_color_format_matches_guid(enum uvc_color_format fmt, uint8_t
   return 0;
 }
 
-static enum uvc_color_format uvc_color_format_for_guid(uint8_t guid[16]) {
+static enum uvc_frame_format uvc_frame_format_for_guid(uint8_t guid[16]) {
   struct format_table_entry *format;
   int format_idx;
 
@@ -131,7 +131,7 @@ static enum uvc_color_format uvc_color_format_for_guid(uint8_t guid[16]) {
       return format->format;
   }
 
-  return UVC_COLOR_FORMAT_UNKNOWN;
+  return UVC_FRAME_FORMAT_UNKNOWN;
 }
 
 /** @internal
@@ -300,26 +300,6 @@ uvc_frame_desc_t *uvc_find_frame_desc(uvc_device_handle_t *devh,
   return NULL;
 }
 
-/** @internal
- * @brief Get the UVC format type for a libuvc color coding
- */
-uint8_t uvc_get_desc_subtype_for_color_format(
-  	enum uvc_color_format cf, enum uvc_vs_desc_subtype *fc
-    ) {
-  switch (cf) {
-    case UVC_COLOR_FORMAT_YUYV:
-      *fc = UVC_VS_FORMAT_UNCOMPRESSED;
-      break;
-    case UVC_COLOR_FORMAT_MJPEG:
-      *fc = UVC_VS_FORMAT_MJPEG;
-      break;
-    default:
-      return 0;
-  }
-  
-  return 1;
-}
-
 /** Get a negotiated streaming control block for some common parameters.
  * @ingroup streaming
  *
@@ -333,7 +313,7 @@ uint8_t uvc_get_desc_subtype_for_color_format(
 uvc_error_t uvc_get_stream_ctrl_format_size(
     uvc_device_handle_t *devh,
     uvc_stream_ctrl_t *ctrl,
-    enum uvc_color_format cf,
+    enum uvc_frame_format cf,
     int width, int height,
     int fps) {
   uvc_streaming_interface_t *stream_if;
@@ -351,7 +331,7 @@ uvc_error_t uvc_get_stream_ctrl_format_size(
     DL_FOREACH(stream_if->format_descs, format) {
       uvc_frame_desc_t *frame;
 
-      if (!_uvc_color_format_matches_guid(cf, format->guidFormat))
+      if (!_uvc_frame_format_matches_guid(cf, format->guidFormat))
         continue;
 
       DL_FOREACH(format->frame_descs, frame) {
@@ -729,8 +709,8 @@ uvc_error_t uvc_stream_start(
   }
   format_desc = frame_desc->parent;
 
-  strmh->color_format = uvc_color_format_for_guid(format_desc->guidFormat);
-  if (strmh->color_format == UVC_COLOR_FORMAT_UNKNOWN) {
+  strmh->frame_format = uvc_frame_format_for_guid(format_desc->guidFormat);
+  if (strmh->frame_format == UVC_FRAME_FORMAT_UNKNOWN) {
     ret = UVC_ERROR_NOT_SUPPORTED;
     goto fail;
   }
@@ -936,16 +916,16 @@ void _uvc_populate_frame(uvc_stream_handle_t *strmh) {
   frame_desc = uvc_find_frame_desc(strmh->devh, strmh->cur_ctrl.bFormatIndex,
 				   strmh->cur_ctrl.bFrameIndex);
 
-  frame->color_format = strmh->color_format;
+  frame->frame_format = strmh->frame_format;
   
   frame->width = frame_desc->wWidth;
   frame->height = frame_desc->wHeight;
   
-  switch (frame->color_format) {
-  case UVC_COLOR_FORMAT_YUYV:
+  switch (frame->frame_format) {
+  case UVC_FRAME_FORMAT_YUYV:
     frame->step = frame->width * 2;
     break;
-  case UVC_COLOR_FORMAT_MJPEG:
+  case UVC_FRAME_FORMAT_MJPEG:
     frame->step = 0;
     break;
   default:
