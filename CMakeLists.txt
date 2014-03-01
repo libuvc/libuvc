@@ -6,6 +6,11 @@ if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
 endif ()
 
+if (NOT CMAKE_BUILD_TARGET)
+  message(STATUS "No target type selected, default to shared library")
+  set(CMAKE_BUILD_TARGET "Shared" CACHE STRING "" FORCE)
+endif()
+
 set(libuvc_VERSION_MAJOR 0)
 set(libuvc_VERSION_MINOR 0)
 set(libuvc_VERSION_PATCH 4)
@@ -40,7 +45,13 @@ if(JPEG_FOUND)
   SET(SOURCES ${SOURCES} src/frame-mjpeg.c)
 endif(JPEG_FOUND)
 
-add_library(uvc SHARED ${SOURCES})
+if(${CMAKE_BUILD_TARGET} MATCHES "Shared")
+  add_library(uvc SHARED ${SOURCES})
+elseif(${CMAKE_BUILD_TARGET} MATCHES "Static")
+  add_library(uvc STATIC ${SOURCES})
+else()
+  message( FATAL_ERROR "Invalid build type ${CMAKE_BUILD_TARGET}" )
+endif()
 
 configure_file(include/libuvc/libuvc_config.h.in
   ${PROJECT_BINARY_DIR}/include/libuvc/libuvc_config.h @ONLY)
@@ -61,6 +72,7 @@ target_link_libraries(uvc ${LIBUSB_LIBRARY_NAMES})
 install(TARGETS uvc
   EXPORT libuvcTargets
   LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
+  ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
   PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_PREFIX}/include/libuvc"
 )
 
