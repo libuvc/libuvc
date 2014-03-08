@@ -22,7 +22,14 @@ find_library(LIBUSB_LIBRARY_NAMES usb-1.0
 find_path(LIBUSB_INCLUDE_DIR libusb-1.0/libusb.h
 	PATHS /opt/local/include)
 
-find_package(jpeg)
+# Try to find JPEG using a module or pkg-config. If that doesn't work, search for the header.
+find_package(jpeg QUIET)
+if(NOT JPEG_FOUND)
+  find_path(JPEG_INCLUDE_DIR jpeglib.h)
+  if(JPEG_INCLUDE_DIR)
+    set(JPEG_FOUND ON)
+  endif()
+endif()
 
 SET(CMAKE_C_FLAGS_DEBUG "-g -DUVC_DEBUGGING")
 
@@ -40,10 +47,13 @@ include_directories(
 )
 
 if(JPEG_FOUND)
+  message(STATUS "Building libuvc with JPEG support.")
   include_directories(${JPEG_INCLUDE_DIR})
   SET(HAVE_JPEG TRUE)
   SET(SOURCES ${SOURCES} src/frame-mjpeg.c)
-endif(JPEG_FOUND)
+else()
+  message(WARNING "JPEG not found. libuvc will not support JPEG decoding.")
+endif()
 
 if(${CMAKE_BUILD_TARGET} MATCHES "Shared")
   add_library(uvc SHARED ${SOURCES})
