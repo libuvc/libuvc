@@ -470,7 +470,7 @@ void _uvc_iso_callback(struct libusb_transfer *transfer) {
         strmh->hold_pts = strmh->pts;
         strmh->hold_seq = strmh->seq;
 
-        pthread_cond_signal(&strmh->cb_cond);
+        pthread_cond_broadcast(&strmh->cb_cond);
         pthread_mutex_unlock(&strmh->cb_mutex);
 
         strmh->seq++;
@@ -504,15 +504,30 @@ void _uvc_iso_callback(struct libusb_transfer *transfer) {
     break;
   case LIBUSB_TRANSFER_CANCELLED: 
   case LIBUSB_TRANSFER_ERROR:
-  case LIBUSB_TRANSFER_NO_DEVICE:
+  case LIBUSB_TRANSFER_NO_DEVICE: {
+    int i;
     UVC_DEBUG("not retrying transfer, status = %d", transfer->status);
     pthread_mutex_lock(&strmh->cb_mutex);
-    pthread_cond_signal(&strmh->cb_cond);
+
+    /* Mark transfer as deleted. */
+    for(i=0; i<ARRAYSIZE(strmh->transfers); i++) {
+      if(strmh->transfers[i] == transfer) {
+        UVC_DEBUG("Freeing transfer %d (%p)", i, transfer);
+        free(transfer->buffer);
+        libusb_free_transfer(transfer);
+        strmh->transfers[i] = NULL;
+        break;
+      }
+    }
+    if(i == ARRAYSIZE(strmh->transfers)) {
+      UVC_DEBUG("transfer %p not found; not freeing!", transfer);
+    }
+
+    pthread_cond_broadcast(&strmh->cb_cond);
     pthread_mutex_unlock(&strmh->cb_mutex);
 
-    free(transfer->buffer);
-    libusb_free_transfer(transfer);
     break;
+  }
   case LIBUSB_TRANSFER_TIMED_OUT:
   case LIBUSB_TRANSFER_STALL:
   case LIBUSB_TRANSFER_OVERFLOW:
@@ -1026,24 +1041,39 @@ void uvc_stop_streaming(uvc_device_handle_t *devh) {
  * @param devh UVC device
  */
 uvc_error_t uvc_stream_stop(uvc_stream_handle_t *strmh) {
-  int transfer_idx;
+  int i;
 
   if (!strmh->running)
     return UVC_ERROR_INVALID_PARAM;
 
   strmh->running = 0;
 
-  for (transfer_idx = 0; transfer_idx < ARRAYSIZE(strmh->transfers); ++transfer_idx) {
-    if (strmh->transfers[transfer_idx]) {
-      if (libusb_cancel_transfer(strmh->transfers[transfer_idx])
-	  == LIBUSB_ERROR_NOT_FOUND) {
-	free(strmh->transfers[transfer_idx]->buffer);
-	libusb_free_transfer(strmh->transfers[transfer_idx]);
-      }
+  pthread_mutex_lock(&strmh->cb_mutex);
 
-      /* callback will free any remaining transfers as they come in */
+  for(i=0; i<ARRAYSIZE(strmh->transfers); i++) {
+    if(strmh->transfers[i] != NULL) {
+      int res = libusb_cancel_transfer(strmh->transfers[i]);
+      if(res < 0) {
+        free(strmh->transfers[i]->buffer);
+        libusb_free_transfer(strmh->transfers[i]);
+        strmh->transfers[i] = NULL;
+      }
     }
   }
+
+  /* Wait for transfers to complete/cancel */
+  do {
+    for(i=0; i<ARRAYSIZE(strmh->transfers); i++) {
+      if(strmh->transfers[i] != NULL)
+        break;
+    }
+    if(i == ARRAYSIZE(strmh->transfers))
+      break;
+    pthread_cond_wait(&strmh->cb_cond, &strmh->cb_mutex);
+  } while(1);
+  // Kick the user thread awake
+  pthread_cond_broadcast(&strmh->cb_cond);
+  pthread_mutex_unlock(&strmh->cb_mutex);
 
   /** @todo stop the actual stream, camera side? */
 
