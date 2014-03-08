@@ -39,8 +39,6 @@
 #include "libuvc/libuvc_internal.h"
 
 int uvc_already_open(uvc_context_t *ctx, struct libusb_device *usb_dev);
-uvc_error_t uvc_claim_ifs(uvc_device_handle_t *devh);
-void uvc_release_ifs(uvc_device_handle_t *devh);
 void uvc_free_devh(uvc_device_handle_t *devh);
 
 uvc_error_t uvc_get_device_info(uvc_device_t *dev, uvc_device_info_t **info);
@@ -74,6 +72,9 @@ uvc_error_t uvc_parse_vs(uvc_device_t *dev,
 			 uvc_streaming_interface_t *stream_if,
 			 const unsigned char *block, size_t block_size);
 uvc_error_t uvc_parse_vs_format_uncompressed(uvc_streaming_interface_t *stream_if,
+					     const unsigned char *block,
+					     size_t block_size);
+uvc_error_t uvc_parse_vs_format_mjpeg(uvc_streaming_interface_t *stream_if,
 					     const unsigned char *block,
 					     size_t block_size);
 uvc_error_t uvc_parse_vs_frame_uncompressed(uvc_streaming_interface_t *stream_if,
@@ -215,7 +216,10 @@ uvc_error_t uvc_open(
   if (ret != UVC_SUCCESS)
     goto fail;
 
-  ret = uvc_claim_ifs(internal_devh);
+  /* Automatically attach/detach kernel driver on supported platforms */
+  libusb_set_auto_detach_kernel_driver(usb_devh, 1);
+
+  ret = uvc_claim_if(internal_devh, internal_devh->info->ctrl_if.bInterfaceNumber);
   if (ret != UVC_SUCCESS)
     goto fail;
 
@@ -260,7 +264,7 @@ uvc_error_t uvc_open(
   return ret;
 
  fail:
-  uvc_release_ifs(internal_devh);
+  uvc_release_if(internal_devh, internal_devh->info->ctrl_if.bInterfaceNumber);
   libusb_close(usb_devh);
   uvc_unref_device(dev);
   uvc_free_devh(internal_devh);
@@ -467,10 +471,10 @@ uvc_error_t uvc_get_device_list(
   uvc_error_t ret;
   struct libusb_device **usb_dev_list;
   struct libusb_device *usb_dev;
-  size_t num_usb_devices;
+  int num_usb_devices;
 
   uvc_device_t **list_internal;
-  size_t num_uvc_devices;
+  int num_uvc_devices;
 
   /* per device */
   int dev_idx;
@@ -580,6 +584,87 @@ void uvc_free_device_list(uvc_device_t **list, uint8_t unref_devices) {
 }
 
 /**
+ * @brief Get the uvc_device_t corresponding to an open device
+ * @ingroup device
+ *
+ * @note Unref the uvc_device_t when you're done with it
+ *
+ * @param devh Device handle to an open UVC device
+ */
+uvc_device_t *uvc_get_device(uvc_device_handle_t *devh) {
+  uvc_ref_device(devh->dev);
+  return devh->dev;
+}
+
+/**
+ * @brief Get the underlying libusb device handle for an open device
+ * @ingroup device
+ *
+ * This can be used to access other interfaces on the same device, e.g.
+ * a webcam microphone.
+ *
+ * @note The libusb device handle is only valid while the UVC device is open;
+ * it will be invalidated upon calling uvc_close.
+ *
+ * @param devh UVC device handle to an open device
+ */
+libusb_device_handle *uvc_get_libusb_handle(uvc_device_handle_t *devh) {
+  return devh->usb_devh;
+}
+
+/**
+ * @brief Get input terminal descriptors for the open device.
+ *
+ * @note Do not modify the returned structure.
+ * @note The returned structure is part of a linked list. Iterate through
+ *       it by using the 'next' pointers.
+ *
+ * @param devh Device handle to an open UVC device
+ */
+const uvc_input_terminal_t *uvc_get_input_terminals(uvc_device_handle_t *devh) {
+  return devh->info->ctrl_if.input_term_descs;
+}
+
+/**
+ * @brief Get output terminal descriptors for the open device.
+ *
+ * @note Do not modify the returned structure.
+ * @note The returned structure is part of a linked list. Iterate through
+ *       it by using the 'next' pointers.
+ *
+ * @param devh Device handle to an open UVC device
+ */
+const uvc_output_terminal_t *uvc_get_output_terminals(uvc_device_handle_t *devh) {
+  return NULL; /* @todo */
+}
+
+/**
+ * @brief Get processing unit descriptors for the open device.
+ *
+ * @note Do not modify the returned structure.
+ * @note The returned structure is part of a linked list. Iterate through
+ *       it by using the 'next' pointers.
+ *
+ * @param devh Device handle to an open UVC device
+ */
+const uvc_processing_unit_t *uvc_get_processing_units(uvc_device_handle_t *devh) {
+  return devh->info->ctrl_if.processing_unit_descs;
+}
+
+/**
+ * @brief Get extension unit descriptors for the open device.
+ *
+ * @note Do not modify the returned structure.
+ * @note The returned structure is part of a linked list. Iterate through
+ *       it by using the 'next' pointers.
+ *
+ * @param devh Device handle to an open UVC device
+ */
+const uvc_extension_unit_t *uvc_get_extension_units(uvc_device_handle_t *devh) {
+  return devh->info->ctrl_if.extension_unit_descs;
+}
+
+/**
  * @brief Increment the reference count for a device
  * @ingroup device
  *
@@ -614,74 +699,43 @@ void uvc_unref_device(uvc_device_t *dev) {
 }
 
 /** @internal
- * Claim UVC interfaces, detaching kernel driver if necessary
+ * Claim a UVC interface, detaching the kernel driver if necessary.
  * @ingroup device
  *
- * @todo Use the right interface numbers...
- * @todo Make a note of detachment so we can reattach later
- *
  * @param devh UVC device handle
+ * @param idx UVC interface index
  */
-uvc_error_t uvc_claim_ifs(uvc_device_handle_t *devh) {
-  uvc_error_t ret;
+uvc_error_t uvc_claim_if(uvc_device_handle_t *devh, int idx) {
+  int ret;
 
   UVC_ENTER();
-
-  /* VideoControl interface */
-  if (libusb_kernel_driver_active(devh->usb_devh, 0)) {
-    ret = libusb_detach_kernel_driver(devh->usb_devh, 0);
-
-    if (ret != UVC_SUCCESS) {
-      UVC_EXIT(ret);
-      return ret;
-    }
-  }
-
-  ret = libusb_claim_interface(devh->usb_devh, 0);
-  
-  if (ret != UVC_SUCCESS) {
-    UVC_EXIT(ret);
-    return ret;
-  }
-
-  /* VideoStreaming interface */
-
-  if (libusb_kernel_driver_active(devh->usb_devh, 1)) {
-    ret = libusb_detach_kernel_driver(devh->usb_devh, 1);
-
-    if (ret != UVC_SUCCESS) {
-      UVC_EXIT(ret);
-      return ret;
-    }
-  }
-
-  if (ret != UVC_SUCCESS) {
-    UVC_EXIT(ret);
-    return ret;
-  }
-
-  ret = libusb_claim_interface(devh->usb_devh, 1);
+  UVC_DEBUG("claiming interface %d", idx);
+  ret = libusb_claim_interface(devh->usb_devh, idx);
 
   UVC_EXIT(ret);
   return ret;
 }
 
 /** @internal
- * Release UVC interfaces
+ * Release a UVC interface.
  * @ingroup device
  *
- * @todo Use the right interface numbers
- * @todo Reattach kernel drivers
- *
  * @param devh UVC device handle
+ * @param idx UVC interface index
  */
-void uvc_release_ifs(uvc_device_handle_t *devh) {
+uvc_error_t uvc_release_if(uvc_device_handle_t *devh, int idx) {
+  int ret;
+
   UVC_ENTER();
+  UVC_DEBUG("releasing interface %d", idx);
+  /* libusb_release_interface *should* reset the alternate setting to the first available,
+     but sometimes (e.g. on Darwin) it doesn't. Thus, we do it explicitly here.
+     This is needed to de-initialize certain cameras. */
+  libusb_set_interface_alt_setting(devh->usb_devh, idx, 0);
+  ret = libusb_release_interface(devh->usb_devh, idx);
 
-  libusb_release_interface(devh->usb_devh, 0);
-  libusb_release_interface(devh->usb_devh, 1);
-
-  UVC_EXIT_VOID();
+  UVC_EXIT(ret);
+  return ret;
 }
 
 /** @internal
@@ -714,6 +768,7 @@ uvc_error_t uvc_scan_control(uvc_device_t *dev, uvc_device_info_t *info) {
     return UVC_ERROR_INVALID_DEVICE;
   }
 
+  info->ctrl_if.bInterfaceNumber = interface_idx;
   if (if_desc->bNumEndpoints != 0) {
     info->ctrl_if.bEndpointAddress = if_desc->endpoint[0].bEndpointAddress;
   }
@@ -1005,6 +1060,35 @@ uvc_error_t uvc_parse_vs_format_uncompressed(uvc_streaming_interface_t *stream_i
 }
 
 /** @internal
+ * @brief Parse a VideoStreaming MJPEG format block.
+ * @ingroup device
+ */
+uvc_error_t uvc_parse_vs_format_mjpeg(uvc_streaming_interface_t *stream_if,
+					     const unsigned char *block,
+					     size_t block_size) {
+  UVC_ENTER();
+
+  uvc_format_desc_t *format = calloc(1, sizeof(*format));
+
+  format->parent = stream_if;
+  format->bDescriptorSubtype = block[2];
+  format->bFormatIndex = block[3];
+  memcpy(format->fourccFormat, "MJPG", 4);
+  format->bmFlags = block[5];
+  format->bBitsPerPixel = 0;
+  format->bDefaultFrameIndex = block[6];
+  format->bAspectRatioX = block[7];
+  format->bAspectRatioY = block[8];
+  format->bmInterlaceFlags = block[9];
+  format->bCopyProtect = block[10];
+
+  DL_APPEND(stream_if->format_descs, format);
+
+  UVC_EXIT(UVC_SUCCESS);
+  return UVC_SUCCESS;
+}
+
+/** @internal
  * @brief Parse a VideoStreaming uncompressed frame block.
  * @ingroup device
  */
@@ -1080,7 +1164,11 @@ uvc_error_t uvc_parse_vs(
   case UVC_VS_FORMAT_UNCOMPRESSED:
     ret = uvc_parse_vs_format_uncompressed(stream_if, block, block_size);
     break;
+  case UVC_VS_FORMAT_MJPEG:
+    ret = uvc_parse_vs_format_mjpeg(stream_if, block, block_size);
+    break;
   case UVC_VS_FRAME_UNCOMPRESSED:
+  case UVC_VS_FRAME_MJPEG:
     ret = uvc_parse_vs_frame_uncompressed(stream_if, block, block_size);
     break;
   default:
@@ -1105,10 +1193,6 @@ void uvc_free_devh(uvc_device_handle_t *devh) {
   if (devh->status_xfer)
     libusb_free_transfer(devh->status_xfer);
 
-  /* free the frame data (exists if any frames came through) */
-  if (devh->stream.frame.data)
-    free(devh->stream.frame.data);
-  
   free(devh);
 
   UVC_EXIT_VOID();
@@ -1126,10 +1210,10 @@ void uvc_close(uvc_device_handle_t *devh) {
   UVC_ENTER();
   uvc_context_t *ctx = devh->dev->ctx;
 
-  if (devh->streaming)
+  if (devh->streams)
     uvc_stop_streaming(devh);
 
-  uvc_release_ifs(devh);
+  uvc_release_if(devh, devh->info->ctrl_if.bInterfaceNumber);
 
   /* If we are managing the libusb context and this is the last open device,
    * then we need to cancel the handler thread. When we call libusb_close,
@@ -1255,13 +1339,18 @@ void uvc_process_status_xfer(uvc_device_handle_t *devh, struct libusb_transfer *
     return;  /* @todo VideoStreaming updates */
   }
 
-  UVC_DEBUG("Running user-supplied status callback");
-  devh->status_cb(status_class,
-                  event,
-                  selector,
-                  attribute,
-                  data, data_len,
-                  devh->status_user_ptr);
+  UVC_DEBUG("Event: class=%d, event=%d, selector=%d, attribute=%d, data_len=%zd",
+    status_class, event, selector, attribute, data_len);
+
+  if(devh->status_cb) {
+    UVC_DEBUG("Running user-supplied status callback");
+    devh->status_cb(status_class,
+                    event,
+                    selector,
+                    attribute,
+                    data, data_len,
+                    devh->status_user_ptr);
+  }
 
   UVC_EXIT_VOID();
 }
@@ -1283,6 +1372,11 @@ void _uvc_status_callback(struct libusb_transfer *transfer) {
     return;
   case LIBUSB_TRANSFER_COMPLETED:
     uvc_process_status_xfer(devh, transfer);
+    break;
+  case LIBUSB_TRANSFER_TIMED_OUT:
+  case LIBUSB_TRANSFER_STALL:
+  case LIBUSB_TRANSFER_OVERFLOW:
+    UVC_DEBUG("retrying transfer, status = %d", transfer->status);
     break;
   }
 

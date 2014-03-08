@@ -52,21 +52,25 @@ typedef enum uvc_error {
 /** Color coding of stream, transport-independent
  * @ingroup streaming
  */
-enum uvc_color_format {
-  UVC_COLOR_FORMAT_UNKNOWN = 0,
-  UVC_COLOR_FORMAT_UNCOMPRESSED,
-  UVC_COLOR_FORMAT_COMPRESSED,
+enum uvc_frame_format {
+  UVC_FRAME_FORMAT_UNKNOWN = 0,
+  /** Any supported format */
+  UVC_FRAME_FORMAT_ANY = 0,
+  UVC_FRAME_FORMAT_UNCOMPRESSED,
+  UVC_FRAME_FORMAT_COMPRESSED,
   /** YUVV/YUV2/YUV422: YUV encoding with one luminance value per pixel and
    * one UV (chrominance) pair for every two pixels.
    */
-  UVC_COLOR_FORMAT_YUYV,
-  UVC_COLOR_FORMAT_UYVY,
+  UVC_FRAME_FORMAT_YUYV,
+  UVC_FRAME_FORMAT_UYVY,
   /** 24-bit RGB */
-  UVC_COLOR_FORMAT_RGB,
-  UVC_COLOR_FORMAT_BGR,
+  UVC_FRAME_FORMAT_RGB,
+  UVC_FRAME_FORMAT_BGR,
   /** Motion-JPEG (or JPEG) encoded images */
-  UVC_COLOR_FORMAT_MJPEG,
-  UVC_COLOR_FORMAT_GRAY8
+  UVC_FRAME_FORMAT_MJPEG,
+  UVC_FRAME_FORMAT_GRAY8,
+  /** Number of formats understood */
+  UVC_FRAME_FORMAT_COUNT,
 };
 
 /** UVC request code (A.8) */
@@ -132,6 +136,34 @@ enum uvc_pu_ctrl_selector {
   UVC_PU_ANALOG_LOCK_STATUS_CONTROL = 0x12
 };
 
+/** USB terminal type (B.1) */
+enum uvc_term_type {
+  UVC_TT_VENDOR_SPECIFIC = 0x0100,
+  UVC_TT_STREAMING = 0x0101
+};
+
+/** Input terminal type (B.2) */
+enum uvc_it_type {
+  UVC_ITT_VENDOR_SPECIFIC = 0x0200,
+  UVC_ITT_CAMERA = 0x0201,
+  UVC_ITT_MEDIA_TRANSPORT_INPUT = 0x0202
+};
+
+/** Output terminal type (B.3) */
+enum uvc_ot_type {
+  UVC_OTT_VENDOR_SPECIFIC = 0x0300,
+  UVC_OTT_DISPLAY = 0x0301,
+  UVC_OTT_MEDIA_TRANSPORT_OUTPUT = 0x0302
+};
+
+/** External terminal type (B.4) */
+enum uvc_et_type {
+  UVC_EXTERNAL_VENDOR_SPECIFIC = 0x0400,
+  UVC_COMPOSITE_CONNECTOR = 0x0401,
+  UVC_SVIDEO_CONNECTOR = 0x0402,
+  UVC_COMPONENT_CONNECTOR = 0x0403
+};
+
 /** Context, equivalent to libusb's contexts.
  *
  * May either own a libusb context or use one that's already made.
@@ -156,6 +188,54 @@ typedef struct uvc_device uvc_device_t;
 struct uvc_device_handle;
 typedef struct uvc_device_handle uvc_device_handle_t;
 
+/** Handle on an open UVC stream.
+ *
+ * Get one of these from uvc_stream_open*().
+ * Once you uvc_stream_close() it, it will no longer be valid.
+ */
+struct uvc_stream_handle;
+typedef struct uvc_stream_handle uvc_stream_handle_t;
+
+/** Representation of the interface that brings data into the UVC device */
+typedef struct uvc_input_terminal {
+  struct uvc_input_terminal *prev, *next;
+  /** Index of the terminal within the device */
+  uint8_t bTerminalID;
+  /** Type of terminal (e.g., camera) */
+  enum uvc_it_type wTerminalType;
+  uint16_t wObjectiveFocalLengthMin;
+  uint16_t wObjectiveFocalLengthMax;
+  uint16_t wOcularFocalLength;
+  /** Camera controls (meaning of bits given in {uvc_ct_ctrl_selector}) */
+  uint64_t bmControls;
+} uvc_input_terminal_t;
+
+typedef struct uvc_output_terminal {
+  struct uvc_output_terminal *prev, *next;
+  /** @todo */
+} uvc_output_terminal_t;
+
+/** Represents post-capture processing functions */
+typedef struct uvc_processing_unit {
+  struct uvc_processing_unit *prev, *next;
+  /** Index of the processing unit within the device */
+  uint8_t bUnitID;
+  /** Index of the terminal from which the device accepts images */
+  uint8_t bSourceID;
+  /** Processing controls (meaning of bits given in {uvc_pu_ctrl_selector}) */
+  uint64_t bmControls;
+} uvc_processing_unit_t;
+
+/** Custom processing or camera-control functions */
+typedef struct uvc_extension_unit {
+  struct uvc_extension_unit *prev, *next;
+  /** Index of the extension unit within the device */
+  uint8_t bUnitID;
+  /** GUID identifying the extension unit */
+  uint8_t guidExtensionCode[16];
+  /** Bitmap of available controls (manufacturer-dependent) */
+  uint64_t bmControls;
+} uvc_extension_unit_t;
 
 enum uvc_status_class {
   UVC_STATUS_CLASS_CONTROL = 0x10,
@@ -212,7 +292,7 @@ typedef struct uvc_frame {
   /** Height of image in pixels */
   uint32_t height;
   /** Pixel data format */
-  enum uvc_color_format color_format;
+  enum uvc_frame_format frame_format;
   /** Number of bytes per horizontal line (undefined for compressed format) */
   size_t step;
   /** Frame number (may skip, but is strictly monotonically increasing) */
@@ -222,6 +302,13 @@ typedef struct uvc_frame {
   /** Handle on the device that produced the image.
    * @warning You must not call any uvc_* functions during a callback. */
   uvc_device_handle_t *source;
+  /** Is the data buffer owned by the library?
+   * If 1, the data buffer can be arbitrarily reallocated by frame conversion
+   * functions.
+   * If 0, the data buffer will not be reallocated or freed by the library.
+   * Set this field to zero if you are supplying the buffer.
+   */
+  uint8_t library_owns_data;
 } uvc_frame_t;
 
 /** A callback function to handle incoming assembled UVC frames
@@ -245,6 +332,7 @@ typedef struct uvc_stream_ctrl {
   uint32_t dwMaxVideoFrameSize;
   uint32_t dwMaxPayloadTransferSize;
   /** @todo add UVC 1.1 parameters */
+  uint8_t bInterfaceNumber;
 } uvc_stream_ctrl_t;
 
 uvc_error_t uvc_init(uvc_context_t **ctx, struct libusb_context *usb_ctx);
@@ -275,6 +363,7 @@ uvc_error_t uvc_open(
 void uvc_close(uvc_device_handle_t *devh);
 
 uvc_device_t *uvc_get_device(uvc_device_handle_t *devh);
+libusb_device_handle *uvc_get_libusb_handle(uvc_device_handle_t *devh);
 
 void uvc_ref_device(uvc_device_t *dev);
 void uvc_unref_device(uvc_device_t *dev);
@@ -283,10 +372,15 @@ void uvc_set_status_callback(uvc_device_handle_t *devh,
                              uvc_status_callback_t cb,
                              void *user_ptr);
 
+const uvc_input_terminal_t *uvc_get_input_terminals(uvc_device_handle_t *devh);
+const uvc_output_terminal_t *uvc_get_output_terminals(uvc_device_handle_t *devh);
+const uvc_processing_unit_t *uvc_get_processing_units(uvc_device_handle_t *devh);
+const uvc_extension_unit_t *uvc_get_extension_units(uvc_device_handle_t *devh);
+
 uvc_error_t uvc_get_stream_ctrl_format_size(
     uvc_device_handle_t *devh,
     uvc_stream_ctrl_t *ctrl,
-    enum uvc_color_format format,
+    enum uvc_frame_format format,
     int width, int height,
     int fps
     );
@@ -308,13 +402,24 @@ uvc_error_t uvc_start_iso_streaming(
     uvc_frame_callback_t *cb,
     void *user_ptr);
 
-uvc_error_t uvc_get_frame(
-    uvc_device_handle_t *devh,
+void uvc_stop_streaming(uvc_device_handle_t *devh);
+
+uvc_error_t uvc_stream_open_ctrl(uvc_device_handle_t *devh, uvc_stream_handle_t **strmh, uvc_stream_ctrl_t *ctrl);
+uvc_error_t uvc_stream_ctrl(uvc_stream_handle_t *strmh, uvc_stream_ctrl_t *ctrl);
+uvc_error_t uvc_stream_start(uvc_stream_handle_t *strmh,
+    uvc_frame_callback_t *cb,
+    void *user_ptr,
+    uint8_t isochronous);
+uvc_error_t uvc_stream_start_iso(uvc_stream_handle_t *strmh,
+    uvc_frame_callback_t *cb,
+    void *user_ptr);
+uvc_error_t uvc_stream_get_frame(
+    uvc_stream_handle_t *strmh,
     uvc_frame_t **frame,
     int32_t timeout_us
 );
-
-void uvc_stop_streaming(uvc_device_handle_t *devh);
+uvc_error_t uvc_stream_stop(uvc_stream_handle_t *strmh);
+void uvc_stream_close(uvc_stream_handle_t *strmh);
 
 uvc_error_t uvc_get_power_mode(uvc_device_handle_t *devh, enum uvc_device_power_mode *mode, enum uvc_req_code req_code);
 uvc_error_t uvc_set_power_mode(uvc_device_handle_t *devh, enum uvc_device_power_mode mode);
@@ -333,6 +438,10 @@ uvc_error_t uvc_set_focus_abs(uvc_device_handle_t *devh, short focus);
 uvc_error_t uvc_get_pantilt_abs(uvc_device_handle_t *devh, int *pan, int *tilt, enum uvc_req_code req_code);
 uvc_error_t uvc_set_pantilt_abs(uvc_device_handle_t *devh, int pan, int tilt);
 
+int uvc_get_ctrl_len(uvc_device_handle_t *devh, uint8_t unit, uint8_t ctrl);
+int uvc_get_ctrl(uvc_device_handle_t *devh, uint8_t unit, uint8_t ctrl, void *data, int len, enum uvc_req_code req_code);
+int uvc_set_ctrl(uvc_device_handle_t *devh, uint8_t unit, uint8_t ctrl, void *data, int len);
+
 void uvc_perror(uvc_error_t err, const char *msg);
 const char* uvc_strerror(uvc_error_t err);
 void uvc_print_diag(uvc_device_handle_t *devh, FILE *stream);
@@ -350,6 +459,10 @@ uvc_error_t uvc_any2rgb(uvc_frame_t *in, uvc_frame_t *out);
 uvc_error_t uvc_yuyv2bgr(uvc_frame_t *in, uvc_frame_t *out);
 uvc_error_t uvc_uyvy2bgr(uvc_frame_t *in, uvc_frame_t *out);
 uvc_error_t uvc_any2bgr(uvc_frame_t *in, uvc_frame_t *out);
+
+#ifdef HAVE_JPEG
+uvc_error_t uvc_mjpeg2rgb(uvc_frame_t *in, uvc_frame_t *out);
+#endif
 
 #ifdef __cplusplus
 }

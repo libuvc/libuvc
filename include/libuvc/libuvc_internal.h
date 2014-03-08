@@ -60,6 +60,11 @@
 #define UVC_EXIT(code)
 #endif
 
+/* http://stackoverflow.com/questions/19452971/array-size-macro-that-rejects-pointers */
+#define IS_INDEXABLE(arg) (sizeof(arg[0]))
+#define IS_ARRAY(arg) (IS_INDEXABLE(arg) && (((void *) &arg) == ((void *) arg)))
+#define ARRAYSIZE(arr) (sizeof(arr) / (IS_ARRAY(arr) ? sizeof(arr[0]) : 0))
+
 /** Video interface subclass code (A.2) */
 enum uvc_int_subclass_code {
   UVC_SC_UNDEFINED = 0x00,
@@ -147,34 +152,6 @@ enum uvc_vs_ctrl_selector {
   UVC_VS_SYNC_DELAY_CONTROL = 0x09
 };
 
-/** USB terminal type (B.1) */
-enum uvc_term_type {
-  UVC_TT_VENDOR_SPECIFIC = 0x0100,
-  UVC_TT_STREAMING = 0x0101
-};
-
-/** Input terminal type (B.2) */
-enum uvc_it_type {
-  UVC_ITT_VENDOR_SPECIFIC = 0x0200,
-  UVC_ITT_CAMERA = 0x0201,
-  UVC_ITT_MEDIA_TRANSPORT_INPUT = 0x0202
-};
-
-/** Output terminal type (B.3) */
-enum uvc_ot_type {
-  UVC_OTT_VENDOR_SPECIFIC = 0x0300,
-  UVC_OTT_DISPLAY = 0x0301,
-  UVC_OTT_MEDIA_TRANSPORT_OUTPUT = 0x0302
-};
-
-/** External terminal type (B.4) */
-enum uvc_et_type {
-  UVC_EXTERNAL_VENDOR_SPECIFIC = 0x0400,
-  UVC_COMPOSITE_CONNECTOR = 0x0401,
-  UVC_SVIDEO_CONNECTOR = 0x0402,
-  UVC_COMPONENT_CONNECTOR = 0x0403
-};
-
 /** Status packet type (2.4.2.2) */
 enum uvc_status_type {
   UVC_STATUS_TYPE_CONTROL = 1,
@@ -251,12 +228,15 @@ typedef struct uvc_format_desc {
   enum uvc_vs_desc_subtype bDescriptorSubtype;
   /** Identifier of this format within the VS interface's format list */
   uint8_t bFormatIndex;
+  /** Format specifier */
   union {
-    /** Format and depth specification for uncompressed stream */
-    struct {
-      uint8_t guidFormat[16];
-      uint8_t bBitsPerPixel;
-    };
+    uint8_t guidFormat[16];
+    uint8_t fourccFormat[4];
+  };
+  /** Format-specific data */
+  union {
+    /** BPP for uncompressed stream */
+    uint8_t bBitsPerPixel;
     /** Flags for JPEG stream */
     uint8_t bmFlags;
   };
@@ -284,46 +264,7 @@ typedef struct uvc_streaming_interface {
   uint8_t bTerminalLink;
 } uvc_streaming_interface_t;
 
-/** Representation of the interface that brings data into the UVC device */
-typedef struct uvc_input_terminal {
-  struct uvc_input_terminal *prev, *next;
-  /** Index of the terminal within the device */
-  uint8_t bTerminalID;
-  /** Type of terminal (e.g., camera) */
-  enum uvc_it_type wTerminalType;
-  uint16_t wObjectiveFocalLengthMin;
-  uint16_t wObjectiveFocalLengthMax;
-  uint16_t wOcularFocalLength;
-  /** Camera controls (meaning of bits given in {uvc_ct_ctrl_selector}) */
-  uint64_t bmControls;
-} uvc_input_terminal_t;
-
-typedef struct uvc_output_terminal {
-  struct uvc_output_terminal *prev, *next;
-} uvc_output_terminal_t;
-
-/** Represents post-capture processing functions */
-typedef struct uvc_processing_unit {
-  struct uvc_processing_unit *prev, *next;
-  /** Index of the processing unit within the device */
-  uint8_t bUnitID;
-  /** Index of the terminal from which the device accepts images */
-  uint8_t bSourceID;
-  /** Processing controls (meaning of bits given in {uvc_pu_ctrl_selector}) */
-  uint64_t bmControls;
-} uvc_processing_unit_t;
-
-/** Custom processing or camera-control functions */
-typedef struct uvc_extension_unit {
-  struct uvc_extension_unit *prev, *next;
-  /** Index of the extension unit within the device */
-  uint8_t bUnitID;
-  /** GUID identifying the extension unit */
-  uint8_t guidExtensionCode[16];
-  /** Bitmap of available controls (manufacturer-dependent) */
-  uint64_t bmControls;
-} uvc_extension_unit_t;
-
+/** VideoControl interface */
 typedef struct uvc_control_interface {
   struct uvc_device_info *parent;
   struct uvc_input_terminal *input_term_descs;
@@ -332,6 +273,8 @@ typedef struct uvc_control_interface {
   struct uvc_extension_unit *extension_unit_descs;
   uint16_t bcdUVC;
   uint8_t bEndpointAddress;
+  /** Interface number */
+  uint8_t bInterfaceNumber;
 } uvc_control_interface_t;
 
 struct uvc_stream_ctrl;
@@ -351,6 +294,36 @@ typedef struct uvc_device_info {
   uvc_streaming_interface_t *stream_ifs;
 } uvc_device_info_t;
 
+struct uvc_stream_handle {
+  struct uvc_device_handle *devh;
+  struct uvc_stream_handle *prev, *next;
+  struct uvc_streaming_interface *stream_if;
+
+  /** if true, stream is running (streaming video to host) */
+  uint8_t running;
+  /** Current control block */
+  struct uvc_stream_ctrl cur_ctrl;
+
+  /* listeners may only access hold*, and only when holding a 
+   * lock on cb_mutex (probably signaled with cb_cond) */
+  uint8_t fid;
+  uint32_t seq, hold_seq;
+  uint32_t pts, hold_pts;
+  uint32_t last_scr, hold_last_scr;
+  size_t got_bytes, hold_bytes;
+  uint8_t *outbuf, *holdbuf;
+  pthread_mutex_t cb_mutex;
+  pthread_cond_t cb_cond;
+  pthread_t cb_thread;
+  uint32_t last_polled_seq;
+  uvc_frame_callback_t *user_cb;
+  void *user_ptr;
+  struct libusb_transfer *transfers[5];
+  uint8_t *transfer_bufs[5];
+  struct uvc_frame frame;
+  enum uvc_frame_format frame_format;
+};
+
 /** Handle on an open UVC device
  *
  * @todo move most of this into a uvc_device struct?
@@ -366,33 +339,10 @@ struct uvc_device_handle {
   /** Function to call when we receive status updates from the camera */
   uvc_status_callback_t *status_cb;
   void *status_user_ptr;
-  /** if true, device is streaming video to host */
-  uint8_t streaming;
-  /** Current control block, valid iff streaming */
-  struct uvc_stream_ctrl cur_ctrl;
+
+  uvc_stream_handle_t *streams;
   /** Whether the camera is an iSight that sends one header per frame */
   uint8_t is_isight;
-  struct {
-    /* listeners may only access hold*, and only when holding a 
-     * lock on cb_mutex (probably signaled with cb_cond) */
-    uint8_t stop;
-    uint8_t fid;
-    uint32_t seq, hold_seq;
-    uint32_t pts, hold_pts;
-    uint32_t last_scr, hold_last_scr;
-    size_t got_bytes, hold_bytes;
-    uint8_t *outbuf, *holdbuf;
-    pthread_mutex_t cb_mutex;
-    pthread_cond_t cb_cond;
-    pthread_t cb_thread;
-    uint32_t last_polled_seq;
-    uvc_frame_callback_t *user_cb;
-    void *user_ptr;
-    struct libusb_transfer *transfers[5];
-    uint8_t *transfer_bufs[5];
-    struct uvc_frame frame;
-    enum uvc_color_format color_format;
-  } stream;
 };
 
 /** Context within which we communicate with devices */
@@ -414,6 +364,8 @@ uvc_error_t uvc_query_stream_ctrl(
     enum uvc_req_code req);
 
 void uvc_start_handler_thread(uvc_context_t *ctx);
+uvc_error_t uvc_claim_if(uvc_device_handle_t *devh, int idx);
+uvc_error_t uvc_release_if(uvc_device_handle_t *devh, int idx);
 
 #endif // !def(LIBUVC_INTERNAL_H)
 /** @endcond */
