@@ -243,8 +243,6 @@ void uvc_print_diag(uvc_device_handle_t *devh, FILE *stream) {
               }
             }
             break;
-            fprintf(stream, "\t-MJPEGFormat\n");
-            break;
           default:
             fprintf(stream, "\t-UnknownFormat\n");
         }
