@@ -58,7 +58,7 @@ enum uvc_frame_format {
   UVC_FRAME_FORMAT_ANY = 0,
   UVC_FRAME_FORMAT_UNCOMPRESSED,
   UVC_FRAME_FORMAT_COMPRESSED,
-  /** YUVV/YUV2/YUV422: YUV encoding with one luminance value per pixel and
+  /** YUYV/YUV2/YUV422: YUV encoding with one luminance value per pixel and
    * one UV (chrominance) pair for every two pixels.
    */
   UVC_FRAME_FORMAT_YUYV,
@@ -72,6 +72,18 @@ enum uvc_frame_format {
   /** Number of formats understood */
   UVC_FRAME_FORMAT_COUNT,
 };
+
+/* UVC_COLOR_FORMAT_* have been replaced with UVC_FRAME_FORMAT_*. Please use
+ * UVC_FRAME_FORMAT_* instead of using these. */
+#define UVC_COLOR_FORMAT_UNKNOWN UVC_FRAME_FORMAT_UNKNOWN
+#define UVC_COLOR_FORMAT_UNCOMPRESSED UVC_FRAME_FORMAT_UNCOMPRESSED
+#define UVC_COLOR_FORMAT_COMPRESSED UVC_FRAME_FORMAT_COMPRESSED
+#define UVC_COLOR_FORMAT_YUYV UVC_FRAME_FORMAT_YUYV
+#define UVC_COLOR_FORMAT_UYVY UVC_FRAME_FORMAT_UYVY
+#define UVC_COLOR_FORMAT_RGB UVC_FRAME_FORMAT_RGB
+#define UVC_COLOR_FORMAT_BGR UVC_FRAME_FORMAT_BGR
+#define UVC_COLOR_FORMAT_MJPEG UVC_FRAME_FORMAT_MJPEG
+#define UVC_COLOR_FORMAT_GRAY8 UVC_FRAME_FORMAT_GRAY8
 
 /** UVC request code (A.8) */
 enum uvc_req_code {
