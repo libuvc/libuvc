@@ -219,6 +219,7 @@ uvc_error_t uvc_open(
   /* Automatically attach/detach kernel driver on supported platforms */
   libusb_set_auto_detach_kernel_driver(usb_devh, 1);
 
+  UVC_DEBUG("claiming control interface %d", internal_devh->info->ctrl_if.bInterfaceNumber);
   ret = uvc_claim_if(internal_devh, internal_devh->info->ctrl_if.bInterfaceNumber);
   if (ret != UVC_SUCCESS)
     goto fail;
@@ -709,6 +710,7 @@ uvc_error_t uvc_claim_if(uvc_device_handle_t *devh, int idx) {
   int ret;
 
   UVC_ENTER();
+
   UVC_DEBUG("claiming interface %d", idx);
   ret = libusb_claim_interface(devh->usb_devh, idx);
 

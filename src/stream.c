@@ -383,6 +383,8 @@ uvc_error_t uvc_probe_stream_ctrl(
     uvc_device_handle_t *devh,
     uvc_stream_ctrl_t *ctrl) {
  
+  uvc_claim_if(devh, ctrl->bInterfaceNumber);
+
   uvc_query_stream_ctrl(
       devh, ctrl, 1, UVC_SET_CUR
   );
@@ -645,11 +647,11 @@ uvc_error_t uvc_stream_open_ctrl(uvc_device_handle_t *devh, uvc_stream_handle_t 
   strmh->stream_if = stream_if;
   strmh->frame.library_owns_data = 1;
 
-  ret = uvc_stream_ctrl(strmh, ctrl);
+  ret = uvc_claim_if(strmh->devh, strmh->stream_if->bInterfaceNumber);
   if (ret != UVC_SUCCESS)
     goto fail;
 
-  ret = uvc_claim_if(strmh->devh, strmh->stream_if->bInterfaceNumber);
+  ret = uvc_stream_ctrl(strmh, ctrl);
   if (ret != UVC_SUCCESS)
     goto fail;
 
