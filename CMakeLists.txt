@@ -28,6 +28,7 @@ if(NOT JPEG_FOUND)
   find_path(JPEG_INCLUDE_DIR jpeglib.h)
   if(JPEG_INCLUDE_DIR)
     set(JPEG_FOUND ON)
+    set(JPEG_LIBRARIES -ljpeg)
   endif()
 endif()
 
