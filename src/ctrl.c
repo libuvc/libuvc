@@ -335,7 +335,50 @@ uvc_error_t uvc_set_focus_abs(uvc_device_handle_t *devh, short focus) {
     return ret;
 }
 
-/** @todo focus_rel, focus_auto_control */
+/** @todo focus_rel */
+
+uvc_error_t uvc_get_focus_auto(uvc_device_handle_t *devh, int *state, enum uvc_req_code req_code) {
+  uint8_t data[1];
+  uvc_error_t ret;
+
+  ret = libusb_control_transfer(
+    devh->usb_devh,
+    REQ_TYPE_GET, req_code,
+    UVC_CT_FOCUS_AUTO_CONTROL << 8,
+    1 << 8,
+    data,
+    sizeof(data),
+    0);
+
+  if (ret == sizeof(data)) {
+    *state = data[0];
+    return UVC_SUCCESS;
+  } else {
+    return ret;
+  }
+}
+
+uvc_error_t uvc_set_focus_auto(uvc_device_handle_t *devh, int state) {
+  uint8_t data[1];
+  uvc_error_t ret;
+
+  data[0] = state;
+
+  ret = libusb_control_transfer(
+    devh->usb_devh,
+    REQ_TYPE_SET, UVC_SET_CUR,
+    UVC_CT_FOCUS_AUTO_CONTROL << 8,
+    1 << 8,
+    data,
+    sizeof(data),
+    0);
+
+  if (ret == sizeof(data))
+    return UVC_SUCCESS;
+  else
+    return ret;
+}
+
 /** @todo iris_abs_ctrl, iris_rel_ctrl */
 /** @todo zoom_abs, zoom_rel */
 

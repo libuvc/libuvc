@@ -447,6 +447,8 @@ uvc_error_t uvc_get_scanning_mode(uvc_device_handle_t *devh, int *step, enum uvc
 uvc_error_t uvc_set_scanning_mode(uvc_device_handle_t *devh, int mode);
 uvc_error_t uvc_get_focus_abs(uvc_device_handle_t *devh, short *focus, enum uvc_req_code req_code);
 uvc_error_t uvc_set_focus_abs(uvc_device_handle_t *devh, short focus);
+uvc_error_t uvc_get_focus_auto(uvc_device_handle_t *devh, int *state, enum uvc_req_code req_code);
+uvc_error_t uvc_set_focus_auto(uvc_device_handle_t *devh, int state);
 uvc_error_t uvc_get_pantilt_abs(uvc_device_handle_t *devh, int *pan, int *tilt, enum uvc_req_code req_code);
 uvc_error_t uvc_set_pantilt_abs(uvc_device_handle_t *devh, int pan, int tilt);
 
