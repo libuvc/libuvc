@@ -398,6 +398,32 @@ uvc_error_t uvc_probe_stream_ctrl(
 }
 
 /** @internal
+ * @brief Swap the working buffer with the presented buffer and notify consumers
+ */
+void _uvc_swap_buffers(uvc_stream_handle_t *strmh) {
+  uint8_t *tmp_buf;
+
+  pthread_mutex_lock(&strmh->cb_mutex);
+
+  /* swap the buffers */
+  tmp_buf = strmh->holdbuf;
+  strmh->hold_bytes = strmh->got_bytes;
+  strmh->holdbuf = strmh->outbuf;
+  strmh->outbuf = tmp_buf;
+  strmh->hold_last_scr = strmh->last_scr;
+  strmh->hold_pts = strmh->pts;
+  strmh->hold_seq = strmh->seq;
+
+  pthread_cond_broadcast(&strmh->cb_cond);
+  pthread_mutex_unlock(&strmh->cb_mutex);
+
+  strmh->seq++;
+  strmh->got_bytes = 0;
+  strmh->last_scr = 0;
+  strmh->pts = 0;
+}
+
+/** @internal
  * @brief Isochronous transfer callback
  * 
  * Processes stream, places frames into buffer, signals listeners
@@ -413,8 +439,8 @@ void _uvc_iso_callback(struct libusb_transfer *transfer) {
   uint8_t *pktbuf;
   uint8_t check_header;
   size_t header_len;
+  size_t data_len;
   struct libusb_iso_packet_descriptor *pkt;
-  uint8_t *tmp_buf;
 
   static uint8_t isight_tag[] = {
     0x11, 0x22, 0x33, 0x44,
@@ -459,30 +485,16 @@ void _uvc_iso_callback(struct libusb_transfer *transfer) {
         continue;
       }
 
-      /** @todo support sending the frame on EOF instead of on flip(FID) */
-      if (check_header && strmh->fid != (pktbuf[1] & 1)) {
-        pthread_mutex_lock(&strmh->cb_mutex);
-
-        /* swap the buffers */
-        tmp_buf = strmh->holdbuf;
-        strmh->hold_bytes = strmh->got_bytes;
-        strmh->holdbuf = strmh->outbuf;
-        strmh->outbuf = tmp_buf;
-        strmh->hold_last_scr = strmh->last_scr;
-        strmh->hold_pts = strmh->pts;
-        strmh->hold_seq = strmh->seq;
-
-        pthread_cond_broadcast(&strmh->cb_cond);
-        pthread_mutex_unlock(&strmh->cb_mutex);
-
-        strmh->seq++;
-        strmh->got_bytes = 0;
-        strmh->last_scr = 0;
-        strmh->pts = 0;
-        strmh->fid = pktbuf[1] & 1;
-      }
-
       if (check_header) {
+        if (strmh->fid != (pktbuf[1] & 1) && strmh->got_bytes != 0) {
+          /* The frame ID bit was flipped, but we have image data sitting
+             around from prior transfers. This means the camera didn't send
+             an EOF for the last transfer of the previous frame. */
+          _uvc_swap_buffers(strmh);
+        }
+
+        strmh->fid = pktbuf[1] & 1;
+
         if (pktbuf[1] & (1 << 2))
           strmh->pts = DW_TO_INT(pktbuf + 2);
 
@@ -498,10 +510,17 @@ void _uvc_iso_callback(struct libusb_transfer *transfer) {
         printf("bogus packet: actual_len=%d, header_len=%zd\n", pkt->actual_length, header_len);
         continue;
       }
-      if (pkt->actual_length - header_len > 0)
-        memcpy(strmh->outbuf + strmh->got_bytes, pktbuf + header_len, pkt->actual_length - header_len);
 
-      strmh->got_bytes += pkt->actual_length - header_len;
+      size_t data_len = pkt->actual_length - header_len;
+      if (data_len > 0) {
+        memcpy(strmh->outbuf + strmh->got_bytes, pktbuf + header_len, data_len);
+        strmh->got_bytes += data_len;
+      }
+
+      if ((pktbuf[1] & (1 << 1)) && strmh->got_bytes != 0) {
+        /* The EOF bit is set, so publish the complete frame */
+        _uvc_swap_buffers(strmh);
+      }
     }
     break;
   case LIBUSB_TRANSFER_CANCELLED: 
