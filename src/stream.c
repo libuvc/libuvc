@@ -548,14 +548,15 @@ void _uvc_iso_callback(struct libusb_transfer *transfer) {
  * @param ctrl Control block, processed using {uvc_probe_stream_ctrl} or
  *             {uvc_get_stream_ctrl_format_size}
  * @param cb   User callback function. See {uvc_frame_callback_t} for restrictions.
- * @param isochronous Whether to use isochronous transfers rather than bulk ones
+ * @param flags Stream setup flags, currently undefined. Set this to zero. The lower bit
+ * is reserved for backward compatibility.
  */
 uvc_error_t uvc_start_streaming(
     uvc_device_handle_t *devh,
     uvc_stream_ctrl_t *ctrl,
     uvc_frame_callback_t *cb,
     void *user_ptr,
-    uint8_t isochronous
+    uint8_t flags
 ) {
   uvc_error_t ret;
   uvc_stream_handle_t *strmh;
@@ -564,7 +565,7 @@ uvc_error_t uvc_start_streaming(
   if (ret != UVC_SUCCESS)
     return ret;
 
-  ret = uvc_stream_start(strmh, cb, user_ptr, isochronous);
+  ret = uvc_stream_start(strmh, cb, user_ptr, flags);
   if (ret != UVC_SUCCESS) {
     uvc_stream_close(strmh);
     return ret;
@@ -575,6 +576,11 @@ uvc_error_t uvc_start_streaming(
 
 /** Begin streaming video from the camera into the callback function.
  * @ingroup streaming
+ *
+ * @deprecated The stream type (bulk vs. isochronous) will be determined by the
+ * type of interface associated with the uvc_stream_ctrl_t parameter, regardless
+ * of whether the caller requests isochronous streaming. Please switch to
+ * uvc_start_streaming().
  *
  * @param devh UVC device
  * @param ctrl Control block, processed using {uvc_probe_stream_ctrl} or
@@ -587,7 +593,7 @@ uvc_error_t uvc_start_iso_streaming(
     uvc_frame_callback_t *cb,
     void *user_ptr
 ) {
-  return uvc_start_streaming(devh, ctrl, cb, user_ptr, 1);
+  return uvc_start_streaming(devh, ctrl, cb, user_ptr, 0);
 }
 
 static uvc_stream_handle_t *_uvc_get_stream_by_interface(uvc_device_handle_t *devh, int interface_idx) {
@@ -682,17 +688,19 @@ fail:
  *
  * @param strmh UVC stream
  * @param cb   User callback function. See {uvc_frame_callback_t} for restrictions.
- * @param isochronous Whether to use isochronous transfers rather than bulk ones
+ * @param flags Stream setup flags, currently undefined. Set this to zero. The lower bit
+ * is reserved for backward compatibility.
  */
 uvc_error_t uvc_stream_start(
     uvc_stream_handle_t *strmh,
     uvc_frame_callback_t *cb,
     void *user_ptr,
-    uint8_t isochronous
+    uint8_t flags
 ) {
   /* USB interface we'll be using */
   const struct libusb_interface *interface;
   int interface_id;
+  char isochronous;
   uvc_frame_desc_t *frame_desc;
   uvc_format_desc_t *format_desc;
   uvc_stream_ctrl_t *ctrl;
@@ -730,6 +738,10 @@ uvc_error_t uvc_stream_start(
   interface_id = strmh->stream_if->bInterfaceNumber;
   interface = &strmh->devh->info->config->interface[interface_id];
 
+  /* A VS interface uses isochronous transfers iff it has multiple altsettings.
+   * (UVC 1.5: 2.4.3. VideoStreaming Interface) */
+  isochronous = interface->num_altsetting > 1;
+
   if (isochronous) {
     /* For isochronous streaming, we choose an appropriate altsetting for the endpoint
      * and set up several transfers */
@@ -749,12 +761,6 @@ uvc_error_t uvc_stream_start(
     
     struct libusb_transfer *transfer;
     int transfer_id;
-
-    /* If the interface doesn't support isochronous mode, give up */
-    if (interface->num_altsetting == 0) {
-      ret = UVC_ERROR_INVALID_DEVICE;
-      goto fail;
-    }
 
     config_bytes_per_packet = strmh->cur_ctrl.dwMaxPayloadTransferSize;
 
@@ -865,16 +871,20 @@ fail:
 /** Begin streaming video from the stream into the callback function.
  * @ingroup streaming
  *
+ * @deprecated The stream type (bulk vs. isochronous) will be determined by the
+ * type of interface associated with the uvc_stream_ctrl_t parameter, regardless
+ * of whether the caller requests isochronous streaming. Please switch to
+ * uvc_stream_start().
+ *
  * @param strmh UVC stream
  * @param cb   User callback function. See {uvc_frame_callback_t} for restrictions.
- * @param isochronous Whether to use isochronous transfers rather than bulk ones
  */
 uvc_error_t uvc_stream_start_iso(
     uvc_stream_handle_t *strmh,
     uvc_frame_callback_t *cb,
     void *user_ptr
 ) {
-  return uvc_stream_start(strmh, cb, user_ptr, 1);
+  return uvc_stream_start(strmh, cb, user_ptr, 0);
 }
 
 /** @internal
