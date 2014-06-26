@@ -1,4 +1,32 @@
-Changes since 0.0.3:
+Changes in 0.0.4
+----------------
 
-- Support devices with multiple streaming interfaces
-- Support for MJPEG streams
+New features:
+ - Support devices with multiple streaming interfaces and multiple concurrent streams.
+   A new uvc_stream* API is added, along with a uvc_stream_handle type to encapsulate the
+   state of a single UVC stream. Multiple streams can run alongside each other, provided
+   your USB connection has enough bandwidth. Streams can be individually stopped and
+   resumed; the old uvc_start/stop_streaming API is still provided as a convenient way
+   to interact with the usual one-stream devices.
+ - Added support for MJPEG streams.
+ - Added functions for checking/setting autofocus mode.
+ - Added an interface to set/get arbitrary controls on units and terminals.
+ - Made the input, output, processing and extension units public.
+ - Implemented uvc_get_device and uvc_get_libusb_handle.
+ - Add a library-owned flag to uvc_frame_t so that users may allocate their own frame buffers.
+
+Bug fixes:
+ - Send frames as soon as they're received, not when the following frame arrives
+ - Fixed call to NULL when no status callback is provided.
+ - Fixed crash that occurred during shutdown if the USB device was disconnected during streaming.
+
+Miscellaneous improvements:
+ - Hid the transfer method (isochronous vs bulk) from the user. This was never really
+   selectable; the camera's streaming interface supports either bulk or isochronous
+   transfers, so now libuvc will figure out which one is appropriate. The `isochronous`
+   parameter has been converted to a `flags` parameter, which is currently unused but
+   could be used to convey up to 7 bits of stream mode information in the future.
+ - Improved the method for claiming the camera's interfaces.
+ - Renamed UVC_COLOR_FORMAT_* to UVC_FRAME_FORMAT_*. The old #defines are still available.
+ - Simplified format definition and lookup.
+ - Improved transfer status (error) handling.
