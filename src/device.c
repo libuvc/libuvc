@@ -216,9 +216,6 @@ uvc_error_t uvc_open(
   if (ret != UVC_SUCCESS)
     goto fail;
 
-  /* Automatically attach/detach kernel driver on supported platforms */
-  libusb_set_auto_detach_kernel_driver(usb_devh, 1);
-
   UVC_DEBUG("claiming control interface %d", internal_devh->info->ctrl_if.bInterfaceNumber);
   ret = uvc_claim_if(internal_devh, internal_devh->info->ctrl_if.bInterfaceNumber);
   if (ret != UVC_SUCCESS)
@@ -711,8 +708,17 @@ uvc_error_t uvc_claim_if(uvc_device_handle_t *devh, int idx) {
 
   UVC_ENTER();
 
-  UVC_DEBUG("claiming interface %d", idx);
-  ret = libusb_claim_interface(devh->usb_devh, idx);
+  /* Tell libusb to detach any active kernel drivers. libusb will keep track of whether
+   * it found a kernel driver for this interface. */
+  ret = libusb_detach_kernel_driver(devh->usb_devh, idx);
+
+  if (ret == UVC_SUCCESS || ret == LIBUSB_ERROR_NOT_FOUND || ret == LIBUSB_ERROR_NOT_SUPPORTED) {
+    UVC_DEBUG("claiming interface %d", idx);
+    ret = libusb_claim_interface(devh->usb_devh, idx);
+  } else {
+    UVC_DEBUG("not claiming interface %d: unable to detach kernel driver (%s)",
+              idx, uvc_strerror(ret));
+  }
 
   UVC_EXIT(ret);
   return ret;
@@ -735,6 +741,20 @@ uvc_error_t uvc_release_if(uvc_device_handle_t *devh, int idx) {
      This is needed to de-initialize certain cameras. */
   libusb_set_interface_alt_setting(devh->usb_devh, idx, 0);
   ret = libusb_release_interface(devh->usb_devh, idx);
+
+  if (UVC_SUCCESS == ret) {
+    /* Reattach any kernel drivers that were disabled when we claimed this interface */
+    ret = libusb_attach_kernel_driver(devh->usb_devh, idx);
+
+    if (ret == UVC_SUCCESS) {
+      UVC_DEBUG("reattached kernel driver to interface %d", idx);
+    } else if (ret == LIBUSB_ERROR_NOT_FOUND || ret == LIBUSB_ERROR_NOT_SUPPORTED) {
+      ret = UVC_SUCCESS;  /* NOT_FOUND and NOT_SUPPORTED are OK: nothing to do */
+    } else {
+      UVC_DEBUG("error reattaching kernel driver to interface %d: %s",
+                idx, uvc_strerror(ret));
+    }
+  }
 
   UVC_EXIT(ret);
   return ret;
