@@ -122,7 +122,10 @@ enum uvc_ct_ctrl_selector {
   UVC_CT_PANTILT_RELATIVE_CONTROL = 0x0e,
   UVC_CT_ROLL_ABSOLUTE_CONTROL = 0x0f,
   UVC_CT_ROLL_RELATIVE_CONTROL = 0x10,
-  UVC_CT_PRIVACY_CONTROL = 0x11
+  UVC_CT_PRIVACY_CONTROL = 0x11,
+  UVC_CT_FOCUS_SIMPLE_CONTROL = 0x12,
+  UVC_CT_DIGITAL_WINDOW_CONTROL = 0x13,
+  UVC_CT_REGION_OF_INTEREST_CONTROL = 0x14
 };
 
 /** Processing unit control selector (A.9.5) */
@@ -145,7 +148,8 @@ enum uvc_pu_ctrl_selector {
   UVC_PU_DIGITAL_MULTIPLIER_LIMIT_CONTROL = 0x0f,
   UVC_PU_HUE_AUTO_CONTROL = 0x10,
   UVC_PU_ANALOG_VIDEO_STANDARD_CONTROL = 0x11,
-  UVC_PU_ANALOG_LOCK_STATUS_CONTROL = 0x12
+  UVC_PU_ANALOG_LOCK_STATUS_CONTROL = 0x12,
+  UVC_PU_CONTRAST_AUTO_CONTROL = 0x13
 };
 
 /** USB terminal type (B.1) */
@@ -433,28 +437,134 @@ uvc_error_t uvc_stream_get_frame(
 uvc_error_t uvc_stream_stop(uvc_stream_handle_t *strmh);
 void uvc_stream_close(uvc_stream_handle_t *strmh);
 
-uvc_error_t uvc_get_power_mode(uvc_device_handle_t *devh, enum uvc_device_power_mode *mode, enum uvc_req_code req_code);
-uvc_error_t uvc_set_power_mode(uvc_device_handle_t *devh, enum uvc_device_power_mode mode);
-uvc_error_t uvc_get_ae_mode(uvc_device_handle_t *devh, int *mode, enum uvc_req_code req_code);
-uvc_error_t uvc_set_ae_mode(uvc_device_handle_t *devh, int mode);
-uvc_error_t uvc_get_ae_priority(uvc_device_handle_t *devh, uint8_t *priority, enum uvc_req_code req_code);
-uvc_error_t uvc_set_ae_priority(uvc_device_handle_t *devh, uint8_t priority);
-uvc_error_t uvc_get_exposure_abs(uvc_device_handle_t *devh, int *time, enum uvc_req_code req_code);
-uvc_error_t uvc_set_exposure_abs(uvc_device_handle_t *devh, int time);
-uvc_error_t uvc_get_exposure_rel(uvc_device_handle_t *devh, int *step, enum uvc_req_code req_code);
-uvc_error_t uvc_set_exposure_rel(uvc_device_handle_t *devh, int step);
-uvc_error_t uvc_get_scanning_mode(uvc_device_handle_t *devh, int *step, enum uvc_req_code req_code);
-uvc_error_t uvc_set_scanning_mode(uvc_device_handle_t *devh, int mode);
-uvc_error_t uvc_get_focus_abs(uvc_device_handle_t *devh, short *focus, enum uvc_req_code req_code);
-uvc_error_t uvc_set_focus_abs(uvc_device_handle_t *devh, short focus);
-uvc_error_t uvc_get_focus_auto(uvc_device_handle_t *devh, int *state, enum uvc_req_code req_code);
-uvc_error_t uvc_set_focus_auto(uvc_device_handle_t *devh, int state);
-uvc_error_t uvc_get_pantilt_abs(uvc_device_handle_t *devh, int *pan, int *tilt, enum uvc_req_code req_code);
-uvc_error_t uvc_set_pantilt_abs(uvc_device_handle_t *devh, int pan, int tilt);
-
 int uvc_get_ctrl_len(uvc_device_handle_t *devh, uint8_t unit, uint8_t ctrl);
 int uvc_get_ctrl(uvc_device_handle_t *devh, uint8_t unit, uint8_t ctrl, void *data, int len, enum uvc_req_code req_code);
 int uvc_set_ctrl(uvc_device_handle_t *devh, uint8_t unit, uint8_t ctrl, void *data, int len);
+
+uvc_error_t uvc_get_power_mode(uvc_device_handle_t *devh, enum uvc_device_power_mode *mode, enum uvc_req_code req_code);
+uvc_error_t uvc_set_power_mode(uvc_device_handle_t *devh, enum uvc_device_power_mode mode);
+
+/* AUTO-GENERATED control accessors! Update them with the output of `ctrl-gen.py decl`. */
+uvc_error_t uvc_get_scanning_mode(uvc_device_handle_t *devh, uint8_t* mode, enum uvc_req_code req_code);
+uvc_error_t uvc_set_scanning_mode(uvc_device_handle_t *devh, uint8_t mode);
+
+uvc_error_t uvc_get_ae_mode(uvc_device_handle_t *devh, uint8_t* mode, enum uvc_req_code req_code);
+uvc_error_t uvc_set_ae_mode(uvc_device_handle_t *devh, uint8_t mode);
+
+uvc_error_t uvc_get_ae_priority(uvc_device_handle_t *devh, uint8_t* priority, enum uvc_req_code req_code);
+uvc_error_t uvc_set_ae_priority(uvc_device_handle_t *devh, uint8_t priority);
+
+uvc_error_t uvc_get_exposure_abs(uvc_device_handle_t *devh, uint32_t* time, enum uvc_req_code req_code);
+uvc_error_t uvc_set_exposure_abs(uvc_device_handle_t *devh, uint32_t time);
+
+uvc_error_t uvc_get_exposure_rel(uvc_device_handle_t *devh, int8_t* step, enum uvc_req_code req_code);
+uvc_error_t uvc_set_exposure_rel(uvc_device_handle_t *devh, int8_t step);
+
+uvc_error_t uvc_get_focus_abs(uvc_device_handle_t *devh, uint16_t* focus, enum uvc_req_code req_code);
+uvc_error_t uvc_set_focus_abs(uvc_device_handle_t *devh, uint16_t focus);
+
+uvc_error_t uvc_get_focus_rel(uvc_device_handle_t *devh, int8_t* focus_rel, uint8_t* speed, enum uvc_req_code req_code);
+uvc_error_t uvc_set_focus_rel(uvc_device_handle_t *devh, int8_t focus_rel, uint8_t speed);
+
+uvc_error_t uvc_get_focus_simple_range(uvc_device_handle_t *devh, uint8_t* focus, enum uvc_req_code req_code);
+uvc_error_t uvc_set_focus_simple_range(uvc_device_handle_t *devh, uint8_t focus);
+
+uvc_error_t uvc_get_focus_auto(uvc_device_handle_t *devh, uint8_t* state, enum uvc_req_code req_code);
+uvc_error_t uvc_set_focus_auto(uvc_device_handle_t *devh, uint8_t state);
+
+uvc_error_t uvc_get_iris_abs(uvc_device_handle_t *devh, uint16_t* iris, enum uvc_req_code req_code);
+uvc_error_t uvc_set_iris_abs(uvc_device_handle_t *devh, uint16_t iris);
+
+uvc_error_t uvc_get_iris_rel(uvc_device_handle_t *devh, uint8_t* iris_rel, enum uvc_req_code req_code);
+uvc_error_t uvc_set_iris_rel(uvc_device_handle_t *devh, uint8_t iris_rel);
+
+uvc_error_t uvc_get_zoom_abs(uvc_device_handle_t *devh, uint16_t* focal_length, enum uvc_req_code req_code);
+uvc_error_t uvc_set_zoom_abs(uvc_device_handle_t *devh, uint16_t focal_length);
+
+uvc_error_t uvc_get_zoom_rel(uvc_device_handle_t *devh, int8_t* zoom_rel, uint8_t* digital_zoom, uint8_t* speed, enum uvc_req_code req_code);
+uvc_error_t uvc_set_zoom_rel(uvc_device_handle_t *devh, int8_t zoom_rel, uint8_t digital_zoom, uint8_t speed);
+
+uvc_error_t uvc_get_pantilt_abs(uvc_device_handle_t *devh, int32_t* pan, int32_t* tilt, enum uvc_req_code req_code);
+uvc_error_t uvc_set_pantilt_abs(uvc_device_handle_t *devh, int32_t pan, int32_t tilt);
+
+uvc_error_t uvc_get_pantilt_rel(uvc_device_handle_t *devh, int8_t* pan_rel, uint8_t* pan_speed, int8_t* tilt_rel, uint8_t* tilt_speed, enum uvc_req_code req_code);
+uvc_error_t uvc_set_pantilt_rel(uvc_device_handle_t *devh, int8_t pan_rel, uint8_t pan_speed, int8_t tilt_rel, uint8_t tilt_speed);
+
+uvc_error_t uvc_get_roll_abs(uvc_device_handle_t *devh, int16_t* roll, enum uvc_req_code req_code);
+uvc_error_t uvc_set_roll_abs(uvc_device_handle_t *devh, int16_t roll);
+
+uvc_error_t uvc_get_roll_rel(uvc_device_handle_t *devh, int8_t* roll_rel, uint8_t* speed, enum uvc_req_code req_code);
+uvc_error_t uvc_set_roll_rel(uvc_device_handle_t *devh, int8_t roll_rel, uint8_t speed);
+
+uvc_error_t uvc_get_privacy(uvc_device_handle_t *devh, uint8_t* privacy, enum uvc_req_code req_code);
+uvc_error_t uvc_set_privacy(uvc_device_handle_t *devh, uint8_t privacy);
+
+uvc_error_t uvc_get_digital_window(uvc_device_handle_t *devh, uint16_t* window_top, uint16_t* window_left, uint16_t* window_bottom, uint16_t* window_right, uint16_t* num_steps, uint16_t* num_steps_units, enum uvc_req_code req_code);
+uvc_error_t uvc_set_digital_window(uvc_device_handle_t *devh, uint16_t window_top, uint16_t window_left, uint16_t window_bottom, uint16_t window_right, uint16_t num_steps, uint16_t num_steps_units);
+
+uvc_error_t uvc_get_digital_roi(uvc_device_handle_t *devh, uint16_t* roi_top, uint16_t* roi_left, uint16_t* roi_bottom, uint16_t* roi_right, uint16_t* auto_controls, enum uvc_req_code req_code);
+uvc_error_t uvc_set_digital_roi(uvc_device_handle_t *devh, uint16_t roi_top, uint16_t roi_left, uint16_t roi_bottom, uint16_t roi_right, uint16_t auto_controls);
+
+uvc_error_t uvc_get_backlight_compensation(uvc_device_handle_t *devh, uint16_t* backlight_compensation, enum uvc_req_code req_code);
+uvc_error_t uvc_set_backlight_compensation(uvc_device_handle_t *devh, uint16_t backlight_compensation);
+
+uvc_error_t uvc_get_brightness(uvc_device_handle_t *devh, int16_t* brightness, enum uvc_req_code req_code);
+uvc_error_t uvc_set_brightness(uvc_device_handle_t *devh, int16_t brightness);
+
+uvc_error_t uvc_get_contrast(uvc_device_handle_t *devh, uint16_t* contrast, enum uvc_req_code req_code);
+uvc_error_t uvc_set_contrast(uvc_device_handle_t *devh, uint16_t contrast);
+
+uvc_error_t uvc_get_contrast_auto(uvc_device_handle_t *devh, uint8_t* contrast_auto, enum uvc_req_code req_code);
+uvc_error_t uvc_set_contrast_auto(uvc_device_handle_t *devh, uint8_t contrast_auto);
+
+uvc_error_t uvc_get_gain(uvc_device_handle_t *devh, uint16_t* gain, enum uvc_req_code req_code);
+uvc_error_t uvc_set_gain(uvc_device_handle_t *devh, uint16_t gain);
+
+uvc_error_t uvc_get_power_line_frequency(uvc_device_handle_t *devh, uint8_t* power_line_frequency, enum uvc_req_code req_code);
+uvc_error_t uvc_set_power_line_frequency(uvc_device_handle_t *devh, uint8_t power_line_frequency);
+
+uvc_error_t uvc_get_hue(uvc_device_handle_t *devh, int16_t* hue, enum uvc_req_code req_code);
+uvc_error_t uvc_set_hue(uvc_device_handle_t *devh, int16_t hue);
+
+uvc_error_t uvc_get_hue_auto(uvc_device_handle_t *devh, uint8_t* hue_auto, enum uvc_req_code req_code);
+uvc_error_t uvc_set_hue_auto(uvc_device_handle_t *devh, uint8_t hue_auto);
+
+uvc_error_t uvc_get_saturation(uvc_device_handle_t *devh, uint16_t* saturation, enum uvc_req_code req_code);
+uvc_error_t uvc_set_saturation(uvc_device_handle_t *devh, uint16_t saturation);
+
+uvc_error_t uvc_get_sharpness(uvc_device_handle_t *devh, uint16_t* sharpness, enum uvc_req_code req_code);
+uvc_error_t uvc_set_sharpness(uvc_device_handle_t *devh, uint16_t sharpness);
+
+uvc_error_t uvc_get_gamma(uvc_device_handle_t *devh, uint16_t* gamma, enum uvc_req_code req_code);
+uvc_error_t uvc_set_gamma(uvc_device_handle_t *devh, uint16_t gamma);
+
+uvc_error_t uvc_get_white_balance_temperature(uvc_device_handle_t *devh, uint16_t* temperature, enum uvc_req_code req_code);
+uvc_error_t uvc_set_white_balance_temperature(uvc_device_handle_t *devh, uint16_t temperature);
+
+uvc_error_t uvc_get_white_balance_temperature_auto(uvc_device_handle_t *devh, uint8_t* temperature_auto, enum uvc_req_code req_code);
+uvc_error_t uvc_set_white_balance_temperature_auto(uvc_device_handle_t *devh, uint8_t temperature_auto);
+
+uvc_error_t uvc_get_white_balance_component(uvc_device_handle_t *devh, uint16_t* blue, uint16_t* red, enum uvc_req_code req_code);
+uvc_error_t uvc_set_white_balance_component(uvc_device_handle_t *devh, uint16_t blue, uint16_t red);
+
+uvc_error_t uvc_get_white_balance_component_auto(uvc_device_handle_t *devh, uint8_t* white_balance_component_auto, enum uvc_req_code req_code);
+uvc_error_t uvc_set_white_balance_component_auto(uvc_device_handle_t *devh, uint8_t white_balance_component_auto);
+
+uvc_error_t uvc_get_digital_multiplier(uvc_device_handle_t *devh, uint16_t* multiplier_step, enum uvc_req_code req_code);
+uvc_error_t uvc_set_digital_multiplier(uvc_device_handle_t *devh, uint16_t multiplier_step);
+
+uvc_error_t uvc_get_digital_multiplier_limit(uvc_device_handle_t *devh, uint16_t* multiplier_step, enum uvc_req_code req_code);
+uvc_error_t uvc_set_digital_multiplier_limit(uvc_device_handle_t *devh, uint16_t multiplier_step);
+
+uvc_error_t uvc_get_analog_video_standard(uvc_device_handle_t *devh, uint8_t* video_standard, enum uvc_req_code req_code);
+uvc_error_t uvc_set_analog_video_standard(uvc_device_handle_t *devh, uint8_t video_standard);
+
+uvc_error_t uvc_get_analog_video_lock_status(uvc_device_handle_t *devh, uint8_t* status, enum uvc_req_code req_code);
+uvc_error_t uvc_set_analog_video_lock_status(uvc_device_handle_t *devh, uint8_t status);
+
+uvc_error_t uvc_get_input_select(uvc_device_handle_t *devh, uint8_t* selector, enum uvc_req_code req_code);
+uvc_error_t uvc_set_input_select(uvc_device_handle_t *devh, uint8_t selector);
+/* end AUTO-GENERATED control accessors */
 
 void uvc_perror(uvc_error_t err, const char *msg);
 const char* uvc_strerror(uvc_error_t err);
