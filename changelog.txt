@@ -1,4 +1,4 @@
-Changes in 0.0.5 (forthcoming)
+Changes in 0.0.5 (2014-07-19)
 ----------------
 
 New features:
@@ -8,6 +8,7 @@ New features:
 
 Bug fixes:
  - Switching to explicit kernel driver detachment since auto_detach isn't available in libusb < 1.0.16.
+ - The cmake module now looks for libuvc.dylib instead of libuvc.so on OS X.
 
 
 Changes in 0.0.4 (2014-06-26)
