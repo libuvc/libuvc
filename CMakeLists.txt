@@ -50,7 +50,7 @@ include_directories(
 if(JPEG_FOUND)
   message(STATUS "Building libuvc with JPEG support.")
   include_directories(${JPEG_INCLUDE_DIR})
-  SET(HAVE_JPEG TRUE)
+  SET(LIBUVC_HAS_JPEG TRUE)
   SET(SOURCES ${SOURCES} src/frame-mjpeg.c)
 else()
   message(WARNING "JPEG not found. libuvc will not support JPEG decoding.")
