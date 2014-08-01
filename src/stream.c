@@ -33,6 +33,7 @@
 *********************************************************************/
 /**
  * @defgroup streaming Streaming control functions
+ * @brief Tools for creating, managing and consuming video streams
  */
 
 #include "libuvc/libuvc.h"

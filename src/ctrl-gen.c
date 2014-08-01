@@ -5,7 +5,12 @@
 static const int REQ_TYPE_SET = 0x21;
 static const int REQ_TYPE_GET = 0xa1;
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the SCANNING_MODE control.
+ * @param devh UVC device handle
+ * @param[out] mode 0: interlaced, 1: progressive
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_scanning_mode(uvc_device_handle_t *devh, uint8_t* mode, enum uvc_req_code req_code) {
   uint8_t data[1];
   uvc_error_t ret;
@@ -28,7 +33,11 @@ uvc_error_t uvc_get_scanning_mode(uvc_device_handle_t *devh, uint8_t* mode, enum
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the SCANNING_MODE control.
+ * @param devh UVC device handle
+ * @param mode 0: interlaced, 1: progressive
+ */
 uvc_error_t uvc_set_scanning_mode(uvc_device_handle_t *devh, uint8_t mode) {
   uint8_t data[1];
   uvc_error_t ret;
@@ -50,7 +59,14 @@ uvc_error_t uvc_set_scanning_mode(uvc_device_handle_t *devh, uint8_t mode) {
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads camera's auto-exposure mode.
+ * 
+ * See uvc_set_ae_mode() for a description of the available modes.
+ * @param devh UVC device handle
+ * @param[out] mode 1: manual mode; 2: auto mode; 4: shutter priority mode; 8: aperture priority mode
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_ae_mode(uvc_device_handle_t *devh, uint8_t* mode, enum uvc_req_code req_code) {
   uint8_t data[1];
   uvc_error_t ret;
@@ -73,7 +89,19 @@ uvc_error_t uvc_get_ae_mode(uvc_device_handle_t *devh, uint8_t* mode, enum uvc_r
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets camera's auto-exposure mode.
+ * 
+ * Cameras may support any of the following AE modes:
+ *  * UVC_AUTO_EXPOSURE_MODE_MANUAL (1) - manual exposure time, manual iris
+ *  * UVC_AUTO_EXPOSURE_MODE_AUTO (2) - auto exposure time, auto iris
+ *  * UVC_AUTO_EXPOSURE_MODE_SHUTTER_PRIORITY (4) - manual exposure time, auto iris
+ *  * UVC_AUTO_EXPOSURE_MODE_APERTURE_PRIORITY (8) - auto exposure time, manual iris
+ * 
+ * Most cameras provide manual mode and aperture priority mode.
+ * @param devh UVC device handle
+ * @param mode 1: manual mode; 2: auto mode; 4: shutter priority mode; 8: aperture priority mode
+ */
 uvc_error_t uvc_set_ae_mode(uvc_device_handle_t *devh, uint8_t mode) {
   uint8_t data[1];
   uvc_error_t ret;
@@ -95,7 +123,13 @@ uvc_error_t uvc_set_ae_mode(uvc_device_handle_t *devh, uint8_t mode) {
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Checks whether the camera may vary the frame rate for exposure control reasons.
+ * See uvc_set_ae_priority() for a description of the `priority` field.
+ * @param devh UVC device handle
+ * @param[out] priority 0: frame rate must remain constant; 1: frame rate may be varied for AE purposes
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_ae_priority(uvc_device_handle_t *devh, uint8_t* priority, enum uvc_req_code req_code) {
   uint8_t data[1];
   uvc_error_t ret;
@@ -118,7 +152,14 @@ uvc_error_t uvc_get_ae_priority(uvc_device_handle_t *devh, uint8_t* priority, en
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Chooses whether the camera may vary the frame rate for exposure control reasons.
+ * A `priority` value of zero means the camera may not vary its frame rate. A value of 1
+ * means the frame rate is variable. This setting has no effect outside of the `auto` and
+ * `shutter_priority` auto-exposure modes.
+ * @param devh UVC device handle
+ * @param priority 0: frame rate must remain constant; 1: frame rate may be varied for AE purposes
+ */
 uvc_error_t uvc_set_ae_priority(uvc_device_handle_t *devh, uint8_t priority) {
   uint8_t data[1];
   uvc_error_t ret;
@@ -140,7 +181,14 @@ uvc_error_t uvc_set_ae_priority(uvc_device_handle_t *devh, uint8_t priority) {
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Gets the absolute exposure time.
+ * 
+ * See uvc_set_exposure_abs() for a description of the `time` field.
+ * @param devh UVC device handle
+ * @param[out] time 
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_exposure_abs(uvc_device_handle_t *devh, uint32_t* time, enum uvc_req_code req_code) {
   uint8_t data[4];
   uvc_error_t ret;
@@ -163,7 +211,15 @@ uvc_error_t uvc_get_exposure_abs(uvc_device_handle_t *devh, uint32_t* time, enum
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the absolute exposure time.
+ * 
+ * The `time` parameter should be provided in units of 0.0001 seconds (e.g., use the value 100
+ * for a 10ms exposure period). Auto exposure should be set to `manual` or `shutter_priority`
+ * before attempting to change this setting.
+ * @param devh UVC device handle
+ * @param time 
+ */
 uvc_error_t uvc_set_exposure_abs(uvc_device_handle_t *devh, uint32_t time) {
   uint8_t data[4];
   uvc_error_t ret;
@@ -185,7 +241,12 @@ uvc_error_t uvc_set_exposure_abs(uvc_device_handle_t *devh, uint32_t time) {
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the EXPOSURE_TIME_RELATIVE control.
+ * @param devh UVC device handle
+ * @param[out] step TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_exposure_rel(uvc_device_handle_t *devh, int8_t* step, enum uvc_req_code req_code) {
   uint8_t data[1];
   uvc_error_t ret;
@@ -208,7 +269,11 @@ uvc_error_t uvc_get_exposure_rel(uvc_device_handle_t *devh, int8_t* step, enum u
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the EXPOSURE_TIME_RELATIVE control.
+ * @param devh UVC device handle
+ * @param step TODO
+ */
 uvc_error_t uvc_set_exposure_rel(uvc_device_handle_t *devh, int8_t step) {
   uint8_t data[1];
   uvc_error_t ret;
@@ -230,7 +295,12 @@ uvc_error_t uvc_set_exposure_rel(uvc_device_handle_t *devh, int8_t step) {
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the FOCUS_ABSOLUTE control.
+ * @param devh UVC device handle
+ * @param[out] focus TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_focus_abs(uvc_device_handle_t *devh, uint16_t* focus, enum uvc_req_code req_code) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -253,7 +323,11 @@ uvc_error_t uvc_get_focus_abs(uvc_device_handle_t *devh, uint16_t* focus, enum u
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the FOCUS_ABSOLUTE control.
+ * @param devh UVC device handle
+ * @param focus TODO
+ */
 uvc_error_t uvc_set_focus_abs(uvc_device_handle_t *devh, uint16_t focus) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -275,7 +349,13 @@ uvc_error_t uvc_set_focus_abs(uvc_device_handle_t *devh, uint16_t focus) {
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the FOCUS_RELATIVE control.
+ * @param devh UVC device handle
+ * @param[out] focus_rel TODO
+ * @param[out] speed TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_focus_rel(uvc_device_handle_t *devh, int8_t* focus_rel, uint8_t* speed, enum uvc_req_code req_code) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -299,7 +379,12 @@ uvc_error_t uvc_get_focus_rel(uvc_device_handle_t *devh, int8_t* focus_rel, uint
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the FOCUS_RELATIVE control.
+ * @param devh UVC device handle
+ * @param focus_rel TODO
+ * @param speed TODO
+ */
 uvc_error_t uvc_set_focus_rel(uvc_device_handle_t *devh, int8_t focus_rel, uint8_t speed) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -322,7 +407,12 @@ uvc_error_t uvc_set_focus_rel(uvc_device_handle_t *devh, int8_t focus_rel, uint8
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the FOCUS_SIMPLE control.
+ * @param devh UVC device handle
+ * @param[out] focus TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_focus_simple_range(uvc_device_handle_t *devh, uint8_t* focus, enum uvc_req_code req_code) {
   uint8_t data[1];
   uvc_error_t ret;
@@ -345,7 +435,11 @@ uvc_error_t uvc_get_focus_simple_range(uvc_device_handle_t *devh, uint8_t* focus
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the FOCUS_SIMPLE control.
+ * @param devh UVC device handle
+ * @param focus TODO
+ */
 uvc_error_t uvc_set_focus_simple_range(uvc_device_handle_t *devh, uint8_t focus) {
   uint8_t data[1];
   uvc_error_t ret;
@@ -367,7 +461,12 @@ uvc_error_t uvc_set_focus_simple_range(uvc_device_handle_t *devh, uint8_t focus)
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the FOCUS_AUTO control.
+ * @param devh UVC device handle
+ * @param[out] state TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_focus_auto(uvc_device_handle_t *devh, uint8_t* state, enum uvc_req_code req_code) {
   uint8_t data[1];
   uvc_error_t ret;
@@ -390,7 +489,11 @@ uvc_error_t uvc_get_focus_auto(uvc_device_handle_t *devh, uint8_t* state, enum u
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the FOCUS_AUTO control.
+ * @param devh UVC device handle
+ * @param state TODO
+ */
 uvc_error_t uvc_set_focus_auto(uvc_device_handle_t *devh, uint8_t state) {
   uint8_t data[1];
   uvc_error_t ret;
@@ -412,7 +515,12 @@ uvc_error_t uvc_set_focus_auto(uvc_device_handle_t *devh, uint8_t state) {
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the IRIS_ABSOLUTE control.
+ * @param devh UVC device handle
+ * @param[out] iris TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_iris_abs(uvc_device_handle_t *devh, uint16_t* iris, enum uvc_req_code req_code) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -435,7 +543,11 @@ uvc_error_t uvc_get_iris_abs(uvc_device_handle_t *devh, uint16_t* iris, enum uvc
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the IRIS_ABSOLUTE control.
+ * @param devh UVC device handle
+ * @param iris TODO
+ */
 uvc_error_t uvc_set_iris_abs(uvc_device_handle_t *devh, uint16_t iris) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -457,7 +569,12 @@ uvc_error_t uvc_set_iris_abs(uvc_device_handle_t *devh, uint16_t iris) {
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the IRIS_RELATIVE control.
+ * @param devh UVC device handle
+ * @param[out] iris_rel TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_iris_rel(uvc_device_handle_t *devh, uint8_t* iris_rel, enum uvc_req_code req_code) {
   uint8_t data[1];
   uvc_error_t ret;
@@ -480,7 +597,11 @@ uvc_error_t uvc_get_iris_rel(uvc_device_handle_t *devh, uint8_t* iris_rel, enum 
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the IRIS_RELATIVE control.
+ * @param devh UVC device handle
+ * @param iris_rel TODO
+ */
 uvc_error_t uvc_set_iris_rel(uvc_device_handle_t *devh, uint8_t iris_rel) {
   uint8_t data[1];
   uvc_error_t ret;
@@ -502,7 +623,12 @@ uvc_error_t uvc_set_iris_rel(uvc_device_handle_t *devh, uint8_t iris_rel) {
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the ZOOM_ABSOLUTE control.
+ * @param devh UVC device handle
+ * @param[out] focal_length TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_zoom_abs(uvc_device_handle_t *devh, uint16_t* focal_length, enum uvc_req_code req_code) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -525,7 +651,11 @@ uvc_error_t uvc_get_zoom_abs(uvc_device_handle_t *devh, uint16_t* focal_length, 
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the ZOOM_ABSOLUTE control.
+ * @param devh UVC device handle
+ * @param focal_length TODO
+ */
 uvc_error_t uvc_set_zoom_abs(uvc_device_handle_t *devh, uint16_t focal_length) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -547,7 +677,14 @@ uvc_error_t uvc_set_zoom_abs(uvc_device_handle_t *devh, uint16_t focal_length) {
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the ZOOM_RELATIVE control.
+ * @param devh UVC device handle
+ * @param[out] zoom_rel TODO
+ * @param[out] digital_zoom TODO
+ * @param[out] speed TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_zoom_rel(uvc_device_handle_t *devh, int8_t* zoom_rel, uint8_t* digital_zoom, uint8_t* speed, enum uvc_req_code req_code) {
   uint8_t data[3];
   uvc_error_t ret;
@@ -572,7 +709,13 @@ uvc_error_t uvc_get_zoom_rel(uvc_device_handle_t *devh, int8_t* zoom_rel, uint8_
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the ZOOM_RELATIVE control.
+ * @param devh UVC device handle
+ * @param zoom_rel TODO
+ * @param digital_zoom TODO
+ * @param speed TODO
+ */
 uvc_error_t uvc_set_zoom_rel(uvc_device_handle_t *devh, int8_t zoom_rel, uint8_t digital_zoom, uint8_t speed) {
   uint8_t data[3];
   uvc_error_t ret;
@@ -596,7 +739,13 @@ uvc_error_t uvc_set_zoom_rel(uvc_device_handle_t *devh, int8_t zoom_rel, uint8_t
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the PANTILT_ABSOLUTE control.
+ * @param devh UVC device handle
+ * @param[out] pan TODO
+ * @param[out] tilt TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_pantilt_abs(uvc_device_handle_t *devh, int32_t* pan, int32_t* tilt, enum uvc_req_code req_code) {
   uint8_t data[8];
   uvc_error_t ret;
@@ -620,7 +769,12 @@ uvc_error_t uvc_get_pantilt_abs(uvc_device_handle_t *devh, int32_t* pan, int32_t
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the PANTILT_ABSOLUTE control.
+ * @param devh UVC device handle
+ * @param pan TODO
+ * @param tilt TODO
+ */
 uvc_error_t uvc_set_pantilt_abs(uvc_device_handle_t *devh, int32_t pan, int32_t tilt) {
   uint8_t data[8];
   uvc_error_t ret;
@@ -643,7 +797,15 @@ uvc_error_t uvc_set_pantilt_abs(uvc_device_handle_t *devh, int32_t pan, int32_t 
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the PANTILT_RELATIVE control.
+ * @param devh UVC device handle
+ * @param[out] pan_rel TODO
+ * @param[out] pan_speed TODO
+ * @param[out] tilt_rel TODO
+ * @param[out] tilt_speed TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_pantilt_rel(uvc_device_handle_t *devh, int8_t* pan_rel, uint8_t* pan_speed, int8_t* tilt_rel, uint8_t* tilt_speed, enum uvc_req_code req_code) {
   uint8_t data[4];
   uvc_error_t ret;
@@ -669,7 +831,14 @@ uvc_error_t uvc_get_pantilt_rel(uvc_device_handle_t *devh, int8_t* pan_rel, uint
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the PANTILT_RELATIVE control.
+ * @param devh UVC device handle
+ * @param pan_rel TODO
+ * @param pan_speed TODO
+ * @param tilt_rel TODO
+ * @param tilt_speed TODO
+ */
 uvc_error_t uvc_set_pantilt_rel(uvc_device_handle_t *devh, int8_t pan_rel, uint8_t pan_speed, int8_t tilt_rel, uint8_t tilt_speed) {
   uint8_t data[4];
   uvc_error_t ret;
@@ -694,7 +863,12 @@ uvc_error_t uvc_set_pantilt_rel(uvc_device_handle_t *devh, int8_t pan_rel, uint8
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the ROLL_ABSOLUTE control.
+ * @param devh UVC device handle
+ * @param[out] roll TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_roll_abs(uvc_device_handle_t *devh, int16_t* roll, enum uvc_req_code req_code) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -717,7 +891,11 @@ uvc_error_t uvc_get_roll_abs(uvc_device_handle_t *devh, int16_t* roll, enum uvc_
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the ROLL_ABSOLUTE control.
+ * @param devh UVC device handle
+ * @param roll TODO
+ */
 uvc_error_t uvc_set_roll_abs(uvc_device_handle_t *devh, int16_t roll) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -739,7 +917,13 @@ uvc_error_t uvc_set_roll_abs(uvc_device_handle_t *devh, int16_t roll) {
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the ROLL_RELATIVE control.
+ * @param devh UVC device handle
+ * @param[out] roll_rel TODO
+ * @param[out] speed TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_roll_rel(uvc_device_handle_t *devh, int8_t* roll_rel, uint8_t* speed, enum uvc_req_code req_code) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -763,7 +947,12 @@ uvc_error_t uvc_get_roll_rel(uvc_device_handle_t *devh, int8_t* roll_rel, uint8_
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the ROLL_RELATIVE control.
+ * @param devh UVC device handle
+ * @param roll_rel TODO
+ * @param speed TODO
+ */
 uvc_error_t uvc_set_roll_rel(uvc_device_handle_t *devh, int8_t roll_rel, uint8_t speed) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -786,7 +975,12 @@ uvc_error_t uvc_set_roll_rel(uvc_device_handle_t *devh, int8_t roll_rel, uint8_t
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the PRIVACY control.
+ * @param devh UVC device handle
+ * @param[out] privacy TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_privacy(uvc_device_handle_t *devh, uint8_t* privacy, enum uvc_req_code req_code) {
   uint8_t data[1];
   uvc_error_t ret;
@@ -809,7 +1003,11 @@ uvc_error_t uvc_get_privacy(uvc_device_handle_t *devh, uint8_t* privacy, enum uv
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the PRIVACY control.
+ * @param devh UVC device handle
+ * @param privacy TODO
+ */
 uvc_error_t uvc_set_privacy(uvc_device_handle_t *devh, uint8_t privacy) {
   uint8_t data[1];
   uvc_error_t ret;
@@ -831,7 +1029,17 @@ uvc_error_t uvc_set_privacy(uvc_device_handle_t *devh, uint8_t privacy) {
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the DIGITAL_WINDOW control.
+ * @param devh UVC device handle
+ * @param[out] window_top TODO
+ * @param[out] window_left TODO
+ * @param[out] window_bottom TODO
+ * @param[out] window_right TODO
+ * @param[out] num_steps TODO
+ * @param[out] num_steps_units TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_digital_window(uvc_device_handle_t *devh, uint16_t* window_top, uint16_t* window_left, uint16_t* window_bottom, uint16_t* window_right, uint16_t* num_steps, uint16_t* num_steps_units, enum uvc_req_code req_code) {
   uint8_t data[12];
   uvc_error_t ret;
@@ -859,7 +1067,16 @@ uvc_error_t uvc_get_digital_window(uvc_device_handle_t *devh, uint16_t* window_t
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the DIGITAL_WINDOW control.
+ * @param devh UVC device handle
+ * @param window_top TODO
+ * @param window_left TODO
+ * @param window_bottom TODO
+ * @param window_right TODO
+ * @param num_steps TODO
+ * @param num_steps_units TODO
+ */
 uvc_error_t uvc_set_digital_window(uvc_device_handle_t *devh, uint16_t window_top, uint16_t window_left, uint16_t window_bottom, uint16_t window_right, uint16_t num_steps, uint16_t num_steps_units) {
   uint8_t data[12];
   uvc_error_t ret;
@@ -886,7 +1103,16 @@ uvc_error_t uvc_set_digital_window(uvc_device_handle_t *devh, uint16_t window_to
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the REGION_OF_INTEREST control.
+ * @param devh UVC device handle
+ * @param[out] roi_top TODO
+ * @param[out] roi_left TODO
+ * @param[out] roi_bottom TODO
+ * @param[out] roi_right TODO
+ * @param[out] auto_controls TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_digital_roi(uvc_device_handle_t *devh, uint16_t* roi_top, uint16_t* roi_left, uint16_t* roi_bottom, uint16_t* roi_right, uint16_t* auto_controls, enum uvc_req_code req_code) {
   uint8_t data[10];
   uvc_error_t ret;
@@ -913,7 +1139,15 @@ uvc_error_t uvc_get_digital_roi(uvc_device_handle_t *devh, uint16_t* roi_top, ui
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the REGION_OF_INTEREST control.
+ * @param devh UVC device handle
+ * @param roi_top TODO
+ * @param roi_left TODO
+ * @param roi_bottom TODO
+ * @param roi_right TODO
+ * @param auto_controls TODO
+ */
 uvc_error_t uvc_set_digital_roi(uvc_device_handle_t *devh, uint16_t roi_top, uint16_t roi_left, uint16_t roi_bottom, uint16_t roi_right, uint16_t auto_controls) {
   uint8_t data[10];
   uvc_error_t ret;
@@ -939,7 +1173,12 @@ uvc_error_t uvc_set_digital_roi(uvc_device_handle_t *devh, uint16_t roi_top, uin
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the BACKLIGHT_COMPENSATION control.
+ * @param devh UVC device handle
+ * @param[out] backlight_compensation device-dependent backlight compensation mode; zero means backlight compensation is disabled
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_backlight_compensation(uvc_device_handle_t *devh, uint16_t* backlight_compensation, enum uvc_req_code req_code) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -962,7 +1201,11 @@ uvc_error_t uvc_get_backlight_compensation(uvc_device_handle_t *devh, uint16_t* 
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the BACKLIGHT_COMPENSATION control.
+ * @param devh UVC device handle
+ * @param backlight_compensation device-dependent backlight compensation mode; zero means backlight compensation is disabled
+ */
 uvc_error_t uvc_set_backlight_compensation(uvc_device_handle_t *devh, uint16_t backlight_compensation) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -984,7 +1227,12 @@ uvc_error_t uvc_set_backlight_compensation(uvc_device_handle_t *devh, uint16_t b
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the BRIGHTNESS control.
+ * @param devh UVC device handle
+ * @param[out] brightness TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_brightness(uvc_device_handle_t *devh, int16_t* brightness, enum uvc_req_code req_code) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -1007,7 +1255,11 @@ uvc_error_t uvc_get_brightness(uvc_device_handle_t *devh, int16_t* brightness, e
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the BRIGHTNESS control.
+ * @param devh UVC device handle
+ * @param brightness TODO
+ */
 uvc_error_t uvc_set_brightness(uvc_device_handle_t *devh, int16_t brightness) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -1029,7 +1281,12 @@ uvc_error_t uvc_set_brightness(uvc_device_handle_t *devh, int16_t brightness) {
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the CONTRAST control.
+ * @param devh UVC device handle
+ * @param[out] contrast TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_contrast(uvc_device_handle_t *devh, uint16_t* contrast, enum uvc_req_code req_code) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -1052,7 +1309,11 @@ uvc_error_t uvc_get_contrast(uvc_device_handle_t *devh, uint16_t* contrast, enum
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the CONTRAST control.
+ * @param devh UVC device handle
+ * @param contrast TODO
+ */
 uvc_error_t uvc_set_contrast(uvc_device_handle_t *devh, uint16_t contrast) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -1074,7 +1335,12 @@ uvc_error_t uvc_set_contrast(uvc_device_handle_t *devh, uint16_t contrast) {
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the CONTRAST_AUTO control.
+ * @param devh UVC device handle
+ * @param[out] contrast_auto TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_contrast_auto(uvc_device_handle_t *devh, uint8_t* contrast_auto, enum uvc_req_code req_code) {
   uint8_t data[1];
   uvc_error_t ret;
@@ -1097,7 +1363,11 @@ uvc_error_t uvc_get_contrast_auto(uvc_device_handle_t *devh, uint8_t* contrast_a
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the CONTRAST_AUTO control.
+ * @param devh UVC device handle
+ * @param contrast_auto TODO
+ */
 uvc_error_t uvc_set_contrast_auto(uvc_device_handle_t *devh, uint8_t contrast_auto) {
   uint8_t data[1];
   uvc_error_t ret;
@@ -1119,7 +1389,12 @@ uvc_error_t uvc_set_contrast_auto(uvc_device_handle_t *devh, uint8_t contrast_au
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the GAIN control.
+ * @param devh UVC device handle
+ * @param[out] gain TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_gain(uvc_device_handle_t *devh, uint16_t* gain, enum uvc_req_code req_code) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -1142,7 +1417,11 @@ uvc_error_t uvc_get_gain(uvc_device_handle_t *devh, uint16_t* gain, enum uvc_req
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the GAIN control.
+ * @param devh UVC device handle
+ * @param gain TODO
+ */
 uvc_error_t uvc_set_gain(uvc_device_handle_t *devh, uint16_t gain) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -1164,7 +1443,12 @@ uvc_error_t uvc_set_gain(uvc_device_handle_t *devh, uint16_t gain) {
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the POWER_LINE_FREQUENCY control.
+ * @param devh UVC device handle
+ * @param[out] power_line_frequency TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_power_line_frequency(uvc_device_handle_t *devh, uint8_t* power_line_frequency, enum uvc_req_code req_code) {
   uint8_t data[1];
   uvc_error_t ret;
@@ -1187,7 +1471,11 @@ uvc_error_t uvc_get_power_line_frequency(uvc_device_handle_t *devh, uint8_t* pow
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the POWER_LINE_FREQUENCY control.
+ * @param devh UVC device handle
+ * @param power_line_frequency TODO
+ */
 uvc_error_t uvc_set_power_line_frequency(uvc_device_handle_t *devh, uint8_t power_line_frequency) {
   uint8_t data[1];
   uvc_error_t ret;
@@ -1209,7 +1497,12 @@ uvc_error_t uvc_set_power_line_frequency(uvc_device_handle_t *devh, uint8_t powe
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the HUE control.
+ * @param devh UVC device handle
+ * @param[out] hue TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_hue(uvc_device_handle_t *devh, int16_t* hue, enum uvc_req_code req_code) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -1232,7 +1525,11 @@ uvc_error_t uvc_get_hue(uvc_device_handle_t *devh, int16_t* hue, enum uvc_req_co
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the HUE control.
+ * @param devh UVC device handle
+ * @param hue TODO
+ */
 uvc_error_t uvc_set_hue(uvc_device_handle_t *devh, int16_t hue) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -1254,7 +1551,12 @@ uvc_error_t uvc_set_hue(uvc_device_handle_t *devh, int16_t hue) {
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the HUE_AUTO control.
+ * @param devh UVC device handle
+ * @param[out] hue_auto TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_hue_auto(uvc_device_handle_t *devh, uint8_t* hue_auto, enum uvc_req_code req_code) {
   uint8_t data[1];
   uvc_error_t ret;
@@ -1277,7 +1579,11 @@ uvc_error_t uvc_get_hue_auto(uvc_device_handle_t *devh, uint8_t* hue_auto, enum 
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the HUE_AUTO control.
+ * @param devh UVC device handle
+ * @param hue_auto TODO
+ */
 uvc_error_t uvc_set_hue_auto(uvc_device_handle_t *devh, uint8_t hue_auto) {
   uint8_t data[1];
   uvc_error_t ret;
@@ -1299,7 +1605,12 @@ uvc_error_t uvc_set_hue_auto(uvc_device_handle_t *devh, uint8_t hue_auto) {
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the SATURATION control.
+ * @param devh UVC device handle
+ * @param[out] saturation TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_saturation(uvc_device_handle_t *devh, uint16_t* saturation, enum uvc_req_code req_code) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -1322,7 +1633,11 @@ uvc_error_t uvc_get_saturation(uvc_device_handle_t *devh, uint16_t* saturation, 
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the SATURATION control.
+ * @param devh UVC device handle
+ * @param saturation TODO
+ */
 uvc_error_t uvc_set_saturation(uvc_device_handle_t *devh, uint16_t saturation) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -1344,7 +1659,12 @@ uvc_error_t uvc_set_saturation(uvc_device_handle_t *devh, uint16_t saturation) {
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the SHARPNESS control.
+ * @param devh UVC device handle
+ * @param[out] sharpness TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_sharpness(uvc_device_handle_t *devh, uint16_t* sharpness, enum uvc_req_code req_code) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -1367,7 +1687,11 @@ uvc_error_t uvc_get_sharpness(uvc_device_handle_t *devh, uint16_t* sharpness, en
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the SHARPNESS control.
+ * @param devh UVC device handle
+ * @param sharpness TODO
+ */
 uvc_error_t uvc_set_sharpness(uvc_device_handle_t *devh, uint16_t sharpness) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -1389,7 +1713,12 @@ uvc_error_t uvc_set_sharpness(uvc_device_handle_t *devh, uint16_t sharpness) {
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the GAMMA control.
+ * @param devh UVC device handle
+ * @param[out] gamma TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_gamma(uvc_device_handle_t *devh, uint16_t* gamma, enum uvc_req_code req_code) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -1412,7 +1741,11 @@ uvc_error_t uvc_get_gamma(uvc_device_handle_t *devh, uint16_t* gamma, enum uvc_r
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the GAMMA control.
+ * @param devh UVC device handle
+ * @param gamma TODO
+ */
 uvc_error_t uvc_set_gamma(uvc_device_handle_t *devh, uint16_t gamma) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -1434,7 +1767,12 @@ uvc_error_t uvc_set_gamma(uvc_device_handle_t *devh, uint16_t gamma) {
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the WHITE_BALANCE_TEMPERATURE control.
+ * @param devh UVC device handle
+ * @param[out] temperature TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_white_balance_temperature(uvc_device_handle_t *devh, uint16_t* temperature, enum uvc_req_code req_code) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -1457,7 +1795,11 @@ uvc_error_t uvc_get_white_balance_temperature(uvc_device_handle_t *devh, uint16_
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the WHITE_BALANCE_TEMPERATURE control.
+ * @param devh UVC device handle
+ * @param temperature TODO
+ */
 uvc_error_t uvc_set_white_balance_temperature(uvc_device_handle_t *devh, uint16_t temperature) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -1479,7 +1821,12 @@ uvc_error_t uvc_set_white_balance_temperature(uvc_device_handle_t *devh, uint16_
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the WHITE_BALANCE_TEMPERATURE_AUTO control.
+ * @param devh UVC device handle
+ * @param[out] temperature_auto TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_white_balance_temperature_auto(uvc_device_handle_t *devh, uint8_t* temperature_auto, enum uvc_req_code req_code) {
   uint8_t data[1];
   uvc_error_t ret;
@@ -1502,7 +1849,11 @@ uvc_error_t uvc_get_white_balance_temperature_auto(uvc_device_handle_t *devh, ui
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the WHITE_BALANCE_TEMPERATURE_AUTO control.
+ * @param devh UVC device handle
+ * @param temperature_auto TODO
+ */
 uvc_error_t uvc_set_white_balance_temperature_auto(uvc_device_handle_t *devh, uint8_t temperature_auto) {
   uint8_t data[1];
   uvc_error_t ret;
@@ -1524,7 +1875,13 @@ uvc_error_t uvc_set_white_balance_temperature_auto(uvc_device_handle_t *devh, ui
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the WHITE_BALANCE_COMPONENT control.
+ * @param devh UVC device handle
+ * @param[out] blue TODO
+ * @param[out] red TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_white_balance_component(uvc_device_handle_t *devh, uint16_t* blue, uint16_t* red, enum uvc_req_code req_code) {
   uint8_t data[4];
   uvc_error_t ret;
@@ -1548,7 +1905,12 @@ uvc_error_t uvc_get_white_balance_component(uvc_device_handle_t *devh, uint16_t*
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the WHITE_BALANCE_COMPONENT control.
+ * @param devh UVC device handle
+ * @param blue TODO
+ * @param red TODO
+ */
 uvc_error_t uvc_set_white_balance_component(uvc_device_handle_t *devh, uint16_t blue, uint16_t red) {
   uint8_t data[4];
   uvc_error_t ret;
@@ -1571,7 +1933,12 @@ uvc_error_t uvc_set_white_balance_component(uvc_device_handle_t *devh, uint16_t 
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the WHITE_BALANCE_COMPONENT_AUTO control.
+ * @param devh UVC device handle
+ * @param[out] white_balance_component_auto TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_white_balance_component_auto(uvc_device_handle_t *devh, uint8_t* white_balance_component_auto, enum uvc_req_code req_code) {
   uint8_t data[1];
   uvc_error_t ret;
@@ -1594,7 +1961,11 @@ uvc_error_t uvc_get_white_balance_component_auto(uvc_device_handle_t *devh, uint
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the WHITE_BALANCE_COMPONENT_AUTO control.
+ * @param devh UVC device handle
+ * @param white_balance_component_auto TODO
+ */
 uvc_error_t uvc_set_white_balance_component_auto(uvc_device_handle_t *devh, uint8_t white_balance_component_auto) {
   uint8_t data[1];
   uvc_error_t ret;
@@ -1616,7 +1987,12 @@ uvc_error_t uvc_set_white_balance_component_auto(uvc_device_handle_t *devh, uint
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the DIGITAL_MULTIPLIER control.
+ * @param devh UVC device handle
+ * @param[out] multiplier_step TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_digital_multiplier(uvc_device_handle_t *devh, uint16_t* multiplier_step, enum uvc_req_code req_code) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -1639,7 +2015,11 @@ uvc_error_t uvc_get_digital_multiplier(uvc_device_handle_t *devh, uint16_t* mult
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the DIGITAL_MULTIPLIER control.
+ * @param devh UVC device handle
+ * @param multiplier_step TODO
+ */
 uvc_error_t uvc_set_digital_multiplier(uvc_device_handle_t *devh, uint16_t multiplier_step) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -1661,7 +2041,12 @@ uvc_error_t uvc_set_digital_multiplier(uvc_device_handle_t *devh, uint16_t multi
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the DIGITAL_MULTIPLIER_LIMIT control.
+ * @param devh UVC device handle
+ * @param[out] multiplier_step TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_digital_multiplier_limit(uvc_device_handle_t *devh, uint16_t* multiplier_step, enum uvc_req_code req_code) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -1684,7 +2069,11 @@ uvc_error_t uvc_get_digital_multiplier_limit(uvc_device_handle_t *devh, uint16_t
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the DIGITAL_MULTIPLIER_LIMIT control.
+ * @param devh UVC device handle
+ * @param multiplier_step TODO
+ */
 uvc_error_t uvc_set_digital_multiplier_limit(uvc_device_handle_t *devh, uint16_t multiplier_step) {
   uint8_t data[2];
   uvc_error_t ret;
@@ -1706,7 +2095,12 @@ uvc_error_t uvc_set_digital_multiplier_limit(uvc_device_handle_t *devh, uint16_t
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the ANALOG_VIDEO_STANDARD control.
+ * @param devh UVC device handle
+ * @param[out] video_standard TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_analog_video_standard(uvc_device_handle_t *devh, uint8_t* video_standard, enum uvc_req_code req_code) {
   uint8_t data[1];
   uvc_error_t ret;
@@ -1729,7 +2123,11 @@ uvc_error_t uvc_get_analog_video_standard(uvc_device_handle_t *devh, uint8_t* vi
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the ANALOG_VIDEO_STANDARD control.
+ * @param devh UVC device handle
+ * @param video_standard TODO
+ */
 uvc_error_t uvc_set_analog_video_standard(uvc_device_handle_t *devh, uint8_t video_standard) {
   uint8_t data[1];
   uvc_error_t ret;
@@ -1751,7 +2149,12 @@ uvc_error_t uvc_set_analog_video_standard(uvc_device_handle_t *devh, uint8_t vid
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the ANALOG_LOCK_STATUS control.
+ * @param devh UVC device handle
+ * @param[out] status TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_analog_video_lock_status(uvc_device_handle_t *devh, uint8_t* status, enum uvc_req_code req_code) {
   uint8_t data[1];
   uvc_error_t ret;
@@ -1774,7 +2177,11 @@ uvc_error_t uvc_get_analog_video_lock_status(uvc_device_handle_t *devh, uint8_t*
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the ANALOG_LOCK_STATUS control.
+ * @param devh UVC device handle
+ * @param status TODO
+ */
 uvc_error_t uvc_set_analog_video_lock_status(uvc_device_handle_t *devh, uint8_t status) {
   uint8_t data[1];
   uvc_error_t ret;
@@ -1796,7 +2203,12 @@ uvc_error_t uvc_set_analog_video_lock_status(uvc_device_handle_t *devh, uint8_t 
     return ret;
 }
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Reads the INPUT_SELECT control.
+ * @param devh UVC device handle
+ * @param[out] selector TODO
+ * @param req_code UVC_GET_* request to execute
+ */
 uvc_error_t uvc_get_input_select(uvc_device_handle_t *devh, uint8_t* selector, enum uvc_req_code req_code) {
   uint8_t data[1];
   uvc_error_t ret;
@@ -1819,7 +2231,11 @@ uvc_error_t uvc_get_input_select(uvc_device_handle_t *devh, uint8_t* selector, e
 }
 
 
-/** @ingroup ctrl */
+/** @ingroup ctrl
+ * @brief Sets the INPUT_SELECT control.
+ * @param devh UVC device handle
+ * @param selector TODO
+ */
 uvc_error_t uvc_set_input_select(uvc_device_handle_t *devh, uint8_t selector) {
   uint8_t data[1];
   uvc_error_t ret;

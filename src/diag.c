@@ -33,6 +33,7 @@
 *********************************************************************/
 /**
  * @defgroup diag Diagnostics
+ * @brief Interpretation of devices, error codes and negotiated stream parameters
  */
 
 #include "libuvc/libuvc.h"

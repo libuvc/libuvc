@@ -33,6 +33,7 @@
 *********************************************************************/
 /**
  * @defgroup device Device handling and enumeration
+ * @brief Support for finding, inspecting and opening UVC devices
  */
 
 #include "libuvc/libuvc.h"

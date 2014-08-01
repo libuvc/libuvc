@@ -32,7 +32,11 @@
 *  POSSIBILITY OF SUCH DAMAGE.
 *********************************************************************/
 /**
- * @defgroup ctrl Video capture and processing control
+ * @defgroup ctrl Video capture and processing controls
+ * @brief Functions for manipulating device settings and stream parameters
+ *
+ * The `uvc_get_*` and `uvc_set_*` functions are used to read and write the settings associated
+ * with the device's input, processing and output units.
  */
 
 #include "libuvc/libuvc.h"
@@ -50,6 +54,7 @@ static const int REQ_TYPE_GET = 0xa1;
  * @param ctrl Vendor-specific control number to query
  * @return On success, the length of the control as reported by the device. Otherwise,
  *   a uvc_error_t error describing the error encountered.
+ * @ingroup ctrl
  */
 int uvc_get_ctrl_len(uvc_device_handle_t *devh, uint8_t unit, uint8_t ctrl) {
   unsigned char buf[2];
@@ -80,6 +85,7 @@ int uvc_get_ctrl_len(uvc_device_handle_t *devh, uint8_t unit, uint8_t ctrl) {
  * @param req_code GET_* request to execute
  * @return On success, the number of bytes actually transferred. Otherwise,
  *   a uvc_error_t error describing the error encountered.
+ * @ingroup ctrl
  */
 int uvc_get_ctrl(uvc_device_handle_t *devh, uint8_t unit, uint8_t ctrl, void *data, int len, enum uvc_req_code req_code) {
   return libusb_control_transfer(
@@ -102,6 +108,7 @@ int uvc_get_ctrl(uvc_device_handle_t *devh, uint8_t unit, uint8_t ctrl, void *da
  * @param len Size of data buffer
  * @return On success, the number of bytes actually transferred. Otherwise,
  *   a uvc_error_t error describing the error encountered.
+ * @ingroup ctrl
  */
 int uvc_set_ctrl(uvc_device_handle_t *devh, uint8_t unit, uint8_t ctrl, void *data, int len) {
   return libusb_control_transfer(

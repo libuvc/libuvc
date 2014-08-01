@@ -33,6 +33,7 @@
 *********************************************************************/
 /**
  * @defgroup frame Frame processing
+ * @brief Tools for managing frame buffers and converting between image formats
  */
 #include "libuvc/libuvc.h"
 #include "libuvc/libuvc_internal.h"

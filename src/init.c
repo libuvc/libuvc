@@ -73,6 +73,7 @@ YUV stream from a UVC device such as a standard webcam.
 
 /**
  * @defgroup init Library initialization/deinitialization
+ * @brief Setup routines used to construct UVC access contexts
  */
 #include "libuvc/libuvc.h"
 #include "libuvc/libuvc_internal.h"
