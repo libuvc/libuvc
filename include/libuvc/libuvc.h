@@ -69,6 +69,7 @@ enum uvc_frame_format {
   /** Motion-JPEG (or JPEG) encoded images */
   UVC_FRAME_FORMAT_MJPEG,
   UVC_FRAME_FORMAT_GRAY8,
+  UVC_FRAME_FORMAT_BY8,
   /** Number of formats understood */
   UVC_FRAME_FORMAT_COUNT,
 };
