@@ -347,7 +347,8 @@ uvc_error_t uvc_get_stream_ctrl_format_size(
 
         if (frame->intervals) {
           for (interval = frame->intervals; *interval; ++interval) {
-            if (10000000 / *interval == (unsigned int) fps) {
+            // allow a fps rate of zero to mean "accept first rate available"
+            if (10000000 / *interval == (unsigned int) fps || fps == 0) {
               ctrl->bmHint = (1 << 0); /* don't negotiate interval */
               ctrl->bFormatIndex = format->bFormatIndex;
               ctrl->bFrameIndex = frame->bFrameIndex;
