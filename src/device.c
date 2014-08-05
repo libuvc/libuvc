@@ -263,7 +263,9 @@ uvc_error_t uvc_open(
   return ret;
 
  fail:
-  uvc_release_if(internal_devh, internal_devh->info->ctrl_if.bInterfaceNumber);
+  if ( internal_devh->info ) {
+    uvc_release_if(internal_devh, internal_devh->info->ctrl_if.bInterfaceNumber);
+  }
   libusb_close(usb_devh);
   uvc_unref_device(dev);
   uvc_free_devh(internal_devh);
