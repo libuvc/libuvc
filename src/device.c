@@ -410,19 +410,29 @@ uvc_error_t uvc_get_device_descriptor(
   desc_internal->idProduct = usb_desc.idProduct;
 
   if (libusb_open(dev->usb_dev, &usb_devh) == 0) {
-    unsigned char serial_buf[64];
+    unsigned char buf[64];
 
-    int serial_bytes = libusb_get_string_descriptor_ascii(
-        usb_devh, usb_desc.iSerialNumber, serial_buf, sizeof(serial_buf));
+    int bytes = libusb_get_string_descriptor_ascii(
+        usb_devh, usb_desc.iSerialNumber, buf, sizeof(buf));
 
-    if (serial_bytes > 0)
-      desc_internal->serialNumber = strdup((const char*) serial_buf);
+    if (bytes > 0)
+      desc_internal->serialNumber = strdup((const char*) buf);
 
-    /** @todo get manufacturer, product names */
+    bytes = libusb_get_string_descriptor_ascii(
+        usb_devh, usb_desc.iManufacturer, buf, sizeof(buf));
+
+    if (bytes > 0)
+      desc_internal->manufacturer = strdup((const char*) buf);
+
+    bytes = libusb_get_string_descriptor_ascii(
+        usb_devh, usb_desc.iProduct, buf, sizeof(buf));
+
+    if (bytes > 0)
+      desc_internal->product = strdup((const char*) buf);
 
     libusb_close(usb_devh);
   } else {
-    UVC_DEBUG("can't open device %04x:%04x, not fetching serial",
+    UVC_DEBUG("can't open device %04x:%04x, not fetching serial etc.",
 	      usb_desc.idVendor, usb_desc.idProduct);
   }
 
