@@ -322,7 +322,6 @@ uvc_error_t uvc_get_stream_ctrl_format_size(
     int width, int height,
     int fps) {
   uvc_streaming_interface_t *stream_if;
-  enum uvc_vs_desc_subtype format_class;
 
   /* get the max values */
   uvc_query_stream_ctrl(
@@ -523,7 +522,7 @@ void _uvc_iso_callback(struct libusb_transfer *transfer) {
         continue;
       }
 
-      size_t data_len = pkt->actual_length - header_len;
+      data_len = pkt->actual_length - header_len;
       if (data_len > 0) {
         memcpy(strmh->outbuf + strmh->got_bytes, pktbuf + header_len, data_len);
         strmh->got_bytes += data_len;
