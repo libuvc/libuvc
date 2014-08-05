@@ -1555,3 +1555,16 @@ void uvc_set_status_callback(uvc_device_handle_t *devh,
 
   UVC_EXIT_VOID();
 }
+
+
+/**
+ * @brief Get format descriptions for the open device.
+ *
+ * @note Do not modify the returned structure.
+ *
+ * @param devh Device handle to an open UVC device
+ */
+const uvc_format_desc_t *uvc_get_format_descs(uvc_device_handle_t *devh) {
+  return devh->info->stream_ifs->format_descs;
+}
+
