@@ -497,6 +497,7 @@ uvc_error_t uvc_get_device_list(
   int dev_idx;
   struct libusb_device_handle *usb_devh;
   struct libusb_config_descriptor *config;
+  struct libusb_device_descriptor desc;
   uint8_t got_interface;
 
   /* per interface */
@@ -529,20 +530,29 @@ uvc_error_t uvc_get_device_list(
     if (libusb_get_config_descriptor(usb_dev, 0, &config) != 0)
       continue;
 
-    for (interface_idx = 0;
-	 !got_interface && interface_idx < config->bNumInterfaces;
-	 ++interface_idx) {
-      interface = &config->interface[interface_idx];
+    if ( libusb_get_device_descriptor ( usb_dev, &desc ) != LIBUSB_SUCCESS )
+      continue;
 
-      for (altsetting_idx = 0;
-	   !got_interface && altsetting_idx < interface->num_altsetting;
-	   ++altsetting_idx) {
-	if_desc = &interface->altsetting[altsetting_idx];
+    // Special case for Imaging Source cameras
+    if ( 0x199e == desc.idVendor && 0x8101 == desc.idProduct ) {
+      got_interface = 1;
+    } else {
 
-	/* Video, Streaming */
-	if (if_desc->bInterfaceClass == 14 && if_desc->bInterfaceSubClass == 2) {
-	  got_interface = 1;
-	}
+      for (interface_idx = 0;
+	   !got_interface && interface_idx < config->bNumInterfaces;
+	   ++interface_idx) {
+        interface = &config->interface[interface_idx];
+
+        for (altsetting_idx = 0;
+	     !got_interface && altsetting_idx < interface->num_altsetting;
+	     ++altsetting_idx) {
+	  if_desc = &interface->altsetting[altsetting_idx];
+
+	  /* Video, Streaming */
+	  if (if_desc->bInterfaceClass == 14 && if_desc->bInterfaceSubClass == 2) {
+	    got_interface = 1;
+	  }
+        }
       }
     }
 
@@ -800,6 +810,20 @@ uvc_error_t uvc_scan_control(uvc_device_t *dev, uvc_device_info_t *info) {
 
     if (if_desc->bInterfaceClass == 14 && if_desc->bInterfaceSubClass == 1) // Video, Control
       break;
+
+    // Another TIS camera hack.
+    if ( if_desc->bInterfaceClass == 255 && if_desc->bInterfaceSubClass == 1 ) {
+      uvc_device_descriptor_t* dev_desc;
+      int haveTISCamera = 0;
+      uvc_get_device_descriptor ( dev, &dev_desc );
+      if ( dev_desc->idVendor == 0x199e && dev_desc->idProduct == 0x8101 ) {
+        haveTISCamera = 1;
+      }
+      uvc_free_device_descriptor ( dev_desc );
+      if ( haveTISCamera ) {
+        break;
+      }
+    }
 
     if_desc = NULL;
   }
