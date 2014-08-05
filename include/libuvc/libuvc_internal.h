@@ -212,6 +212,10 @@ typedef struct uvc_frame_desc {
   uint32_t dwMaxFrameInterval;
   /** Granularity of frame interval range for continuous mode (100ns) */
   uint32_t dwFrameIntervalStep;
+  /** Frame intervals */
+  uint8_t bFrameIntervalType;
+  /** number of bytes per line */
+  uint32_t dwBytesPerLine;
   /** Available frame rates, zero-terminated (in 100ns units) */
   uint32_t *intervals;
 } uvc_frame_desc_t;
@@ -228,6 +232,7 @@ typedef struct uvc_format_desc {
   enum uvc_vs_desc_subtype bDescriptorSubtype;
   /** Identifier of this format within the VS interface's format list */
   uint8_t bFormatIndex;
+  uint8_t bNumFrameDescriptors;
   /** Format specifier */
   union {
     uint8_t guidFormat[16];
@@ -246,6 +251,7 @@ typedef struct uvc_format_desc {
   uint8_t bAspectRatioY;
   uint8_t bmInterlaceFlags;
   uint8_t bCopyProtect;
+  uint8_t bVariableSize;
   /** Available frame specifications for this format */
   struct uvc_frame_desc *frame_descs;
 } uvc_format_desc_t;
