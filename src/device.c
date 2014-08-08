@@ -1264,7 +1264,7 @@ uvc_error_t uvc_parse_vs_frame_uncompressed(uvc_streaming_interface_t *stream_if
   frame->dwMaxBitRate = DW_TO_INT(&block[13]);
   frame->dwMaxVideoFrameBufferSize = DW_TO_INT(&block[17]);
   frame->dwDefaultFrameInterval = DW_TO_INT(&block[21]);
-  // frame->bFrameIntervalType = block[25];
+  frame->bFrameIntervalType = block[25];
 
   if (block[25] == 0) {
     frame->dwMinFrameInterval = DW_TO_INT(&block[26]);
