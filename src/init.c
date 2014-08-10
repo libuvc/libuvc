@@ -38,10 +38,10 @@
 for USB Video Class (UVC) devices, such as consumer webcams.
 
 \section features Features
-\li Asynchronous video streaming (device to host) in isochronous mode
-\li Synchronous streaming API (but only isochronous streaming is available)
-\li Read/write access to standard device settings
-\li Conversion between various RGB and YUV formats
+\li UVC device \ref device "discovery and management" API
+\li \ref streaming "Video streaming" (device to host) with asynchronous/callback and synchronous/polling modes
+\li Read/write access to standard \ref ctrl "device settings"
+\li \ref frame "Conversion" between various formats: RGB, YUV, JPEG, etc.
 \li Tested on Mac and Linux, portable to Windows and some BSDs
 
 \section roadmap Roadmap
