@@ -1,0 +1,518 @@
+units:
+  camera_terminal:
+    type: standard
+    description: Standard camera input terminal (captures images from sensor)
+    control_prefix: CT
+    controls:
+      scanning_mode:
+        control: SCANNING_MODE
+        length: 1
+        fields:
+          mode:
+            type: int
+            position: 0
+            length: 1
+            doc: '0: interlaced, 1: progressive'
+      ae_mode:
+        control: AE_MODE
+        length: 1
+        fields:
+          mode:
+            type: int
+            position: 0
+            length: 1
+            doc: '1: manual mode; 2: auto mode; 4: shutter priority mode; 8: aperture
+              priority mode'
+        doc:
+          get: |-
+            @brief Reads camera's auto-exposure mode.
+
+            See uvc_set_ae_mode() for a description of the available modes.
+          set: |-
+            @brief Sets camera's auto-exposure mode.
+
+            Cameras may support any of the following AE modes:
+             * UVC_AUTO_EXPOSURE_MODE_MANUAL (1) - manual exposure time, manual iris
+             * UVC_AUTO_EXPOSURE_MODE_AUTO (2) - auto exposure time, auto iris
+             * UVC_AUTO_EXPOSURE_MODE_SHUTTER_PRIORITY (4) - manual exposure time, auto iris
+             * UVC_AUTO_EXPOSURE_MODE_APERTURE_PRIORITY (8) - auto exposure time, manual iris
+
+            Most cameras provide manual mode and aperture priority mode.
+      ae_priority:
+        control: AE_PRIORITY
+        length: 1
+        fields:
+          priority:
+            type: int
+            position: 0
+            length: 1
+            doc: '0: frame rate must remain constant; 1: frame rate may be varied
+              for AE purposes'
+        doc:
+          get: |-
+            @brief Checks whether the camera may vary the frame rate for exposure control reasons.
+            See uvc_set_ae_priority() for a description of the `priority` field.
+          set: |-
+            @brief Chooses whether the camera may vary the frame rate for exposure control reasons.
+            A `priority` value of zero means the camera may not vary its frame rate. A value of 1
+            means the frame rate is variable. This setting has no effect outside of the `auto` and
+            `shutter_priority` auto-exposure modes.
+      exposure_abs:
+        control: EXPOSURE_TIME_ABSOLUTE
+        length: 4
+        fields:
+          time:
+            type: int
+            position: 0
+            length: 4
+            doc: ''
+        doc:
+          get: |-
+            @brief Gets the absolute exposure time.
+
+            See uvc_set_exposure_abs() for a description of the `time` field.
+          set: |-
+            @brief Sets the absolute exposure time.
+
+            The `time` parameter should be provided in units of 0.0001 seconds (e.g., use the value 100
+            for a 10ms exposure period). Auto exposure should be set to `manual` or `shutter_priority`
+            before attempting to change this setting.
+      exposure_rel:
+        control: EXPOSURE_TIME_RELATIVE
+        length: 1
+        fields:
+          step:
+            type: int
+            position: 0
+            length: 1
+            signed: true
+            doc: number of steps by which to change the exposure time, or zero to
+              set the default exposure time
+        doc: '@brief {gets_sets} the exposure time relative to the current setting.'
+      focus_abs:
+        control: FOCUS_ABSOLUTE
+        length: 2
+        fields:
+          focus:
+            type: int
+            position: 0
+            length: 2
+            doc: focal target distance in millimeters
+        doc: '@brief {gets_sets} the distance at which an object is optimally focused.'
+      focus_rel:
+        control: FOCUS_RELATIVE
+        length: 2
+        fields:
+          focus_rel:
+            type: int
+            position: 0
+            length: 1
+            signed: true
+            doc: TODO
+          speed:
+            type: int
+            position: 1
+            length: 1
+            doc: TODO
+      focus_simple_range:
+        control: FOCUS_SIMPLE
+        length: 1
+        fields:
+          focus:
+            type: int
+            position: 0
+            length: 1
+            doc: TODO
+      focus_auto:
+        control: FOCUS_AUTO
+        length: 1
+        fields:
+          state:
+            type: int
+            position: 0
+            length: 1
+            doc: TODO
+      iris_abs:
+        control: IRIS_ABSOLUTE
+        length: 2
+        fields:
+          iris:
+            type: int
+            position: 0
+            length: 2
+            doc: TODO
+      iris_rel:
+        control: IRIS_RELATIVE
+        length: 1
+        fields:
+          iris_rel:
+            type: int
+            position: 0
+            length: 1
+            doc: TODO
+      zoom_abs:
+        control: ZOOM_ABSOLUTE
+        length: 2
+        fields:
+          focal_length:
+            type: int
+            position: 0
+            length: 2
+            doc: TODO
+      zoom_rel:
+        control: ZOOM_RELATIVE
+        length: 3
+        fields:
+          zoom_rel:
+            type: int
+            position: 0
+            length: 1
+            signed: true
+            doc: TODO
+          digital_zoom:
+            type: int
+            position: 1
+            length: 1
+            doc: TODO
+          speed:
+            type: int
+            position: 2
+            length: 1
+            doc: TODO
+      pantilt_abs:
+        control: PANTILT_ABSOLUTE
+        length: 8
+        fields:
+          pan:
+            type: int
+            position: 0
+            length: 4
+            signed: true
+            doc: TODO
+          tilt:
+            type: int
+            position: 4
+            length: 4
+            signed: true
+            doc: TODO
+      pantilt_rel:
+        control: PANTILT_RELATIVE
+        length: 4
+        fields:
+          pan_rel:
+            type: int
+            position: 0
+            length: 1
+            signed: true
+            doc: TODO
+          pan_speed:
+            type: int
+            position: 1
+            length: 1
+            doc: TODO
+          tilt_rel:
+            type: int
+            position: 2
+            length: 1
+            signed: true
+            doc: TODO
+          tilt_speed:
+            type: int
+            position: 3
+            length: 1
+            doc: TODO
+      roll_abs:
+        control: ROLL_ABSOLUTE
+        length: 2
+        fields:
+          roll:
+            type: int
+            position: 0
+            length: 2
+            signed: true
+            doc: TODO
+      roll_rel:
+        control: ROLL_RELATIVE
+        length: 2
+        fields:
+          roll_rel:
+            type: int
+            position: 0
+            length: 1
+            signed: true
+            doc: TODO
+          speed:
+            type: int
+            position: 1
+            length: 1
+            doc: TODO
+      privacy:
+        control: PRIVACY
+        length: 1
+        fields:
+          privacy:
+            type: int
+            position: 0
+            length: 1
+            doc: TODO
+      digital_window:
+        control: DIGITAL_WINDOW
+        length: 12
+        fields:
+          window_top:
+            type: int
+            position: 0
+            length: 2
+            doc: TODO
+          window_left:
+            type: int
+            position: 2
+            length: 2
+            doc: TODO
+          window_bottom:
+            type: int
+            position: 4
+            length: 2
+            doc: TODO
+          window_right:
+            type: int
+            position: 6
+            length: 2
+            doc: TODO
+          num_steps:
+            type: int
+            position: 8
+            length: 2
+            doc: TODO
+          num_steps_units:
+            type: int
+            position: 10
+            length: 2
+            doc: TODO
+      digital_roi:
+        control: REGION_OF_INTEREST
+        length: 10
+        fields:
+          roi_top:
+            type: int
+            position: 0
+            length: 2
+            doc: TODO
+          roi_left:
+            type: int
+            position: 2
+            length: 2
+            doc: TODO
+          roi_bottom:
+            type: int
+            position: 4
+            length: 2
+            doc: TODO
+          roi_right:
+            type: int
+            position: 6
+            length: 2
+            doc: TODO
+          auto_controls:
+            type: int
+            position: 8
+            length: 2
+            doc: TODO
+  processing_unit:
+    type: standard
+    description: Standard processing unit (processes images between other units)
+    control_prefix: PU
+    controls:
+      backlight_compensation:
+        control: BACKLIGHT_COMPENSATION
+        length: 2
+        fields:
+          backlight_compensation:
+            type: int
+            position: 0
+            length: 2
+            doc: device-dependent backlight compensation mode; zero means backlight
+              compensation is disabled
+      brightness:
+        control: BRIGHTNESS
+        length: 2
+        fields:
+          brightness:
+            type: int
+            position: 0
+            length: 2
+            signed: true
+            doc: TODO
+      contrast:
+        control: CONTRAST
+        length: 2
+        fields:
+          contrast:
+            type: int
+            position: 0
+            length: 2
+            doc: TODO
+      contrast_auto:
+        control: CONTRAST_AUTO
+        length: 1
+        fields:
+          contrast_auto:
+            type: int
+            position: 0
+            length: 1
+            doc: TODO
+      gain:
+        control: GAIN
+        length: 2
+        fields:
+          gain:
+            type: int
+            position: 0
+            length: 2
+            doc: TODO
+      power_line_frequency:
+        control: POWER_LINE_FREQUENCY
+        length: 1
+        fields:
+          power_line_frequency:
+            type: int
+            position: 0
+            length: 1
+            doc: TODO
+      hue:
+        control: HUE
+        length: 2
+        fields:
+          hue:
+            type: int
+            position: 0
+            length: 2
+            signed: true
+            doc: TODO
+      hue_auto:
+        control: HUE_AUTO
+        length: 1
+        fields:
+          hue_auto:
+            type: int
+            position: 0
+            length: 1
+            doc: TODO
+      saturation:
+        control: SATURATION
+        length: 2
+        fields:
+          saturation:
+            type: int
+            position: 0
+            length: 2
+            doc: TODO
+      sharpness:
+        control: SHARPNESS
+        length: 2
+        fields:
+          sharpness:
+            type: int
+            position: 0
+            length: 2
+            doc: TODO
+      gamma:
+        control: GAMMA
+        length: 2
+        fields:
+          gamma:
+            type: int
+            position: 0
+            length: 2
+            doc: TODO
+      white_balance_temperature:
+        control: WHITE_BALANCE_TEMPERATURE
+        length: 2
+        fields:
+          temperature:
+            type: int
+            position: 0
+            length: 2
+            doc: TODO
+      white_balance_temperature_auto:
+        control: WHITE_BALANCE_TEMPERATURE_AUTO
+        length: 1
+        fields:
+          temperature_auto:
+            type: int
+            position: 0
+            length: 1
+            doc: TODO
+      white_balance_component:
+        control: WHITE_BALANCE_COMPONENT
+        length: 4
+        fields:
+          blue:
+            type: int
+            position: 0
+            length: 2
+            doc: TODO
+          red:
+            type: int
+            position: 2
+            length: 2
+            doc: TODO
+      white_balance_component_auto:
+        control: WHITE_BALANCE_COMPONENT_AUTO
+        length: 1
+        fields:
+          white_balance_component_auto:
+            type: int
+            position: 0
+            length: 1
+            doc: TODO
+      digital_multiplier:
+        control: DIGITAL_MULTIPLIER
+        length: 2
+        fields:
+          multiplier_step:
+            type: int
+            position: 0
+            length: 2
+            doc: TODO
+      digital_multiplier_limit:
+        control: DIGITAL_MULTIPLIER_LIMIT
+        length: 2
+        fields:
+          multiplier_step:
+            type: int
+            position: 0
+            length: 2
+            doc: TODO
+      analog_video_standard:
+        control: ANALOG_VIDEO_STANDARD
+        length: 1
+        fields:
+          video_standard:
+            type: int
+            position: 0
+            length: 1
+            doc: TODO
+      analog_video_lock_status:
+        control: ANALOG_LOCK_STATUS
+        length: 1
+        fields:
+          status:
+            type: int
+            position: 0
+            length: 1
+            doc: TODO
+  selector_unit:
+    type: standard
+    description: Standard selector unit (controls connectivity between other units)
+    control_prefix: SU
+    controls:
+      input_select:
+        control: INPUT_SELECT
+        length: 1
+        fields:
+          selector:
+            type: int
+            position: 0
+            length: 1
+            doc: TODO

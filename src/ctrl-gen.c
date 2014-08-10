@@ -242,9 +242,9 @@ uvc_error_t uvc_set_exposure_abs(uvc_device_handle_t *devh, uint32_t time) {
 }
 
 /** @ingroup ctrl
- * @brief Reads the EXPOSURE_TIME_RELATIVE control.
+ * @brief Reads the exposure time relative to the current setting.
  * @param devh UVC device handle
- * @param[out] step TODO
+ * @param[out] step number of steps by which to change the exposure time, or zero to set the default exposure time
  * @param req_code UVC_GET_* request to execute
  */
 uvc_error_t uvc_get_exposure_rel(uvc_device_handle_t *devh, int8_t* step, enum uvc_req_code req_code) {
@@ -270,9 +270,9 @@ uvc_error_t uvc_get_exposure_rel(uvc_device_handle_t *devh, int8_t* step, enum u
 
 
 /** @ingroup ctrl
- * @brief Sets the EXPOSURE_TIME_RELATIVE control.
+ * @brief Sets the exposure time relative to the current setting.
  * @param devh UVC device handle
- * @param step TODO
+ * @param step number of steps by which to change the exposure time, or zero to set the default exposure time
  */
 uvc_error_t uvc_set_exposure_rel(uvc_device_handle_t *devh, int8_t step) {
   uint8_t data[1];
@@ -296,9 +296,9 @@ uvc_error_t uvc_set_exposure_rel(uvc_device_handle_t *devh, int8_t step) {
 }
 
 /** @ingroup ctrl
- * @brief Reads the FOCUS_ABSOLUTE control.
+ * @brief Reads the distance at which an object is optimally focused.
  * @param devh UVC device handle
- * @param[out] focus TODO
+ * @param[out] focus focal target distance in millimeters
  * @param req_code UVC_GET_* request to execute
  */
 uvc_error_t uvc_get_focus_abs(uvc_device_handle_t *devh, uint16_t* focus, enum uvc_req_code req_code) {
@@ -324,9 +324,9 @@ uvc_error_t uvc_get_focus_abs(uvc_device_handle_t *devh, uint16_t* focus, enum u
 
 
 /** @ingroup ctrl
- * @brief Sets the FOCUS_ABSOLUTE control.
+ * @brief Sets the distance at which an object is optimally focused.
  * @param devh UVC device handle
- * @param focus TODO
+ * @param focus focal target distance in millimeters
  */
 uvc_error_t uvc_set_focus_abs(uvc_device_handle_t *devh, uint16_t focus) {
   uint8_t data[2];
