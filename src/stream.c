@@ -544,6 +544,8 @@ void _uvc_process_payload(uvc_stream_handle_t *strmh, uint8_t *payload, size_t p
 void _uvc_stream_callback(struct libusb_transfer *transfer) {
   uvc_stream_handle_t *strmh = transfer->user_data;
 
+  int resubmit = 1;
+
   switch (transfer->status) {
   case LIBUSB_TRANSFER_COMPLETED:
     if (transfer->num_iso_packets == 0) {
@@ -592,6 +594,8 @@ void _uvc_stream_callback(struct libusb_transfer *transfer) {
       UVC_DEBUG("transfer %p not found; not freeing!", transfer);
     }
 
+    resubmit = 0;
+
     pthread_cond_broadcast(&strmh->cb_cond);
     pthread_mutex_unlock(&strmh->cb_mutex);
 
@@ -604,7 +608,7 @@ void _uvc_stream_callback(struct libusb_transfer *transfer) {
     break;
   }
   
-  if (strmh->running)
+  if ( strmh->running && resubmit )
     libusb_submit_transfer(transfer);
 }
 
