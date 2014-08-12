@@ -127,6 +127,8 @@ static const char *_uvc_name_for_format_subtype(uint8_t subtype) {
     return "UncompressedFormat";
   case UVC_VS_FORMAT_MJPEG:
     return "MJPEGFormat";
+  case UVC_VS_FORMAT_FRAME_BASED:
+    return "FrameFormat";
   default:
     return "Unknown";
   }
@@ -177,6 +179,7 @@ void uvc_print_diag(uvc_device_handle_t *devh, FILE *stream) {
         switch (fmt_desc->bDescriptorSubtype) {
           case UVC_VS_FORMAT_UNCOMPRESSED:
           case UVC_VS_FORMAT_MJPEG:
+          case UVC_VS_FORMAT_FRAME_BASED:
             fprintf(stream,
                 "\t\%s(%d)\n"
                 "\t\t  bits per pixel: %d\n"
@@ -188,11 +191,11 @@ void uvc_print_diag(uvc_device_handle_t *devh, FILE *stream) {
             for (i = 0; i < 16; ++i)
               fprintf(stream, "%02x", fmt_desc->guidFormat[i]);
 
-            fprintf(stream, "\n");
+            fprintf(stream, " (%4s)\n", fmt_desc->fourccFormat );
 
             fprintf(stream,
                 "\t\t  default frame: %d\n"
-                "\t\t  aspect ration: %dx%d\n"
+                "\t\t  aspect ratio: %dx%d\n"
                 "\t\t  interlace flags: %02x\n"
                 "\t\t  copy protect: %02x\n",
                 fmt_desc->bDefaultFrameIndex,
@@ -245,7 +248,8 @@ void uvc_print_diag(uvc_device_handle_t *devh, FILE *stream) {
             }
             break;
           default:
-            fprintf(stream, "\t-UnknownFormat\n");
+            fprintf(stream, "\t-UnknownFormat (%d)\n",
+                fmt_desc->bDescriptorSubtype );
         }
       }
     }
