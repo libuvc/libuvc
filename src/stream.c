@@ -323,11 +323,6 @@ uvc_error_t uvc_get_stream_ctrl_format_size(
     int fps) {
   uvc_streaming_interface_t *stream_if;
 
-  /* get the max values */
-  uvc_query_stream_ctrl(
-      devh, ctrl, 1, UVC_GET_MAX
-  );
-
   /* find a matching frame descriptor and interval */
   DL_FOREACH(devh->info->stream_ifs, stream_if) {
     uvc_format_desc_t *format;
@@ -348,10 +343,15 @@ uvc_error_t uvc_get_stream_ctrl_format_size(
           for (interval = frame->intervals; *interval; ++interval) {
             // allow a fps rate of zero to mean "accept first rate available"
             if (10000000 / *interval == (unsigned int) fps || fps == 0) {
+
+              /* get the max values -- we need the interface number to be able
+                 to do this */
+              ctrl->bInterfaceNumber = stream_if->bInterfaceNumber;
+              uvc_query_stream_ctrl( devh, ctrl, 1, UVC_GET_MAX);
+
               ctrl->bmHint = (1 << 0); /* don't negotiate interval */
               ctrl->bFormatIndex = format->bFormatIndex;
               ctrl->bFrameIndex = frame->bFrameIndex;
-              ctrl->bInterfaceNumber = stream_if->bInterfaceNumber;
               ctrl->dwFrameInterval = *interval;
 
               goto found;
@@ -365,10 +365,15 @@ uvc_error_t uvc_get_stream_ctrl_format_size(
               && interval_100ns <= frame->dwMaxFrameInterval
               && !(interval_offset
                    && (interval_offset % frame->dwFrameIntervalStep))) {
+
+            /* get the max values -- we need the interface number to be able
+               to do this */
+            ctrl->bInterfaceNumber = stream_if->bInterfaceNumber;
+            uvc_query_stream_ctrl( devh, ctrl, 1, UVC_GET_MAX);
+
             ctrl->bmHint = (1 << 0);
             ctrl->bFormatIndex = format->bFormatIndex;
             ctrl->bFrameIndex = frame->bFrameIndex;
-            ctrl->bInterfaceNumber = stream_if->bInterfaceNumber;
             ctrl->dwFrameInterval = interval_100ns;
 
             goto found;
