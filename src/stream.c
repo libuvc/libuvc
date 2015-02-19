@@ -39,6 +39,32 @@
 #include "libuvc/libuvc.h"
 #include "libuvc/libuvc_internal.h"
 
+#ifdef _MSC_VER
+
+#define DELTA_EPOCH_IN_MICROSECS  116444736000000000Ui64
+
+// gettimeofday - get time of day for Windows;
+// A gettimeofday implementation for Microsoft Windows;
+// Public domain code, author "ponnada";
+int gettimeofday(struct timeval *tv, struct timezone *tz)
+{
+    FILETIME ft;
+    unsigned __int64 tmpres = 0;
+    static int tzflag = 0;
+    if (NULL != tv)
+    {
+        GetSystemTimeAsFileTime(&ft);
+        tmpres |= ft.dwHighDateTime;
+        tmpres <<= 32;
+        tmpres |= ft.dwLowDateTime;
+        tmpres /= 10;
+        tmpres -= DELTA_EPOCH_IN_MICROSECS;
+        tv->tv_sec = (long)(tmpres / 1000000UL);
+        tv->tv_usec = (long)(tmpres % 1000000UL);
+    }
+    return 0;
+}
+#endif // _MSC_VER
 uvc_frame_desc_t *uvc_find_frame_desc_stream(uvc_stream_handle_t *strmh,
     uint16_t format_id, uint16_t frame_id);
 uvc_frame_desc_t *uvc_find_frame_desc(uvc_device_handle_t *devh,
