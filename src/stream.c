@@ -546,7 +546,7 @@ void _uvc_process_payload(uvc_stream_handle_t *strmh, uint8_t *payload, size_t p
  *
  * @param transfer Active transfer
  */
-void _uvc_stream_callback(struct libusb_transfer *transfer) {
+void LIBUSB_CALL _uvc_stream_callback(struct libusb_transfer *transfer) {
   uvc_stream_handle_t *strmh = transfer->user_data;
 
   int resubmit = 1;
