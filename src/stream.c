@@ -81,11 +81,11 @@ struct format_table_entry {
 };
 
 struct format_table_entry *_get_format_entry(enum uvc_frame_format format) {
-  #define ABS_FMT(_fmt, ...) \
+  #define ABS_FMT(_fmt, _num, ...) \
     case _fmt: { \
     static enum uvc_frame_format _fmt##_children[] = __VA_ARGS__; \
     static struct format_table_entry _fmt##_entry = { \
-      _fmt, 0, {}, ARRAYSIZE(_fmt##_children), _fmt##_children }; \
+      _fmt, 0, {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, _num, _fmt##_children }; \
     return &_fmt##_entry; }
 
   #define FMT(_fmt, ...) \
@@ -96,10 +96,10 @@ struct format_table_entry *_get_format_entry(enum uvc_frame_format format) {
 
   switch(format) {
     /* Define new formats here */
-    ABS_FMT(UVC_FRAME_FORMAT_ANY,
+    ABS_FMT(UVC_FRAME_FORMAT_ANY, 2,
       {UVC_FRAME_FORMAT_UNCOMPRESSED, UVC_FRAME_FORMAT_COMPRESSED})
 
-    ABS_FMT(UVC_FRAME_FORMAT_UNCOMPRESSED,
+    ABS_FMT(UVC_FRAME_FORMAT_UNCOMPRESSED, 3,
       {UVC_FRAME_FORMAT_YUYV, UVC_FRAME_FORMAT_UYVY, UVC_FRAME_FORMAT_GRAY8})
     FMT(UVC_FRAME_FORMAT_YUYV,
       {'Y',  'U',  'Y',  '2', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
@@ -110,7 +110,7 @@ struct format_table_entry *_get_format_entry(enum uvc_frame_format format) {
     FMT(UVC_FRAME_FORMAT_BY8,
       {'B',  'Y',  '8',  ' ', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
 
-    ABS_FMT(UVC_FRAME_FORMAT_COMPRESSED,
+    ABS_FMT(UVC_FRAME_FORMAT_COMPRESSED, 1,
       {UVC_FRAME_FORMAT_MJPEG})
     FMT(UVC_FRAME_FORMAT_MJPEG,
       {'M',  'J',  'P',  'G'})
