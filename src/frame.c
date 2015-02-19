@@ -67,7 +67,7 @@ uvc_frame_t *uvc_allocate_frame(size_t data_bytes) {
   if (!frame)
     return NULL;
 
-  bzero(frame, sizeof(*frame));
+  memset(frame, 0, sizeof(*frame));
 
   frame->library_owns_data = 1;
 
