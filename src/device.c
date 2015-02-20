@@ -91,7 +91,7 @@ uvc_error_t uvc_parse_vs_input_header(uvc_streaming_interface_t *stream_if,
 				      const unsigned char *block,
 				      size_t block_size);
 
-void _uvc_status_callback(struct libusb_transfer *transfer);
+void LIBUSB_CALL _uvc_status_callback(struct libusb_transfer *transfer);
 
 /** @internal
  * @brief Test whether the specified USB device has been opened as a UVC device
@@ -1513,7 +1513,7 @@ void uvc_process_status_xfer(uvc_device_handle_t *devh, struct libusb_transfer *
 /** @internal
  * @brief Process asynchronous status updates from the device.
  */
-void _uvc_status_callback(struct libusb_transfer *transfer) {
+void LIBUSB_CALL _uvc_status_callback(struct libusb_transfer *transfer) {
   UVC_ENTER();
 
   uvc_device_handle_t *devh = (uvc_device_handle_t *) transfer->user_data;
