@@ -1056,15 +1056,20 @@ void _uvc_populate_frame(uvc_stream_handle_t *strmh) {
     frame->step = 0;
     break;
   }
-  
+
+  /** @todo set the frame time */
+  frame->sequence = strmh->seq;
+  frame->capture_time.tv_usec = strmh->pts;
+
   /* copy the image data from the hold buffer to the frame (unnecessary extra buf?) */
   if (frame->data_bytes < strmh->hold_bytes) {
     frame->data = realloc(frame->data, strmh->hold_bytes);
-    frame->data_bytes = strmh->hold_bytes;
   }
+  frame->data_bytes = strmh->hold_bytes;
   memcpy(frame->data, strmh->holdbuf, frame->data_bytes);
-  
-  /** @todo set the frame time */
+
+
+
 }
 
 /** Poll for a frame
