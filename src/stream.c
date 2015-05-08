@@ -863,9 +863,22 @@ uvc_error_t uvc_stream_start(
     size_t endpoint_bytes_per_packet;
     /* Index of the altsetting */
     int alt_idx, ep_idx;
-    
+
+    //the proper way: ask the cmaera
     config_bytes_per_packet = strmh->cur_ctrl.dwMaxPayloadTransferSize;
 
+
+    // our way: estimate it:
+    size_t bandwidth = frame_desc->wWidth * frame_desc->wHeight / 8 * 2; //the last one is bpp default 4 but we use if for compression
+    bandwidth *= 10000000 / strmh->cur_ctrl.dwFrameInterval + 1;
+    bandwidth /= 1000; //unit
+    bandwidth /= 8; // 8 high speed usb microframes per ms
+    bandwidth += 12; //header size
+    printf("estimated bandwith %d \n",bandwidth);
+    config_bytes_per_packet = bandwidth;
+
+
+    // config_bytes_per_packet /= 2;
     /* Go through the altsettings and find one whose packets are at least
      * as big as our format's maximum per-packet usage. Assume that the
      * packet sizes are increasing. */
@@ -886,16 +899,24 @@ uvc_error_t uvc_stream_start(
         }
       }
 
+      printf("alt_idx: %d\n",alt_idx);
+      printf("config_bytes_per_packet: %d\n",config_bytes_per_packet);
+      printf("endpoint_bytes_per_packet: %d\n",endpoint_bytes_per_packet);
+
+
       if (endpoint_bytes_per_packet >= config_bytes_per_packet) {
         /* Transfers will be at most one frame long: Divide the maximum frame size
          * by the size of the endpoint and round up */
         packets_per_transfer = (ctrl->dwMaxVideoFrameSize +
                                 endpoint_bytes_per_packet - 1) / endpoint_bytes_per_packet;
-
+        printf("packets_per_transfer: %d\n",packets_per_transfer);
+        // packets_per_transfer = (ctrl->dwMaxVideoFrameSize +
+        //                         endpoint_bytes_per_packet - 1) / endpoint_bytes_per_packet;
+        // frame_desc
         /* But keep a reasonable limit: Otherwise we start dropping data */
         if (packets_per_transfer > 32)
           packets_per_transfer = 32;
-        
+
         total_transfer_size = packets_per_transfer * endpoint_bytes_per_packet;
         break;
       }
