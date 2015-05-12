@@ -23,14 +23,14 @@ find_path(LIBUSB_INCLUDE_DIR libusb-1.0/libusb.h
 	PATHS /opt/local/include)
 
 # Try to find JPEG using a module or pkg-config. If that doesn't work, search for the header.
-find_package(jpeg QUIET)
-if(NOT JPEG_FOUND)
-  find_path(JPEG_INCLUDE_DIR jpeglib.h)
-  if(JPEG_INCLUDE_DIR)
-    set(JPEG_FOUND ON)
-    set(JPEG_LIBRARIES -ljpeg)
-  endif()
-endif()
+# find_package(jpeg QUIET)
+# if(NOT JPEG_FOUND)
+#   find_path(JPEG_INCLUDE_DIR jpeglib.h)
+#   if(JPEG_INCLUDE_DIR)
+#     set(JPEG_FOUND ON)
+#     set(JPEG_LIBRARIES -ljpeg)
+#   endif()
+# endif()
 
 SET(CMAKE_C_FLAGS_DEBUG "-g -DUVC_DEBUGGING")
 
