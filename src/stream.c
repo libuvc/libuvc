@@ -243,8 +243,6 @@ uvc_error_t uvc_query_stream_ctrl(
     else
       ctrl->dwClockFrequency = devh->info->ctrl_if.dwClockFrequency;
     }
-    printf("hz %d \n",ctrl->dwClockFrequency);
-
 
     /* fix up block for cameras that fail to set dwMax* */
     if (ctrl->dwMaxVideoFrameSize == 0) {
@@ -1054,7 +1052,6 @@ void *_uvc_user_caller(void *arg) {
  */
 void _uvc_populate_frame(uvc_stream_handle_t *strmh) {
   size_t alloc_size = strmh->cur_ctrl.dwMaxVideoFrameSize;
-  // printf("hz %d \n",strmh->cur_ctrl.dwClockFrequency);
   uvc_frame_t *frame = &strmh->frame;
   uvc_frame_desc_t *frame_desc;
 
@@ -1086,15 +1083,12 @@ void _uvc_populate_frame(uvc_stream_handle_t *strmh) {
   /** @todo set the frame time */
   frame->sequence = strmh->hold_seq;
   frame->capture_time.tv_usec = strmh->hold_pts;
-
   if (frame->data_bytes < strmh->hold_bytes) {
     frame->data = realloc(frame->data, strmh->hold_bytes);
   }
   /* copy the image data from the hold buffer to the frame (unnecessary extra buf?) */
   frame->data_bytes = strmh->hold_bytes;
   memcpy(frame->data, strmh->holdbuf, frame->data_bytes);
-
-
 
 }
 
@@ -1125,7 +1119,8 @@ uvc_error_t uvc_stream_get_frame(uvc_stream_handle_t *strmh,
     _uvc_populate_frame(strmh);
     *frame = &strmh->frame;
     strmh->last_polled_seq = strmh->hold_seq;
-  } else if (timeout_us != -1) {
+  }
+  else if (timeout_us != -1) {
     if (timeout_us == 0) {
       pthread_cond_wait(&strmh->cb_cond, &strmh->cb_mutex);
     } else {
@@ -1154,9 +1149,13 @@ uvc_error_t uvc_stream_get_frame(uvc_stream_handle_t *strmh,
       strmh->last_polled_seq = strmh->hold_seq;
     } else {
       *frame = NULL;
+      pthread_mutex_unlock(&strmh->cb_mutex);
+      return UVC_ERROR_TIMEOUT;
     }
   } else {
     *frame = NULL;
+    pthread_mutex_unlock(&strmh->cb_mutex);
+    return UVC_ERROR_BUSY;
   }
 
   pthread_mutex_unlock(&strmh->cb_mutex);
