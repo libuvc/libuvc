@@ -181,6 +181,7 @@ typedef struct uvc_control_interface {
   struct uvc_processing_unit *processing_unit_descs;
   struct uvc_extension_unit *extension_unit_descs;
   uint16_t bcdUVC;
+  uint32_t dwClockFrequency;
   uint8_t bEndpointAddress;
   /** Interface number */
   uint8_t bInterfaceNumber;
@@ -225,7 +226,7 @@ struct uvc_stream_handle {
   /** Current control block */
   struct uvc_stream_ctrl cur_ctrl;
 
-  /* listeners may only access hold*, and only when holding a 
+  /* listeners may only access hold*, and only when holding a
    * lock on cb_mutex (probably signaled with cb_cond) */
   uint8_t fid;
   uint32_t seq, hold_seq;

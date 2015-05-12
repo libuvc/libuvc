@@ -880,7 +880,9 @@ uvc_error_t uvc_parse_vc_header(uvc_device_t *dev,
 
   switch (info->ctrl_if.bcdUVC) {
   case 0x0100:
+    info->ctrl_if.dwClockFrequency = DW_TO_INT(block + 7);
   case 0x010a:
+    info->ctrl_if.dwClockFrequency = DW_TO_INT(block + 7);
   case 0x0110:
     break;
   default:
@@ -950,10 +952,10 @@ uvc_error_t uvc_parse_vc_processing_unit(uvc_device_t *dev,
   unit = calloc(1, sizeof(*unit));
   unit->bUnitID = block[3];
   unit->bSourceID = block[4];
-  
+
   for (i = 7 + block[7]; i >= 8; --i)
     unit->bmControls = block[i] + (unit->bmControls << 8);
-  
+
   DL_APPEND(info->ctrl_if.processing_unit_descs, unit);
 
   UVC_EXIT(UVC_SUCCESS);
@@ -976,14 +978,14 @@ uvc_error_t uvc_parse_vc_extension_unit(uvc_device_t *dev,
 
   unit->bUnitID = block[3];
   memcpy(unit->guidExtensionCode, &block[4], 16);
-  
+
   num_in_pins = block[21];
   size_of_controls = block[22 + num_in_pins];
   start_of_controls = &block[23 + num_in_pins];
-  
+
   for (i = size_of_controls - 1; i >= 0; --i)
     unit->bmControls = start_of_controls[i] + (unit->bmControls << 8);
-  
+
   DL_APPEND(info->ctrl_if.extension_unit_descs, unit);
 
   UVC_EXIT(UVC_SUCCESS);
