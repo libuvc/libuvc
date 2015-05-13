@@ -240,6 +240,8 @@ uvc_error_t uvc_query_stream_ctrl(
       ctrl->bMaxVersion = buf[33];
       /** @todo support UVC 1.1 */
     }
+    else
+      ctrl->dwClockFrequency = devh->info->ctrl_if.dwClockFrequency;
 
     /* fix up block for cameras that fail to set dwMax* */
     if (ctrl->dwMaxVideoFrameSize == 0) {
