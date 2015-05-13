@@ -1059,7 +1059,7 @@ void _uvc_populate_frame(uvc_stream_handle_t *strmh) {
     break;
   }
 
-  frame->sequence = strmh->seq;
+  frame->sequence = strmh->hold_seq;
   /** @todo set the frame time */
   // frame->capture_time
 
