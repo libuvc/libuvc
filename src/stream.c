@@ -876,7 +876,7 @@ uvc_error_t uvc_stream_start(
     bandwidth /= 1000; //unit
     bandwidth /= 8; // 8 high speed usb microframes per ms
     bandwidth += 12; //header size
-    printf("estimated bandwith %d \n",bandwidth);
+    // printf("estimated bandwith %d \n",bandwidth);
     config_bytes_per_packet = bandwidth;
 
 
@@ -901,9 +901,8 @@ uvc_error_t uvc_stream_start(
         }
       }
 
-      printf("alt_idx: %d\n",alt_idx);
-      printf("config_bytes_per_packet: %d\n",config_bytes_per_packet);
-      printf("endpoint_bytes_per_packet: %d\n",endpoint_bytes_per_packet);
+      // printf("alt_idx: %d\n",alt_idx);
+      // printf("endpoint_bytes_per_packet: %d\n",endpoint_bytes_per_packet);
 
 
       if (endpoint_bytes_per_packet >= config_bytes_per_packet) {
@@ -911,7 +910,6 @@ uvc_error_t uvc_stream_start(
          * by the size of the endpoint and round up */
         packets_per_transfer = (ctrl->dwMaxVideoFrameSize +
                                 endpoint_bytes_per_packet - 1) / endpoint_bytes_per_packet;
-        printf("packets_per_transfer: %d\n",packets_per_transfer);
         // packets_per_transfer = (ctrl->dwMaxVideoFrameSize +
         //                         endpoint_bytes_per_packet - 1) / endpoint_bytes_per_packet;
         // frame_desc
@@ -1205,7 +1203,6 @@ uvc_error_t uvc_stream_stop(uvc_stream_handle_t *strmh) {
       }
     }
   }
-
   /* Wait for transfers to complete/cancel */
   do {
     for(i=0; i < LIBUVC_NUM_TRANSFER_BUFS; i++) {
@@ -1214,7 +1211,9 @@ uvc_error_t uvc_stream_stop(uvc_stream_handle_t *strmh) {
     }
     if(i == LIBUVC_NUM_TRANSFER_BUFS )
       break;
+    // this ones sometimes does not return.
     pthread_cond_wait(&strmh->cb_cond, &strmh->cb_mutex);
+    // printf("loop %d\n",i);
   } while(1);
   // Kick the user thread awake
   pthread_cond_broadcast(&strmh->cb_cond);
