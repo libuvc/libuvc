@@ -1185,7 +1185,6 @@ void uvc_stop_streaming(uvc_device_handle_t *devh) {
  */
 uvc_error_t uvc_stream_stop(uvc_stream_handle_t *strmh) {
   int i;
-
   if (!strmh->running)
     return UVC_ERROR_INVALID_PARAM;
 
@@ -1213,7 +1212,7 @@ uvc_error_t uvc_stream_stop(uvc_stream_handle_t *strmh) {
       break;
     // this ones sometimes does not return.
     pthread_cond_wait(&strmh->cb_cond, &strmh->cb_mutex);
-    // printf("loop %d\n",i);
+    printf("loop %d\n",i);
   } while(1);
   // Kick the user thread awake
   pthread_cond_broadcast(&strmh->cb_cond);
