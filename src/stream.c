@@ -1184,8 +1184,7 @@ void uvc_stop_streaming(uvc_device_handle_t *devh) {
  * @param devh UVC device
  */
 uvc_error_t uvc_stream_stop(uvc_stream_handle_t *strmh) {
-  int i,timeout_s= 1,ret=UVC_SUCCESS;
-  time_t add_secs;
+  int i,timeout_ns= 500000000,ret=UVC_SUCCESS;
   struct timespec ts;
   struct timeval tv;
   if (!strmh->running)
@@ -1219,7 +1218,6 @@ uvc_error_t uvc_stream_stop(uvc_stream_handle_t *strmh) {
     // this ones sometimes does not return.
     // pthread_cond_wait(&strmh->cb_cond, &strmh->cb_mutex);
 
-    add_secs = timeout_s ;
     ts.tv_sec = 0;
     ts.tv_nsec = 0;
 
@@ -1231,7 +1229,7 @@ uvc_error_t uvc_stream_stop(uvc_stream_handle_t *strmh) {
     ts.tv_nsec = tv.tv_usec * 1000;
 #endif
 
-    ts.tv_sec += add_secs;
+    ts.tv_nsec += timeout_ns;
 
     if (ETIMEDOUT == pthread_cond_timedwait(&strmh->cb_cond, &strmh->cb_mutex, &ts)){
       ret = UVC_ERROR_TIMEOUT;
