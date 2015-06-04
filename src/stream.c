@@ -669,7 +669,7 @@ uvc_error_t uvc_start_streaming(
   if (ret != UVC_SUCCESS)
     return ret;
 
-  ret = uvc_stream_start(strmh, cb, user_ptr, flags);
+  ret = uvc_stream_start(strmh, cb, user_ptr,2, flags);
   if (ret != UVC_SUCCESS) {
     uvc_stream_close(strmh);
     return ret;
@@ -793,6 +793,7 @@ fail:
  *
  * @param strmh UVC stream
  * @param cb   User callback function. See {uvc_frame_callback_t} for restrictions.
+ * @param bandwidth_factor   Compression factor for mjpeg bandwidth estimation. Default 2 is save. 1 is often not enough. Differnt cameras require different minimums.
  * @param flags Stream setup flags, currently undefined. Set this to zero. The lower bit
  * is reserved for backward compatibility.
  */
@@ -800,6 +801,7 @@ uvc_error_t uvc_stream_start(
     uvc_stream_handle_t *strmh,
     uvc_frame_callback_t *cb,
     void *user_ptr,
+    float bandwidth_factor,
     uint8_t flags
 ) {
   /* USB interface we'll be using */
@@ -871,7 +873,7 @@ uvc_error_t uvc_stream_start(
 
 
     // our way: estimate it:
-    size_t bandwidth = frame_desc->wWidth * frame_desc->wHeight / 8 * 1.5; //the last one is bpp default 4 but we use if for compression, 2 is save, 1.5 is needed to run 3 high speed cameras. on one bus.
+    size_t bandwidth = frame_desc->wWidth * frame_desc->wHeight / 8 * bandwidth_factor; //the last one is bpp default 4 but we use if for compression, 2 is save, 1.5 is needed to run 3 high speed cameras. on one bus.
     bandwidth *= 10000000 / strmh->cur_ctrl.dwFrameInterval + 1;
     bandwidth /= 1000; //unit
     bandwidth /= 8; // 8 high speed usb microframes per ms
@@ -1006,7 +1008,7 @@ uvc_error_t uvc_stream_start_iso(
     uvc_frame_callback_t *cb,
     void *user_ptr
 ) {
-  return uvc_stream_start(strmh, cb, user_ptr, 0);
+  return uvc_stream_start(strmh, cb, user_ptr,2, 0);
 }
 
 /** @internal
