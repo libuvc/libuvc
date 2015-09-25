@@ -181,6 +181,7 @@ typedef struct uvc_control_interface {
   struct uvc_processing_unit *processing_unit_descs;
   struct uvc_extension_unit *extension_unit_descs;
   uint16_t bcdUVC;
+  uint32_t dwClockFrequency;
   uint8_t bEndpointAddress;
   /** Interface number */
   uint8_t bInterfaceNumber;

@@ -240,6 +240,8 @@ uvc_error_t uvc_query_stream_ctrl(
       ctrl->bMaxVersion = buf[33];
       /** @todo support UVC 1.1 */
     }
+    else
+      ctrl->dwClockFrequency = devh->info->ctrl_if.dwClockFrequency;
 
     /* fix up block for cameras that fail to set dwMax* */
     if (ctrl->dwMaxVideoFrameSize == 0) {
@@ -1056,15 +1058,20 @@ void _uvc_populate_frame(uvc_stream_handle_t *strmh) {
     frame->step = 0;
     break;
   }
-  
+
+  frame->sequence = strmh->hold_seq;
+  /** @todo set the frame time */
+  // frame->capture_time
+
   /* copy the image data from the hold buffer to the frame (unnecessary extra buf?) */
   if (frame->data_bytes < strmh->hold_bytes) {
     frame->data = realloc(frame->data, strmh->hold_bytes);
-    frame->data_bytes = strmh->hold_bytes;
   }
+  frame->data_bytes = strmh->hold_bytes;
   memcpy(frame->data, strmh->holdbuf, frame->data_bytes);
-  
-  /** @todo set the frame time */
+
+
+
 }
 
 /** Poll for a frame
