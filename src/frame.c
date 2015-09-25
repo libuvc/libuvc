@@ -234,6 +234,84 @@ uvc_error_t uvc_yuyv2bgr(uvc_frame_t *in, uvc_frame_t *out) {
   return UVC_SUCCESS;
 }
 
+#define IYUYV2Y(pyuv, py) { \
+    (py)[0] = (pyuv[0]); \
+    }
+
+/** @brief Convert a frame from YUYV to Y (GRAY8)
+ * @ingroup frame
+ *
+ * @param in YUYV frame
+ * @param out GRAY8 frame
+ */
+uvc_error_t uvc_yuyv2y(uvc_frame_t *in, uvc_frame_t *out) {
+  if (in->frame_format != UVC_FRAME_FORMAT_YUYV)
+    return UVC_ERROR_INVALID_PARAM;
+
+  if (uvc_ensure_frame_size(out, in->width * in->height) < 0)
+    return UVC_ERROR_NO_MEM;
+
+  out->width = in->width;
+  out->height = in->height;
+  out->frame_format = UVC_FRAME_FORMAT_GRAY8;
+  out->step = in->width;
+  out->sequence = in->sequence;
+  out->capture_time = in->capture_time;
+  out->source = in->source;
+
+  uint8_t *pyuv = in->data;
+  uint8_t *py = out->data;
+  uint8_t *py_end = py + out->data_bytes;
+
+  while (py < py_end) {
+    IYUYV2Y(pyuv, py);
+
+    py += 1;
+    pyuv += 2;
+  }
+
+  return UVC_SUCCESS;
+}
+
+#define IYUYV2UV(pyuv, puv) { \
+    (puv)[0] = (pyuv[1]); \
+    }
+
+/** @brief Convert a frame from YUYV to UV (GRAY8)
+ * @ingroup frame
+ *
+ * @param in YUYV frame
+ * @param out GRAY8 frame
+ */
+uvc_error_t uvc_yuyv2uv(uvc_frame_t *in, uvc_frame_t *out) {
+  if (in->frame_format != UVC_FRAME_FORMAT_YUYV)
+    return UVC_ERROR_INVALID_PARAM;
+
+  if (uvc_ensure_frame_size(out, in->width * in->height) < 0)
+    return UVC_ERROR_NO_MEM;
+
+  out->width = in->width;
+  out->height = in->height;
+  out->frame_format = UVC_FRAME_FORMAT_GRAY8;
+  out->step = in->width;
+  out->sequence = in->sequence;
+  out->capture_time = in->capture_time;
+  out->source = in->source;
+
+  uint8_t *pyuv = in->data;
+  uint8_t *puv = out->data;
+  uint8_t *puv_end = puv + out->data_bytes;
+
+  while (puv < puv_end) {
+    IYUYV2UV(pyuv, puv);
+
+    puv += 1;
+    pyuv += 2;
+  }
+
+  return UVC_SUCCESS;
+}
+
 #define IUYVY2RGB_2(pyuv, prgb) { \
     int r = (22987 * ((pyuv)[2] - 128)) >> 14; \
     int g = (-5636 * ((pyuv)[0] - 128) - 11698 * ((pyuv)[2] - 128)) >> 14; \
