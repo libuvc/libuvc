@@ -1175,7 +1175,7 @@ uvc_error_t uvc_stream_stop(uvc_stream_handle_t *strmh) {
   for(i=0; i < LIBUVC_NUM_TRANSFER_BUFS; i++) {
     if(strmh->transfers[i] != NULL) {
       int res = libusb_cancel_transfer(strmh->transfers[i]);
-      if(res < 0 && res != LIBUSB_ERROR_NOT_FOUND ) {
+      if(res < 0) {
         free(strmh->transfers[i]->buffer);
         libusb_free_transfer(strmh->transfers[i]);
         strmh->transfers[i] = NULL;
