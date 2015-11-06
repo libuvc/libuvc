@@ -340,6 +340,13 @@ typedef struct uvc_processing_unit {
   uint64_t bmControls;
 } uvc_processing_unit_t;
 
+/** Represents selector unit to connect other units */
+typedef struct uvc_selector_unit {
+  struct uvc_selector_unit *prev, *next;
+  /** Index of the selector unit within the device */
+  uint8_t bUnitID;
+} uvc_selector_unit_t;
+
 /** Custom processing or camera-control functions */
 typedef struct uvc_extension_unit {
   struct uvc_extension_unit *prev, *next;
@@ -501,8 +508,10 @@ void uvc_set_button_callback(uvc_device_handle_t *devh,
                              uvc_button_callback_t cb,
                              void *user_ptr);
 
+const uvc_input_terminal_t *uvc_get_camera_terminal(uvc_device_handle_t *devh);
 const uvc_input_terminal_t *uvc_get_input_terminals(uvc_device_handle_t *devh);
 const uvc_output_terminal_t *uvc_get_output_terminals(uvc_device_handle_t *devh);
+const uvc_selector_unit_t *uvc_get_selector_units(uvc_device_handle_t *devh);
 const uvc_processing_unit_t *uvc_get_processing_units(uvc_device_handle_t *devh);
 const uvc_extension_unit_t *uvc_get_extension_units(uvc_device_handle_t *devh);
 

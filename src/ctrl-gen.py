@@ -90,7 +90,7 @@ uvc_error_t uvc_get_{control_name}(uvc_device_handle_t *devh, {args_signature}, 
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     {control_code} << 8,
-    1 << 8,
+    {unit_fn} << 8,
     data,
     sizeof(data),
     0);
@@ -119,7 +119,7 @@ uvc_error_t uvc_set_{control_name}(uvc_device_handle_t *devh, {args_signature}) 
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     {control_code} << 8,
-    1 << 8,
+    {unit_fn} << 8,
     data,
     sizeof(data),
     0);
@@ -177,14 +177,17 @@ def gen_ctrl(unit_name, unit, control_name, control):
         set_gen_doc = set_gen_doc_raw.format(gets_sets='Sets')
     else:
         set_gen_doc = '@brief Sets the ' + control['control'] + ' control.'
- 
+
     get_args_doc = "\n * ".join(["@param[out] {0} {1}".format(field.name, desc) for (field, desc) in fields])
     set_args_doc = "\n * ".join(["@param {0} {1}".format(field.name, desc) for (field, desc) in fields])
 
     control_code = 'UVC_' + unit['control_prefix'] + '_' + control['control'] + '_CONTROL'
 
+    unit_fn = "uvc_get_camera_terminal(devh)->bTerminalID" if (unit_name == "camera_terminal") else ("uvc_get_" + unit_name + "s(devh)->bUnitID")
+
     return GETTER_TEMPLATE.format(
         unit=unit,
+        unit_fn=unit_fn,
         control_name=control_name,
         control_code=control_code,
         control_length=control['length'],
@@ -193,6 +196,7 @@ def gen_ctrl(unit_name, unit, control_name, control):
         gen_doc=get_gen_doc,
         unpack=unpack) + "\n\n" + SETTER_TEMPLATE.format(
             unit=unit,
+            unit_fn=unit_fn,
             control_name=control_name,
             control_code=control_code,
             control_length=control['length'],
