@@ -212,7 +212,11 @@ typedef struct uvc_device_info {
   We could/should change this to allow reduce it to, say, 5 by default
   and then allow the user to change the number of buffers as required.
  */
+#ifdef __APPLE__
+#define LIBUVC_NUM_TRANSFER_BUFS 8
+#else
 #define LIBUVC_NUM_TRANSFER_BUFS 100
+#endif
 
 #define LIBUVC_XFER_BUF_SIZE	( 16 * 1024 * 1024 )
 
