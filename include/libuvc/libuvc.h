@@ -482,6 +482,11 @@ uvc_error_t uvc_find_device(
     uvc_device_t **dev,
     int vid, int pid, const char *sn);
 
+uvc_error_t uvc_find_devices(
+    uvc_context_t *ctx,
+    uvc_device_t ***devs,
+    int vid, int pid, const char *sn);
+
 uvc_error_t uvc_open(
     uvc_device_t *dev,
     uvc_device_handle_t **devh);
