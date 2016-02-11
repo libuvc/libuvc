@@ -173,6 +173,79 @@ uvc_error_t uvc_find_device(
   }
 }
 
+/** @brief Finds all cameras identified by vendor, product and/or serial number
+ * @ingroup device
+ *
+ * @param[in] ctx UVC context in which to search for the camera
+ * @param[out] devs List of matching cameras
+ * @param[in] vid Vendor ID number, optional
+ * @param[in] pid Product ID number, optional
+ * @param[in] sn Serial number or NULL
+ * @return Error finding device or UVC_SUCCESS
+ */
+uvc_error_t uvc_find_devices(
+    uvc_context_t *ctx, uvc_device_t ***devs,
+    int vid, int pid, const char *sn) {
+  uvc_error_t ret = UVC_SUCCESS;
+
+  uvc_device_t **list;
+  uvc_device_t *test_dev;
+  int dev_idx;
+  int found_dev;
+
+  uvc_device_t **list_internal;
+  int num_uvc_devices;
+
+  UVC_ENTER();
+
+  ret = uvc_get_device_list(ctx, &list);
+
+  if (ret != UVC_SUCCESS) {
+    UVC_EXIT(ret);
+    return ret;
+  }
+
+  num_uvc_devices = 0;
+  dev_idx = 0;
+  found_dev = 0;
+
+  list_internal = malloc(sizeof(*list_internal));
+  *list_internal = NULL;
+
+  while ((test_dev = list[dev_idx++]) != NULL) {
+    uvc_device_descriptor_t *desc;
+
+    if (uvc_get_device_descriptor(test_dev, &desc) != UVC_SUCCESS)
+      continue;
+
+    if ((!vid || desc->idVendor == vid)
+        && (!pid || desc->idProduct == pid)
+        && (!sn || (desc->serialNumber && !strcmp(desc->serialNumber, sn)))) {
+      found_dev = 1;
+      uvc_ref_device(test_dev);
+
+      num_uvc_devices++;
+      list_internal = realloc(list_internal, (num_uvc_devices + 1) * sizeof(*list_internal));
+
+      list_internal[num_uvc_devices - 1] = test_dev;
+      list_internal[num_uvc_devices] = NULL;
+    }
+
+    uvc_free_device_descriptor(desc);
+  }
+
+  uvc_free_device_list(list, 1);
+
+  if (found_dev) {
+    *devs = list_internal;
+    UVC_EXIT(UVC_SUCCESS);
+    return UVC_SUCCESS;
+  } else {
+    UVC_EXIT(UVC_ERROR_NO_DEVICE);
+    return UVC_ERROR_NO_DEVICE;
+  }
+}
+
 /** @brief Get the number of the bus to which the device is attached
  * @ingroup device
  */
