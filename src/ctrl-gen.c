@@ -19,7 +19,7 @@ uvc_error_t uvc_get_scanning_mode(uvc_device_handle_t *devh, uint8_t* mode, enum
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_CT_SCANNING_MODE_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -48,7 +48,7 @@ uvc_error_t uvc_set_scanning_mode(uvc_device_handle_t *devh, uint8_t mode) {
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_CT_SCANNING_MODE_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -75,7 +75,7 @@ uvc_error_t uvc_get_ae_mode(uvc_device_handle_t *devh, uint8_t* mode, enum uvc_r
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_CT_AE_MODE_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -112,7 +112,7 @@ uvc_error_t uvc_set_ae_mode(uvc_device_handle_t *devh, uint8_t mode) {
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_CT_AE_MODE_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -138,7 +138,7 @@ uvc_error_t uvc_get_ae_priority(uvc_device_handle_t *devh, uint8_t* priority, en
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_CT_AE_PRIORITY_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -170,7 +170,7 @@ uvc_error_t uvc_set_ae_priority(uvc_device_handle_t *devh, uint8_t priority) {
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_CT_AE_PRIORITY_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -197,7 +197,7 @@ uvc_error_t uvc_get_exposure_abs(uvc_device_handle_t *devh, uint32_t* time, enum
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_CT_EXPOSURE_TIME_ABSOLUTE_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -230,7 +230,7 @@ uvc_error_t uvc_set_exposure_abs(uvc_device_handle_t *devh, uint32_t time) {
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_CT_EXPOSURE_TIME_ABSOLUTE_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -255,7 +255,7 @@ uvc_error_t uvc_get_exposure_rel(uvc_device_handle_t *devh, int8_t* step, enum u
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_CT_EXPOSURE_TIME_RELATIVE_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -284,7 +284,7 @@ uvc_error_t uvc_set_exposure_rel(uvc_device_handle_t *devh, int8_t step) {
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_CT_EXPOSURE_TIME_RELATIVE_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -309,7 +309,7 @@ uvc_error_t uvc_get_focus_abs(uvc_device_handle_t *devh, uint16_t* focus, enum u
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_CT_FOCUS_ABSOLUTE_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -338,7 +338,7 @@ uvc_error_t uvc_set_focus_abs(uvc_device_handle_t *devh, uint16_t focus) {
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_CT_FOCUS_ABSOLUTE_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -364,7 +364,7 @@ uvc_error_t uvc_get_focus_rel(uvc_device_handle_t *devh, int8_t* focus_rel, uint
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_CT_FOCUS_RELATIVE_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -396,7 +396,7 @@ uvc_error_t uvc_set_focus_rel(uvc_device_handle_t *devh, int8_t focus_rel, uint8
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_CT_FOCUS_RELATIVE_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -421,7 +421,7 @@ uvc_error_t uvc_get_focus_simple_range(uvc_device_handle_t *devh, uint8_t* focus
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_CT_FOCUS_SIMPLE_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -450,7 +450,7 @@ uvc_error_t uvc_set_focus_simple_range(uvc_device_handle_t *devh, uint8_t focus)
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_CT_FOCUS_SIMPLE_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -475,7 +475,7 @@ uvc_error_t uvc_get_focus_auto(uvc_device_handle_t *devh, uint8_t* state, enum u
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_CT_FOCUS_AUTO_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -504,7 +504,7 @@ uvc_error_t uvc_set_focus_auto(uvc_device_handle_t *devh, uint8_t state) {
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_CT_FOCUS_AUTO_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -529,7 +529,7 @@ uvc_error_t uvc_get_iris_abs(uvc_device_handle_t *devh, uint16_t* iris, enum uvc
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_CT_IRIS_ABSOLUTE_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -558,7 +558,7 @@ uvc_error_t uvc_set_iris_abs(uvc_device_handle_t *devh, uint16_t iris) {
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_CT_IRIS_ABSOLUTE_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -583,7 +583,7 @@ uvc_error_t uvc_get_iris_rel(uvc_device_handle_t *devh, uint8_t* iris_rel, enum 
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_CT_IRIS_RELATIVE_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -612,7 +612,7 @@ uvc_error_t uvc_set_iris_rel(uvc_device_handle_t *devh, uint8_t iris_rel) {
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_CT_IRIS_RELATIVE_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -637,7 +637,7 @@ uvc_error_t uvc_get_zoom_abs(uvc_device_handle_t *devh, uint16_t* focal_length, 
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_CT_ZOOM_ABSOLUTE_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -666,7 +666,7 @@ uvc_error_t uvc_set_zoom_abs(uvc_device_handle_t *devh, uint16_t focal_length) {
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_CT_ZOOM_ABSOLUTE_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -693,7 +693,7 @@ uvc_error_t uvc_get_zoom_rel(uvc_device_handle_t *devh, int8_t* zoom_rel, uint8_
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_CT_ZOOM_RELATIVE_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -728,7 +728,7 @@ uvc_error_t uvc_set_zoom_rel(uvc_device_handle_t *devh, int8_t zoom_rel, uint8_t
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_CT_ZOOM_RELATIVE_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -754,7 +754,7 @@ uvc_error_t uvc_get_pantilt_abs(uvc_device_handle_t *devh, int32_t* pan, int32_t
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_CT_PANTILT_ABSOLUTE_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -786,7 +786,7 @@ uvc_error_t uvc_set_pantilt_abs(uvc_device_handle_t *devh, int32_t pan, int32_t 
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_CT_PANTILT_ABSOLUTE_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -814,7 +814,7 @@ uvc_error_t uvc_get_pantilt_rel(uvc_device_handle_t *devh, int8_t* pan_rel, uint
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_CT_PANTILT_RELATIVE_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -852,7 +852,7 @@ uvc_error_t uvc_set_pantilt_rel(uvc_device_handle_t *devh, int8_t pan_rel, uint8
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_CT_PANTILT_RELATIVE_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -877,7 +877,7 @@ uvc_error_t uvc_get_roll_abs(uvc_device_handle_t *devh, int16_t* roll, enum uvc_
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_CT_ROLL_ABSOLUTE_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -906,7 +906,7 @@ uvc_error_t uvc_set_roll_abs(uvc_device_handle_t *devh, int16_t roll) {
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_CT_ROLL_ABSOLUTE_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -932,7 +932,7 @@ uvc_error_t uvc_get_roll_rel(uvc_device_handle_t *devh, int8_t* roll_rel, uint8_
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_CT_ROLL_RELATIVE_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -964,7 +964,7 @@ uvc_error_t uvc_set_roll_rel(uvc_device_handle_t *devh, int8_t roll_rel, uint8_t
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_CT_ROLL_RELATIVE_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -989,7 +989,7 @@ uvc_error_t uvc_get_privacy(uvc_device_handle_t *devh, uint8_t* privacy, enum uv
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_CT_PRIVACY_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -1018,7 +1018,7 @@ uvc_error_t uvc_set_privacy(uvc_device_handle_t *devh, uint8_t privacy) {
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_CT_PRIVACY_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -1048,7 +1048,7 @@ uvc_error_t uvc_get_digital_window(uvc_device_handle_t *devh, uint16_t* window_t
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_CT_DIGITAL_WINDOW_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -1092,7 +1092,7 @@ uvc_error_t uvc_set_digital_window(uvc_device_handle_t *devh, uint16_t window_to
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_CT_DIGITAL_WINDOW_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -1121,7 +1121,7 @@ uvc_error_t uvc_get_digital_roi(uvc_device_handle_t *devh, uint16_t* roi_top, ui
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_CT_REGION_OF_INTEREST_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -1162,7 +1162,7 @@ uvc_error_t uvc_set_digital_roi(uvc_device_handle_t *devh, uint16_t roi_top, uin
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_CT_REGION_OF_INTEREST_CONTROL << 8,
-    1 << 8,
+    uvc_get_camera_terminal(devh)->bTerminalID << 8,
     data,
     sizeof(data),
     0);
@@ -1187,7 +1187,7 @@ uvc_error_t uvc_get_backlight_compensation(uvc_device_handle_t *devh, uint16_t* 
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_PU_BACKLIGHT_COMPENSATION_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -1216,7 +1216,7 @@ uvc_error_t uvc_set_backlight_compensation(uvc_device_handle_t *devh, uint16_t b
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_PU_BACKLIGHT_COMPENSATION_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -1241,7 +1241,7 @@ uvc_error_t uvc_get_brightness(uvc_device_handle_t *devh, int16_t* brightness, e
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_PU_BRIGHTNESS_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -1270,7 +1270,7 @@ uvc_error_t uvc_set_brightness(uvc_device_handle_t *devh, int16_t brightness) {
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_PU_BRIGHTNESS_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -1295,7 +1295,7 @@ uvc_error_t uvc_get_contrast(uvc_device_handle_t *devh, uint16_t* contrast, enum
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_PU_CONTRAST_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -1324,7 +1324,7 @@ uvc_error_t uvc_set_contrast(uvc_device_handle_t *devh, uint16_t contrast) {
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_PU_CONTRAST_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -1349,7 +1349,7 @@ uvc_error_t uvc_get_contrast_auto(uvc_device_handle_t *devh, uint8_t* contrast_a
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_PU_CONTRAST_AUTO_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -1378,7 +1378,7 @@ uvc_error_t uvc_set_contrast_auto(uvc_device_handle_t *devh, uint8_t contrast_au
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_PU_CONTRAST_AUTO_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -1403,7 +1403,7 @@ uvc_error_t uvc_get_gain(uvc_device_handle_t *devh, uint16_t* gain, enum uvc_req
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_PU_GAIN_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -1432,7 +1432,7 @@ uvc_error_t uvc_set_gain(uvc_device_handle_t *devh, uint16_t gain) {
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_PU_GAIN_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -1457,7 +1457,7 @@ uvc_error_t uvc_get_power_line_frequency(uvc_device_handle_t *devh, uint8_t* pow
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_PU_POWER_LINE_FREQUENCY_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -1486,7 +1486,7 @@ uvc_error_t uvc_set_power_line_frequency(uvc_device_handle_t *devh, uint8_t powe
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_PU_POWER_LINE_FREQUENCY_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -1511,7 +1511,7 @@ uvc_error_t uvc_get_hue(uvc_device_handle_t *devh, int16_t* hue, enum uvc_req_co
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_PU_HUE_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -1540,7 +1540,7 @@ uvc_error_t uvc_set_hue(uvc_device_handle_t *devh, int16_t hue) {
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_PU_HUE_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -1565,7 +1565,7 @@ uvc_error_t uvc_get_hue_auto(uvc_device_handle_t *devh, uint8_t* hue_auto, enum 
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_PU_HUE_AUTO_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -1594,7 +1594,7 @@ uvc_error_t uvc_set_hue_auto(uvc_device_handle_t *devh, uint8_t hue_auto) {
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_PU_HUE_AUTO_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -1619,7 +1619,7 @@ uvc_error_t uvc_get_saturation(uvc_device_handle_t *devh, uint16_t* saturation, 
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_PU_SATURATION_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -1648,7 +1648,7 @@ uvc_error_t uvc_set_saturation(uvc_device_handle_t *devh, uint16_t saturation) {
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_PU_SATURATION_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -1673,7 +1673,7 @@ uvc_error_t uvc_get_sharpness(uvc_device_handle_t *devh, uint16_t* sharpness, en
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_PU_SHARPNESS_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -1702,7 +1702,7 @@ uvc_error_t uvc_set_sharpness(uvc_device_handle_t *devh, uint16_t sharpness) {
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_PU_SHARPNESS_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -1727,7 +1727,7 @@ uvc_error_t uvc_get_gamma(uvc_device_handle_t *devh, uint16_t* gamma, enum uvc_r
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_PU_GAMMA_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -1756,7 +1756,7 @@ uvc_error_t uvc_set_gamma(uvc_device_handle_t *devh, uint16_t gamma) {
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_PU_GAMMA_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -1781,7 +1781,7 @@ uvc_error_t uvc_get_white_balance_temperature(uvc_device_handle_t *devh, uint16_
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_PU_WHITE_BALANCE_TEMPERATURE_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -1810,7 +1810,7 @@ uvc_error_t uvc_set_white_balance_temperature(uvc_device_handle_t *devh, uint16_
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_PU_WHITE_BALANCE_TEMPERATURE_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -1835,7 +1835,7 @@ uvc_error_t uvc_get_white_balance_temperature_auto(uvc_device_handle_t *devh, ui
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_PU_WHITE_BALANCE_TEMPERATURE_AUTO_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -1864,7 +1864,7 @@ uvc_error_t uvc_set_white_balance_temperature_auto(uvc_device_handle_t *devh, ui
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_PU_WHITE_BALANCE_TEMPERATURE_AUTO_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -1890,7 +1890,7 @@ uvc_error_t uvc_get_white_balance_component(uvc_device_handle_t *devh, uint16_t*
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_PU_WHITE_BALANCE_COMPONENT_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -1922,7 +1922,7 @@ uvc_error_t uvc_set_white_balance_component(uvc_device_handle_t *devh, uint16_t 
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_PU_WHITE_BALANCE_COMPONENT_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -1947,7 +1947,7 @@ uvc_error_t uvc_get_white_balance_component_auto(uvc_device_handle_t *devh, uint
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_PU_WHITE_BALANCE_COMPONENT_AUTO_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -1976,7 +1976,7 @@ uvc_error_t uvc_set_white_balance_component_auto(uvc_device_handle_t *devh, uint
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_PU_WHITE_BALANCE_COMPONENT_AUTO_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -2001,7 +2001,7 @@ uvc_error_t uvc_get_digital_multiplier(uvc_device_handle_t *devh, uint16_t* mult
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_PU_DIGITAL_MULTIPLIER_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -2030,7 +2030,7 @@ uvc_error_t uvc_set_digital_multiplier(uvc_device_handle_t *devh, uint16_t multi
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_PU_DIGITAL_MULTIPLIER_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -2055,7 +2055,7 @@ uvc_error_t uvc_get_digital_multiplier_limit(uvc_device_handle_t *devh, uint16_t
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_PU_DIGITAL_MULTIPLIER_LIMIT_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -2084,7 +2084,7 @@ uvc_error_t uvc_set_digital_multiplier_limit(uvc_device_handle_t *devh, uint16_t
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_PU_DIGITAL_MULTIPLIER_LIMIT_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -2109,7 +2109,7 @@ uvc_error_t uvc_get_analog_video_standard(uvc_device_handle_t *devh, uint8_t* vi
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_PU_ANALOG_VIDEO_STANDARD_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -2138,7 +2138,7 @@ uvc_error_t uvc_set_analog_video_standard(uvc_device_handle_t *devh, uint8_t vid
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_PU_ANALOG_VIDEO_STANDARD_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -2163,7 +2163,7 @@ uvc_error_t uvc_get_analog_video_lock_status(uvc_device_handle_t *devh, uint8_t*
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_PU_ANALOG_LOCK_STATUS_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -2192,7 +2192,7 @@ uvc_error_t uvc_set_analog_video_lock_status(uvc_device_handle_t *devh, uint8_t 
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_PU_ANALOG_LOCK_STATUS_CONTROL << 8,
-    1 << 8,
+    uvc_get_processing_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -2217,7 +2217,7 @@ uvc_error_t uvc_get_input_select(uvc_device_handle_t *devh, uint8_t* selector, e
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_SU_INPUT_SELECT_CONTROL << 8,
-    1 << 8,
+    uvc_get_selector_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
@@ -2246,7 +2246,7 @@ uvc_error_t uvc_set_input_select(uvc_device_handle_t *devh, uint8_t selector) {
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_SU_INPUT_SELECT_CONTROL << 8,
-    1 << 8,
+    uvc_get_selector_units(devh)->bUnitID << 8,
     data,
     sizeof(data),
     0);
