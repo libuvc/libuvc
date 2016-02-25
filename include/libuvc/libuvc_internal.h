@@ -178,6 +178,7 @@ typedef struct uvc_control_interface {
   struct uvc_device_info *parent;
   struct uvc_input_terminal *input_term_descs;
   // struct uvc_output_terminal *output_term_descs;
+  struct uvc_selector_unit *selector_unit_descs;
   struct uvc_processing_unit *processing_unit_descs;
   struct uvc_extension_unit *extension_unit_descs;
   uint16_t bcdUVC;

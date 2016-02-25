@@ -49,6 +49,9 @@ uvc_error_t uvc_scan_control(uvc_device_t *dev, uvc_device_info_t *info);
 uvc_error_t uvc_parse_vc(uvc_device_t *dev,
 			 uvc_device_info_t *info,
 			 const unsigned char *block, size_t block_size);
+uvc_error_t uvc_parse_vc_selector_unit(uvc_device_t *dev,
+					uvc_device_info_t *info,
+					const unsigned char *block, size_t block_size);
 uvc_error_t uvc_parse_vc_extension_unit(uvc_device_t *dev,
 					uvc_device_info_t *info,
 					const unsigned char *block,
@@ -640,6 +643,29 @@ libusb_device_handle *uvc_get_libusb_handle(uvc_device_handle_t *devh) {
 }
 
 /**
+ * @brief Get camera terminal descriptor for the open device.
+ *
+ * @note Do not modify the returned structure.
+ * @note The returned structure is part of a linked list, but iterating through
+ * it will make it no longer the camera terminal
+ *
+ * @param devh Device handle to an open UVC device
+ */
+const uvc_input_terminal_t *uvc_get_camera_terminal(uvc_device_handle_t *devh) {
+  const uvc_input_terminal_t *term = uvc_get_input_terminals(devh);
+  while(term != NULL) {
+    if (term->wTerminalType == UVC_ITT_CAMERA) {
+      break;
+    }
+    else {
+      term = term->next;
+    }
+  }
+  return term;
+}
+
+
+/**
  * @brief Get input terminal descriptors for the open device.
  *
  * @note Do not modify the returned structure.
@@ -663,6 +689,19 @@ const uvc_input_terminal_t *uvc_get_input_terminals(uvc_device_handle_t *devh) {
  */
 const uvc_output_terminal_t *uvc_get_output_terminals(uvc_device_handle_t *devh) {
   return NULL; /* @todo */
+}
+
+/**
+ * @brief Get selector unit descriptors for the open device.
+ *
+ * @note Do not modify the returned structure.
+ * @note The returned structure is part of a linked list. Iterate through
+ *       it by using the 'next' pointers.
+ *
+ * @param devh Device handle to an open UVC device
+ */
+const uvc_selector_unit_t *uvc_get_selector_units(uvc_device_handle_t *devh) {
+  return devh->info->ctrl_if.selector_unit_descs;
 }
 
 /**
@@ -963,6 +1002,27 @@ uvc_error_t uvc_parse_vc_processing_unit(uvc_device_t *dev,
 }
 
 /** @internal
+ * @brief Parse a VideoControl selector unit.
+ * @ingroup device
+ */
+uvc_error_t uvc_parse_vc_selector_unit(uvc_device_t *dev,
+					 uvc_device_info_t *info,
+					 const unsigned char *block, size_t block_size) {
+  uvc_selector_unit_t *unit;
+  size_t i;
+
+  UVC_ENTER();
+
+  unit = calloc(1, sizeof(*unit));
+  unit->bUnitID = block[3];
+
+  DL_APPEND(info->ctrl_if.selector_unit_descs, unit);
+
+  UVC_EXIT(UVC_SUCCESS);
+  return UVC_SUCCESS;
+}
+
+/** @internal
  * @brief Parse a VideoControl extension unit.
  * @ingroup device
  */
@@ -1022,6 +1082,7 @@ uvc_error_t uvc_parse_vc(
   case UVC_VC_OUTPUT_TERMINAL:
     break;
   case UVC_VC_SELECTOR_UNIT:
+    ret = uvc_parse_vc_selector_unit(dev, info, block, block_size);
     break;
   case UVC_VC_PROCESSING_UNIT:
     ret = uvc_parse_vc_processing_unit(dev, info, block, block_size);
