@@ -381,6 +381,13 @@ typedef void(uvc_status_callback_t)(enum uvc_status_class status_class,
                                     void *data, size_t data_len,
                                     void *user_ptr);
 
+/** A callback function to accept button events
+ * @ingroup device
+ */
+typedef void(uvc_button_callback_t)(int button,
+                                    int state,
+                                    void *user_ptr);
+
 /** Structure representing a UVC device descriptor.
  *
  * (This isn't a standard structure.)
@@ -482,6 +489,11 @@ uvc_error_t uvc_find_device(
     uvc_device_t **dev,
     int vid, int pid, const char *sn);
 
+uvc_error_t uvc_find_devices(
+    uvc_context_t *ctx,
+    uvc_device_t ***devs,
+    int vid, int pid, const char *sn);
+
 uvc_error_t uvc_open(
     uvc_device_t *dev,
     uvc_device_handle_t **devh);
@@ -495,6 +507,10 @@ void uvc_unref_device(uvc_device_t *dev);
 
 void uvc_set_status_callback(uvc_device_handle_t *devh,
                              uvc_status_callback_t cb,
+                             void *user_ptr);
+
+void uvc_set_button_callback(uvc_device_handle_t *devh,
+                             uvc_button_callback_t cb,
                              void *user_ptr);
 
 const uvc_input_terminal_t *uvc_get_camera_terminal(uvc_device_handle_t *devh);
@@ -697,6 +713,9 @@ uvc_error_t uvc_any2rgb(uvc_frame_t *in, uvc_frame_t *out);
 uvc_error_t uvc_yuyv2bgr(uvc_frame_t *in, uvc_frame_t *out);
 uvc_error_t uvc_uyvy2bgr(uvc_frame_t *in, uvc_frame_t *out);
 uvc_error_t uvc_any2bgr(uvc_frame_t *in, uvc_frame_t *out);
+
+uvc_error_t uvc_yuyv2y(uvc_frame_t *in, uvc_frame_t *out);
+uvc_error_t uvc_yuyv2uv(uvc_frame_t *in, uvc_frame_t *out);
 
 #ifdef LIBUVC_HAS_JPEG
 uvc_error_t uvc_mjpeg2rgb(uvc_frame_t *in, uvc_frame_t *out);

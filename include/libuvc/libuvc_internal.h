@@ -266,6 +266,9 @@ struct uvc_device_handle {
   /** Function to call when we receive status updates from the camera */
   uvc_status_callback_t *status_cb;
   void *status_user_ptr;
+  /** Function to call when we receive button events from the camera */
+  uvc_button_callback_t *button_cb;
+  void *button_user_ptr;
 
   uvc_stream_handle_t *streams;
   /** Whether the camera is an iSight that sends one header per frame */
@@ -281,7 +284,7 @@ struct uvc_context {
   /** List of open devices in this context */
   uvc_device_handle_t *open_devices;
   pthread_t handler_thread;
-  uint8_t kill_handler_thread;
+  int kill_handler_thread;
 };
 
 uvc_error_t uvc_query_stream_ctrl(

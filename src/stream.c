@@ -904,7 +904,7 @@ uvc_error_t uvc_stream_start(
 
 
       if (endpoint_bytes_per_packet >= config_bytes_per_packet) {
-        printf("Estimated / selected altsetting bandwith : %d / %d. \n",config_bytes_per_packet,endpoint_bytes_per_packet);
+        printf("Estimated / selected altsetting bandwith : %zu / %zu. \n",config_bytes_per_packet,endpoint_bytes_per_packet);
 
         /* Transfers will be at most one frame long: Divide the maximum frame size
          * by the size of the endpoint and round up */
@@ -1117,8 +1117,7 @@ uvc_error_t uvc_stream_get_frame(uvc_stream_handle_t *strmh,
     _uvc_populate_frame(strmh);
     *frame = &strmh->frame;
     strmh->last_polled_seq = strmh->hold_seq;
-  }
-  else if (timeout_us != -1) {
+  } else if (timeout_us != -1) {
     if (timeout_us == 0) {
       pthread_cond_wait(&strmh->cb_cond, &strmh->cb_mutex);
     } else {
@@ -1199,15 +1198,13 @@ uvc_error_t uvc_stream_stop(uvc_stream_handle_t *strmh) {
   for(i=0; i < LIBUVC_NUM_TRANSFER_BUFS; i++) {
     if(strmh->transfers[i] != NULL) {
       int res = libusb_cancel_transfer(strmh->transfers[i]);
-      if(res < 0) {
+      if(res < 0 && res != LIBUSB_ERROR_NOT_FOUND ) {
         free(strmh->transfers[i]->buffer);
         libusb_free_transfer(strmh->transfers[i]);
         strmh->transfers[i] = NULL;
       }
     }
   }
-
-
 
   /* Wait for transfers to complete/cancel */
   do {
