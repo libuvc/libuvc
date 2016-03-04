@@ -63,7 +63,7 @@ int uvc_get_ctrl_len(uvc_device_handle_t *devh, uint8_t unit, uint8_t ctrl) {
     devh->usb_devh,
     REQ_TYPE_GET, UVC_GET_LEN,
     ctrl << 8,
-    unit << 8,
+    unit << 8 | devh->info->ctrl_if.bInterfaceNumber,		// XXX saki
     buf,
     2,
     0 /* timeout */);
@@ -92,7 +92,7 @@ int uvc_get_ctrl(uvc_device_handle_t *devh, uint8_t unit, uint8_t ctrl, void *da
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     ctrl << 8,
-    unit << 8,
+    unit << 8 | devh->info->ctrl_if.bInterfaceNumber,		// XXX saki
     data,
     len,
     0 /* timeout */);
@@ -115,7 +115,7 @@ int uvc_set_ctrl(uvc_device_handle_t *devh, uint8_t unit, uint8_t ctrl, void *da
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     ctrl << 8,
-    unit << 8,
+    unit << 8 | devh->info->ctrl_if.bInterfaceNumber,		// XXX saki
     data,
     len,
     0 /* timeout */);
@@ -130,7 +130,7 @@ uvc_error_t uvc_get_power_mode(uvc_device_handle_t *devh, enum uvc_device_power_
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     UVC_VC_VIDEO_POWER_MODE_CONTROL << 8,
-    0,
+    devh->info->ctrl_if.bInterfaceNumber,	// XXX saki
     &mode_char,
     sizeof(mode_char),
     0);
@@ -151,7 +151,7 @@ uvc_error_t uvc_set_power_mode(uvc_device_handle_t *devh, enum uvc_device_power_
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     UVC_VC_VIDEO_POWER_MODE_CONTROL << 8,
-    0,
+    devh->info->ctrl_if.bInterfaceNumber,	// XXX saki
     &mode_char,
     sizeof(mode_char),
     0);

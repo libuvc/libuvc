@@ -90,7 +90,7 @@ uvc_error_t uvc_get_{control_name}(uvc_device_handle_t *devh, {args_signature}, 
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     {control_code} << 8,
-    {unit_fn} << 8,
+    {unit_fn} << 8 | devh->info->ctrl_if.bInterfaceNumber,
     data,
     sizeof(data),
     0);
@@ -119,7 +119,7 @@ uvc_error_t uvc_set_{control_name}(uvc_device_handle_t *devh, {args_signature}) 
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     {control_code} << 8,
-    {unit_fn} << 8,
+    {unit_fn} << 8 | devh->info->ctrl_if.bInterfaceNumber,
     data,
     sizeof(data),
     0);
