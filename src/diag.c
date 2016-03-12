@@ -260,7 +260,6 @@ void uvc_print_diag(uvc_device_handle_t *devh, FILE *stream) {
   }
 }
 
-
 /** @brief Print all possible frame configuration.
  * @ingroup diag
  *
