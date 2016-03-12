@@ -353,3 +353,13 @@ void uvc_print_frameformats(uvc_device_handle_t *devh) {
     printf("uvc_print_frameformats: Device not configured!\n");
   }
 }
+
+/** @brief returns a vector of all possible frame configuration.
+ * @ingroup diag
+ *
+ * @param devh UVC device
+ */
+uvc_error_t uvc_get_frameformat_list(uvc_device_handle_t *devh,uvc_streaming_interface_t ***list) {
+	*list = &devh->info->stream_ifs;
+	return UVC_SUCCESS;
+}

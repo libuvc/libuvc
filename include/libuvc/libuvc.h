@@ -700,6 +700,7 @@ const char* uvc_strerror(uvc_error_t err);
 void uvc_print_diag(uvc_device_handle_t *devh, FILE *stream);
 void uvc_print_stream_ctrl(uvc_stream_ctrl_t *ctrl, FILE *stream);
 void uvc_print_frameformats(uvc_device_handle_t *devh);
+uvc_error_t uvc_get_frameformat_list(uvc_device_handle_t *devh,uvc_streaming_interface_t ***list)
 
 uvc_frame_t *uvc_allocate_frame(size_t data_bytes);
 void uvc_free_frame(uvc_frame_t *frame);
