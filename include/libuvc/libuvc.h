@@ -470,7 +470,7 @@ typedef struct uvc_stream_ctrl {
 uvc_error_t uvc_init(uvc_context_t **ctx, struct libusb_context *usb_ctx);
 void uvc_exit(uvc_context_t *ctx);
 
-uvc_error_t uvc_get_device_list(
+int uvc_get_device_list(
     uvc_context_t *ctx,
     uvc_device_t ***list);
 void uvc_free_device_list(uvc_device_t **list, uint8_t unref_devices);
