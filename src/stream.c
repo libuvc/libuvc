@@ -825,7 +825,7 @@ uvc_error_t uvc_stream_start(
   }
 
   strmh->running = 1;
-  strmh->seq = 0;
+  strmh->seq = 1;
   strmh->fid = 0;
   strmh->pts = 0;
   strmh->last_scr = 0;
