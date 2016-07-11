@@ -38,6 +38,7 @@
 
 #include "libuvc/libuvc.h"
 #include "libuvc/libuvc_internal.h"
+#include "errno.h"
 
 #ifdef _MSC_VER
 
@@ -1121,7 +1122,24 @@ uvc_error_t uvc_stream_get_frame(uvc_stream_handle_t *strmh,
       ts.tv_sec += add_secs;
       ts.tv_nsec += add_nsecs;
 
-      pthread_cond_timedwait(&strmh->cb_cond, &strmh->cb_mutex, &ts);
+      /* pthread_cond_timedwait FAILS with EINVAL if ts.tv_nsec > 1000000000 (1 billion)
+       * Since we are just adding values to the timespec, we have to increment the seconds if nanoseconds is greater than 1 billion,
+       * and then re-adjust the nanoseconds in the correct range.
+       * */
+      ts.tv_sec += ts.tv_nsec / 1000000000;
+      ts.tv_nsec = ts.tv_nsec % 1000000000;
+
+      int err = pthread_cond_timedwait(&strmh->cb_cond, &strmh->cb_mutex, &ts);
+
+      //TODO: How should we handle EINVAL?
+      switch(err){
+      case EINVAL:
+          *frame = NULL;
+          return UVC_ERROR_OTHER;
+      case ETIMEDOUT:
+          *frame = NULL;
+          return UVC_ERROR_TIMEOUT;
+      }
     }
     
     if (strmh->last_polled_seq < strmh->hold_seq) {
