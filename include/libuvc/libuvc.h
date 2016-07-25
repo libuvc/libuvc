@@ -6,7 +6,7 @@ extern "C" {
 #endif
 
 #include <stdio.h> // FILE
-#include <libusb.h>
+#include <libusb-1.0/libusb.h>
 #include <libuvc/libuvc_config.h>
 
 /** UVC error types, based on libusb errors
