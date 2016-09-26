@@ -88,7 +88,7 @@ export(TARGETS uvc
   FILE "${PROJECT_BINARY_DIR}/libuvcTargets.cmake")
 export(PACKAGE libuvc)
 
-set(CONF_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/include")
+set(CONF_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/include;${LIBUSB_INCLUDE_DIRS}")
 set(CONF_LIBRARY "${CMAKE_INSTALL_PREFIX}/lib/${CMAKE_SHARED_LIBRARY_PREFIX}uvc${CMAKE_SHARED_LIBRARY_SUFFIX}")
 
 configure_file(libuvcConfig.cmake.in ${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/libuvcConfig.cmake)
