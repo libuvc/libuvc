@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>libuvc</name>
+  <version>0.0.5</version>
+  <description>UVC</description>
+
+  <maintainer email="ken@tossell.net">Ken Tossell</maintainer>
+  <author email="ken@tossell.net">Ken Tossell</author>
+
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>libusb-1.0-dev</build_depend>
+
+  <exec_depend>libusb-1.0</exec_depend>
+
+  <depend>libjpeg</depend>
+
+  <export>
+    <build_type>cmake</build_type>
+  </export>
+</package>
