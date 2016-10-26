@@ -6,7 +6,11 @@ extern "C" {
 #endif
 
 #include <stdio.h> // FILE
+#ifndef WIN32
 #include <libusb-1.0/libusb.h>
+#else
+#include <libusb.h>
+#endif
 #include <libuvc/libuvc_config.h>
 #include <errno.h>
 /** UVC error types, based on libusb errors

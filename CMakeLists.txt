@@ -25,14 +25,26 @@ find_path(LIBUSB_INCLUDE_DIR libusb-1.0/libusb.h
 # Try to find JPEG using a module or pkg-config. If that doesn't work, search for the header.
 # find_package(jpeg QUIET)
 # if(NOT JPEG_FOUND)
-#   find_path(JPEG_INCLUDE_DIR jpeglib.h)
-#   if(JPEG_INCLUDE_DIR)
-#     set(JPEG_FOUND ON)
-#     set(JPEG_LIBRARIES -ljpeg)
-#   endif()
+   find_path(JPEG_INCLUDE_DIR jpeglib.h)
+   find_library(JPEG_LIBRARY_NAMES jpeg
+	   PATHS /opt/local/lib)
+   if(JPEG_INCLUDE_DIR)
+     set(JPEG_FOUND ON)
+     #set(JPEG_LIBRARIES -ljpeg)
+   endif()
 # endif()
 
-SET(CMAKE_C_FLAGS_DEBUG "-g -DUVC_DEBUGGING")
+if (WIN32)
+  find_library(PTHREAD_LIBRARY_NAMES pthreadVC2
+        PATHS D:/install/pthreads-w32-2-9-1-release/lib/x64)
+  find_path(PTHREAD_INCLUDE_DIR pthread.h
+        PATHS D:/install/pthreads-w32-2-9-1-release/include)
+SET(EXTRA_DEFS "-D_TIMESPEC_DEFINED")
+add_definitions(${EXTRA_DEFS})
+else()
+SET(CMAKE_C_FLAGS_DEBUG "-g  -DUVC_DEBUGGING")
+endif()
+
 
 SET(INSTALL_CMAKE_DIR "${CMAKE_INSTALL_PREFIX}/lib/cmake/libuvc" CACHE PATH
 	"Installation directory for CMake files")
@@ -45,6 +57,7 @@ include_directories(
   ${libuvc_SOURCE_DIR}/include
   ${libuvc_BINARY_DIR}/include
   ${LIBUSB_INCLUDE_DIR}
+  ${PTHREAD_INCLUDE_DIR}
 )
 
 if(JPEG_FOUND)
@@ -68,13 +81,13 @@ configure_file(include/libuvc/libuvc_config.h.in
   ${PROJECT_BINARY_DIR}/include/libuvc/libuvc_config.h @ONLY)
 
 set_target_properties(uvc PROPERTIES
-  PUBLIC_HEADER "include/libuvc/libuvc.h;${libuvc_BINARY_DIR}/include/libuvc/libuvc_config.h" )
+  PUBLIC_HEADER "include/libuvc/libuvc.h;${libuvc_BINARY_DIR}/include/libuvc/libuvc_config.h" WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
 
-if(JPEG_FOUND)
-  target_link_libraries (uvc ${JPEG_LIBRARIES})
-endif(JPEG_FOUND)
+#if(JPEG_FOUND)
+#  target_link_libraries (uvc ${JPEG_LIBRARIES})
+#endif(JPEG_FOUND)
 
-target_link_libraries(uvc ${LIBUSB_LIBRARY_NAMES})
+target_link_libraries(uvc ${LIBUSB_LIBRARY_NAMES} ${PTHREAD_LIBRARY_NAMES} ${JPEG_LIBRARY_NAMES})
 
 #add_executable(test src/test.c)
 #target_link_libraries(test uvc ${LIBUSB_LIBRARY_NAMES} opencv_highgui
