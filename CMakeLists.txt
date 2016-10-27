@@ -31,6 +31,8 @@ find_path(LIBUSB_INCLUDE_DIR libusb-1.0/libusb.h
    if(JPEG_INCLUDE_DIR)
      set(JPEG_FOUND ON)
      #set(JPEG_LIBRARIES -ljpeg)
+   else()
+     unset(JPEG_LIBRARY_NAMES CACHE)
    endif()
 # endif()
 
