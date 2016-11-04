@@ -1,11 +1,11 @@
-PREREQUISITES
-==============
+## Prerequisites
 
-1. Libusb with isochronous support
+
+1. [Libusb with isochronous support] (https://github.com/pupil-labs/libusb)
 2. Cmake  (https://cmake.org/files/v3.7/cmake-3.7.0-rc2-win64-x64.msi)
 
-INSTALLATION
-=============
+## Installation
+
 1. Download and extract posix threads for Windows from http://kent.dl.sourceforge.net/project/pthreads4w/pthreads-w32-2-9-1-release.zip
    Add the dll\x64 directory to the system path
 2. Run cmake. Set the top level libuvc directory as the source path. Set a
