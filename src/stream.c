@@ -39,6 +39,11 @@
 #include "libuvc/libuvc.h"
 #include "libuvc/libuvc_internal.h"
 
+
+#ifdef __APPLE__
+    #include "time_mac.h"
+#endif
+
 #ifdef _MSC_VER
 
 #define DELTA_EPOCH_IN_MICROSECS  116444736000000000Ui64
@@ -1121,21 +1126,25 @@ uvc_error_t uvc_stream_get_frame(uvc_stream_handle_t *strmh,
     if (timeout_us == 0) {
       pthread_cond_wait(&strmh->cb_cond, &strmh->cb_mutex);
     } else {
-      add_secs = timeout_us / 1000000;
-      add_nsecs = (timeout_us % 1000000) * 1000;
+      add_secs = timeout_us / 1e6;
+      add_nsecs = (timeout_us % (int)1e6) * 1e3;
       ts.tv_sec = 0;
       ts.tv_nsec = 0;
 
-#if _POSIX_TIMERS > 0
+#if _POSIX_TIMERS > 0 //linux
       clock_gettime(CLOCK_REALTIME, &ts);
-#else
+#else //windows
       gettimeofday(&tv, NULL);
       ts.tv_sec = tv.tv_sec;
       ts.tv_nsec = tv.tv_usec * 1000;
 #endif
-
       ts.tv_sec += add_secs;
       ts.tv_nsec += add_nsecs;
+
+#ifdef __APPLE__
+      // use a custom fn instead
+      ts = get_abs_future_time_coarse(timeout_us/1000);
+#endif
 
       pthread_cond_timedwait(&strmh->cb_cond, &strmh->cb_mutex, &ts);
     }
