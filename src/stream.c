@@ -568,6 +568,37 @@ void _uvc_process_payload(uvc_stream_handle_t *strmh, uint8_t *payload, size_t p
 }
 
 /** @internal
+ * @brief Delete transfer
+ *
+ * Cancel transfer and free all buffers
+ *
+ * @param transfer Active transfer
+ */
+static void _uvc_delete_transfer(struct libusb_transfer *transfer) {
+    uvc_stream_handle_t *strmh = transfer->user_data;
+    if (!strmh) return;
+    int i;
+    pthread_mutex_lock(&strmh->cb_mutex);
+    {
+        for (i = 0; i < LIBUVC_NUM_TRANSFER_BUFS; i++) {
+            if (strmh->transfers[i] == transfer) {
+                libusb_cancel_transfer(strmh->transfers[i]);
+                UVC_DEBUG("Freeing transfer %d (%p)", i, transfer);
+                free(transfer->buffer);
+                libusb_free_transfer(transfer);
+                strmh->transfers[i] = NULL;
+                break;
+            }
+        }
+        if (i == LIBUVC_NUM_TRANSFER_BUFS) {
+            UVC_DEBUG("transfer %p not found; not freeing!", transfer);
+        }
+        pthread_cond_broadcast(&strmh->cb_cond);
+    }
+    pthread_mutex_unlock(&strmh->cb_mutex);
+}
+
+/** @internal
  * @brief Stream transfer callback
  *
  * Processes stream, places frames into buffer, signals listeners
@@ -644,6 +675,11 @@ void LIBUSB_CALL _uvc_stream_callback(struct libusb_transfer *transfer) {
   
   if ( strmh->running && resubmit )
     libusb_submit_transfer(transfer);
+	
+  if ( strmh->running && resubmit )
+    libusb_submit_transfer(transfer);
+  else
+    _uvc_delete_transfer(transfer);
 }
 
 /** Begin streaming video from the camera into the callback function.
@@ -1193,11 +1229,11 @@ uvc_error_t uvc_stream_stop(uvc_stream_handle_t *strmh) {
   for(i=0; i < LIBUVC_NUM_TRANSFER_BUFS; i++) {
     if(strmh->transfers[i] != NULL) {
       int res = libusb_cancel_transfer(strmh->transfers[i]);
-      if(res < 0 && res != LIBUSB_ERROR_NOT_FOUND ) {
+/*      if(res < 0 && res != LIBUSB_ERROR_NOT_FOUND ) {
         free(strmh->transfers[i]->buffer);
         libusb_free_transfer(strmh->transfers[i]);
         strmh->transfers[i] = NULL;
-      }
+      }*/
     }
   }
 
