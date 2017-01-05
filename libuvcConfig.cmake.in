@@ -1,3 +1,16 @@
 # - Config file for the libuvc package
-set(libuvc_INCLUDE_DIRS "@CONF_INCLUDE_DIR@")
-set(libuvc_LIBRARIES "@CONF_LIBRARY@")
+# It defines the following variables
+#  libuvc_INCLUDE_DIRS - include directories for libuvc
+#  libuvc_LIBRARIES    - libraries to link against
+
+# Compute paths
+get_filename_component(libuvc_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+set(libuvc_INCLUDE_DIRS "@CONF_INCLUDE_DIRS@")
+
+# Our library dependencies (contains definitions for IMPORTED targets)
+if(NOT TARGET uvc AND NOT libuvc_BINARY_DIR)
+  include("${libuvc_CMAKE_DIR}/libuvcTargets.cmake")
+endif()
+
+# These are IMPORTED targets created by libuvcTargets.cmake
+set(libuvc_LIBRARIES uvc)
