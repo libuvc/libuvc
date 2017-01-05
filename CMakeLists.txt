@@ -17,7 +17,7 @@ set(libuvc_VERSION_PATCH 5)
 set(libuvc_VERSION ${libuvc_VERSION_MAJOR}.${libuvc_VERSION_MINOR}.${libuvc_VERSION_PATCH})
 
 find_package(PkgConfig)
-pkg_check_modules(LIBUSB libusb-1.0)
+pkg_check_modules(LIBUSB REQUIRED libusb-1.0)
 
 # Try to find JPEG using a module or pkg-config. If that doesn't work, search for the header.
 find_package(jpeg QUIET)
