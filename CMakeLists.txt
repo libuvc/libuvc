@@ -32,7 +32,7 @@ endif()
 SET(CMAKE_C_FLAGS_DEBUG "-g -DUVC_DEBUGGING")
 
 SET(INSTALL_CMAKE_DIR "${CMAKE_INSTALL_PREFIX}/lib/cmake/libuvc" CACHE PATH
-	"Installation directory for CMake files")
+  "Installation directory for CMake files")
 
 SET(SOURCES src/ctrl.c src/ctrl-gen.c src/device.c src/diag.c
            src/frame.c src/init.c src/stream.c
