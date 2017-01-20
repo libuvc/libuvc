@@ -70,6 +70,10 @@ configure_file(include/libuvc/libuvc_config.h.in
 set_target_properties(uvc PROPERTIES
   PUBLIC_HEADER "include/libuvc/libuvc.h;${libuvc_BINARY_DIR}/include/libuvc/libuvc_config.h" )
 
+set_target_properties(uvc PROPERTIES VERSION ${libuvc_VERSION}
+                                         SOVERSION ${libuvc_VERSION_MAJOR})
+
+
 if(JPEG_FOUND)
   target_link_libraries (uvc ${JPEG_LIBRARIES})
 endif(JPEG_FOUND)
