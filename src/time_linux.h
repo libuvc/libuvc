@@ -21,8 +21,6 @@ struct timespec get_abs_future_time_coarse(unsigned milli)
 {
     struct timespec future;         /* ns since 1 Jan 1970 to 1500 ms in the future */
     clock_gettime(CLOCK_REALTIME, &future);
-    future.tv_sec = micro.tv_sec;
-    future.tv_nsec = micro.tv_usec * 1000;
     NORMALISE_TIMESPEC( future, milli );
     return future;
 }

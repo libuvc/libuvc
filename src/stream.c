@@ -43,10 +43,10 @@
 #ifdef __APPLE__
     #include "time_mac.h"
 #endif
-#ifdef __LINUX__
+#ifdef __linux__
     #include "time_linux.h"
 #endif
-#ifdef __WINDOWS__
+#ifdef _WIN32
     #include "time_windows.h"
 #endif
 
