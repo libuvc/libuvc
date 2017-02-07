@@ -43,33 +43,14 @@
 #ifdef __APPLE__
     #include "time_mac.h"
 #endif
+#ifdef __linux__
+    #include "time_linux.h"
+#endif
+#ifdef _WIN32
+    #include "time_windows.h"
+#endif
 
-#ifdef _MSC_VER
 
-#define DELTA_EPOCH_IN_MICROSECS  116444736000000000Ui64
-
-// gettimeofday - get time of day for Windows;
-// A gettimeofday implementation for Microsoft Windows;
-// Public domain code, author "ponnada";
-int gettimeofday(struct timeval *tv, struct timezone *tz)
-{
-    FILETIME ft;
-    unsigned __int64 tmpres = 0;
-    static int tzflag = 0;
-    if (NULL != tv)
-    {
-        GetSystemTimeAsFileTime(&ft);
-        tmpres |= ft.dwHighDateTime;
-        tmpres <<= 32;
-        tmpres |= ft.dwLowDateTime;
-        tmpres /= 10;
-        tmpres -= DELTA_EPOCH_IN_MICROSECS;
-        tv->tv_sec = (long)(tmpres / 1000000UL);
-        tv->tv_usec = (long)(tmpres % 1000000UL);
-    }
-    return 0;
-}
-#endif // _MSC_VER
 uvc_frame_desc_t *uvc_find_frame_desc_stream(uvc_stream_handle_t *strmh,
     uint16_t format_id, uint16_t frame_id);
 uvc_frame_desc_t *uvc_find_frame_desc(uvc_device_handle_t *devh,
@@ -1108,7 +1089,6 @@ uvc_error_t uvc_stream_get_frame(uvc_stream_handle_t *strmh,
   time_t add_secs;
   time_t add_nsecs;
   struct timespec ts;
-  struct timeval tv;
 
   if (!strmh->running)
     return UVC_ERROR_INVALID_PARAM;
@@ -1125,27 +1105,9 @@ uvc_error_t uvc_stream_get_frame(uvc_stream_handle_t *strmh,
   } else if (timeout_us != -1) {
     if (timeout_us == 0) {
       pthread_cond_wait(&strmh->cb_cond, &strmh->cb_mutex);
-    } else {
-      add_secs = timeout_us / 1e6;
-      add_nsecs = (timeout_us % (int)1e6) * 1e3;
-      ts.tv_sec = 0;
-      ts.tv_nsec = 0;
-
-#if _POSIX_TIMERS > 0 //linux
-      clock_gettime(CLOCK_REALTIME, &ts);
-#else //windows
-      gettimeofday(&tv, NULL);
-      ts.tv_sec = tv.tv_sec;
-      ts.tv_nsec = tv.tv_usec * 1000;
-#endif
-      ts.tv_sec += add_secs;
-      ts.tv_nsec += add_nsecs;
-
-#ifdef __APPLE__
-      // use a custom fn instead
+    }
+else {
       ts = get_abs_future_time_coarse(timeout_us/1000);
-#endif
-
       pthread_cond_timedwait(&strmh->cb_cond, &strmh->cb_mutex, &ts);
     }
 
@@ -1225,23 +1187,7 @@ uvc_error_t uvc_stream_stop(uvc_stream_handle_t *strmh) {
       break;
     // this ones sometimes does not return.
     // pthread_cond_wait(&strmh->cb_cond, &strmh->cb_mutex);
-
-    add_secs = timeout_us / 1000000;
-    add_nsecs = (timeout_us % 1000000) * 1000;
-    ts.tv_sec = 0;
-    ts.tv_nsec = 0;
-
-#if _POSIX_TIMERS > 0
-    clock_gettime(CLOCK_REALTIME, &ts);
-#else
-    gettimeofday(&tv, NULL);
-    ts.tv_sec = tv.tv_sec;
-    ts.tv_nsec = tv.tv_usec * 1000;
-#endif
-
-    ts.tv_sec += add_secs;
-    ts.tv_nsec += add_nsecs;
-
+    ts = get_abs_future_time_coarse(timeout_us/1000);
     if (ETIMEDOUT == pthread_cond_timedwait(&strmh->cb_cond, &strmh->cb_mutex, &ts)){
       ret = UVC_ERROR_TIMEOUT;
       break;
