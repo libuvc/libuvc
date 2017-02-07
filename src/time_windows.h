@@ -20,7 +20,6 @@ struct timespec get_abs_future_time_coarse(unsigned milli)
 						 // Note: _ftime is deprecated; consider using _ftime_s instead  
 
     struct timespec future;
-    DWORD t_ms = timeGetTime(); // time in ms
     future.tv_sec = timebuffer.time;
     future.tv_nsec = timebuffer.millitm * MILLION;
     NORMALISE_TIMESPEC( future, milli );
