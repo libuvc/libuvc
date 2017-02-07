@@ -1,26 +1,20 @@
-#ifdef _MSC_VER
+#define BILLION 1000000000L
+#define MILLION 1000000L
 
-#define DELTA_EPOCH_IN_MICROSECS  116444736000000000Ui64
+#define NORMALISE_TIMESPEC( ts, uint_milli )            \
+    do {                                                \
+        ts.tv_sec += uint_milli / 1000u;                \
+        ts.tv_nsec += (uint_milli % 1000u) * MILLION;   \
+        ts.tv_sec += ts.tv_nsec / BILLION;              \
+        ts.tv_nsec = ts.tv_nsec % BILLION;              \
+    } while (0)
 
-// gettimeofday - get time of day for Windows;
-// A gettimeofday implementation for Microsoft Windows;
-// Public domain code, author "ponnada";
-int gettimeofday(struct timeval *tv, struct timezone *tz)
+struct timespec get_abs_future_time_coarse(unsigned milli)
 {
-    FILETIME ft;
-    unsigned __int64 tmpres = 0;
-    static int tzflag = 0;
-    if (NULL != tv)
-    {
-        GetSystemTimeAsFileTime(&ft);
-        tmpres |= ft.dwHighDateTime;
-        tmpres <<= 32;
-        tmpres |= ft.dwLowDateTime;
-        tmpres /= 10;
-        tmpres -= DELTA_EPOCH_IN_MICROSECS;
-        tv->tv_sec = (long)(tmpres / 1000000UL);
-        tv->tv_usec = (long)(tmpres % 1000000UL);
-    }
-    return 0;
+    struct timespec future;
+    uint t_ms = timeGetTime(); // time in ms
+    future.tv_sec = t_ms / 1000u;
+    future.tv_nsec = (t_ms % 1000u) * MILLION;
+    NORMALISE_TIMESPEC( future, milli );
+    return future;
 }
-#endif // _MSC_VER
