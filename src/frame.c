@@ -223,8 +223,8 @@ uvc_error_t uvc_yuyv2bgr(uvc_frame_t *in, uvc_frame_t *out) {
   uint8_t *pyuv = in->data;
   uint8_t *pbgr = out->data;
   uint8_t *pbgr_end = pbgr + out->data_bytes;
-
-  while (pbgr < pbgr_end) {
+  uint8_t *pyuv_end = pyuv + in->data_bytes;
+  while (pbgr < pbgr_end && pyuv < pyuv_end) {
     IYUYV2BGR_8(pyuv, pbgr);
 
     pbgr += 3 * 8;
