@@ -1,3 +1,13 @@
+Changes in 0.0.6 (2017-04-13)
+----------------
+
+New features:
+ - Added support for pkg-config.
+
+Bug fixes:
+ - Don't process a new transfer when LIBUSB_TRANSFER_COMPLETED and not running, just free it.
+
+
 Changes in 0.0.5 (2014-07-19)
 ----------------
 

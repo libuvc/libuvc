@@ -13,7 +13,7 @@ endif()
 
 set(libuvc_VERSION_MAJOR 0)
 set(libuvc_VERSION_MINOR 0)
-set(libuvc_VERSION_PATCH 5)
+set(libuvc_VERSION_PATCH 6)
 set(libuvc_VERSION ${libuvc_VERSION_MAJOR}.${libuvc_VERSION_MINOR}.${libuvc_VERSION_PATCH})
 
 find_package(PkgConfig)
