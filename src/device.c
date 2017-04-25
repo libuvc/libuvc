@@ -39,6 +39,8 @@
 #include "libuvc/libuvc.h"
 #include "libuvc/libuvc_internal.h"
 
+#define CS_INTERFACE 36
+
 int uvc_already_open(uvc_context_t *ctx, struct libusb_device *usb_dev);
 void uvc_free_devh(uvc_device_handle_t *devh);
 
@@ -71,6 +73,10 @@ uvc_error_t uvc_parse_vc_processing_unit(uvc_device_t *dev,
 uvc_error_t uvc_scan_streaming(uvc_device_t *dev,
 			       uvc_device_info_t *info,
 			       int interface_idx);
+uvc_error_t uvc_scan_streaming_endpoint(uvc_device_t *dev,
+			       uvc_device_info_t *info,
+			       const struct libusb_interface_descriptor* if_desc,
+			       int endpoint_idx);
 uvc_error_t uvc_parse_vs(uvc_device_t *dev,
 			 uvc_device_info_t *info,
 			 uvc_streaming_interface_t *stream_if,
@@ -1138,9 +1144,9 @@ uvc_error_t uvc_parse_vc(
 
   UVC_ENTER();
 
-  if (block[1] != 36) { // not a CS_INTERFACE descriptor??
-    UVC_EXIT(UVC_SUCCESS);
-    return UVC_SUCCESS; // UVC_ERROR_INVALID_DEVICE;
+  if (block[1] != CS_INTERFACE) { 
+    UVC_EXIT(UVC_ERROR_NOT_SUPPORTED);
+    return UVC_ERROR_NOT_SUPPORTED;
   }
 
   descriptor_subtype = block[2];
@@ -1192,6 +1198,59 @@ uvc_error_t uvc_scan_streaming(uvc_device_t *dev,
   buffer = if_desc->extra;
   buffer_left = if_desc->extra_length;
 
+  if (buffer_left) {
+    stream_if = calloc(1, sizeof(*stream_if));
+    stream_if->parent = info;
+    stream_if->bInterfaceNumber = if_desc->bInterfaceNumber;
+    DL_APPEND(info->stream_ifs, stream_if);
+
+    while (buffer_left >= 3) {
+      block_size = buffer[0];
+      parse_ret = uvc_parse_vs(dev, info, stream_if, buffer, block_size);
+
+      if (parse_ret != UVC_SUCCESS) {
+	ret = parse_ret;
+	break;
+      }
+
+      buffer_left -= block_size;
+      buffer += block_size;
+    }
+  }
+  for (int i = 0; i< if_desc->bNumEndpoints != 0; i++ ) {
+    uvc_scan_streaming_endpoint(dev, info, if_desc, i);
+  }
+
+  UVC_EXIT(ret);
+  return ret;
+}
+
+/** @internal
+ * Process a VideoStreaming Endpoint
+ * @ingroup device
+ */
+uvc_error_t uvc_scan_streaming_endpoint(uvc_device_t *dev,
+			       uvc_device_info_t *info,
+			       const struct libusb_interface_descriptor *if_desc,
+			       int endpoint_idx) {
+  const struct libusb_endpoint_descriptor *ep_desc;
+  const unsigned char *buffer;
+  size_t buffer_left, block_size;
+  uvc_error_t ret, parse_ret;
+  uvc_streaming_interface_t *stream_if;
+
+  UVC_ENTER();
+
+  ret = UVC_SUCCESS;
+
+  ep_desc = &if_desc->endpoint[endpoint_idx];
+  buffer = ep_desc->extra;
+  buffer_left = ep_desc->extra_length;
+
+  // Some USB Cameras attach streaming interfaces to endpoints
+  // Check each block to see if it's an interface, then assume
+  // it's a video interface
+
   stream_if = calloc(1, sizeof(*stream_if));
   stream_if->parent = info;
   stream_if->bInterfaceNumber = if_desc->bInterfaceNumber;
@@ -1199,6 +1258,11 @@ uvc_error_t uvc_scan_streaming(uvc_device_t *dev,
 
   while (buffer_left >= 3) {
     block_size = buffer[0];
+    if (buffer[1] != CS_INTERFACE) { 
+      ret = UVC_ERROR_NOT_SUPPORTED;
+      break;
+    }
+    
     parse_ret = uvc_parse_vs(dev, info, stream_if, buffer, block_size);
 
     if (parse_ret != UVC_SUCCESS) {
@@ -1213,6 +1277,7 @@ uvc_error_t uvc_scan_streaming(uvc_device_t *dev,
   UVC_EXIT(ret);
   return ret;
 }
+
 
 /** @internal
  * @brief Parse a VideoStreaming header block.
