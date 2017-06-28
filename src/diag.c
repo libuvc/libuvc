@@ -260,3 +260,96 @@ void uvc_print_diag(uvc_device_handle_t *devh, FILE *stream) {
   }
 }
 
+/** @brief Print all possible frame configuration.
+ * @ingroup diag
+ *
+ * @param devh UVC device
+ * @param stream Output stream (stderr if NULL)
+ */
+void uvc_print_frameformats(uvc_device_handle_t *devh) {
+
+  if (devh->info->ctrl_if.bcdUVC) {
+    uvc_streaming_interface_t *stream_if;
+    int stream_idx = 0;
+    DL_FOREACH(devh->info->stream_ifs, stream_if) {
+      uvc_format_desc_t *fmt_desc;
+      ++stream_idx;
+
+      DL_FOREACH(stream_if->format_descs, fmt_desc) {
+        uvc_frame_desc_t *frame_desc;
+        int i;
+
+        switch (fmt_desc->bDescriptorSubtype) {
+          case UVC_VS_FORMAT_UNCOMPRESSED:
+          case UVC_VS_FORMAT_MJPEG:
+          case UVC_VS_FORMAT_FRAME_BASED:
+            printf("         \%s(%d)\n"
+                "            bits per pixel: %d\n"
+                "            GUID: ",
+                _uvc_name_for_format_subtype(fmt_desc->bDescriptorSubtype),
+                fmt_desc->bFormatIndex,
+                fmt_desc->bBitsPerPixel);
+
+            for (i = 0; i < 16; ++i)
+              printf("%02x", fmt_desc->guidFormat[i]);
+
+            printf(" (%4s)\n", fmt_desc->fourccFormat );
+
+            printf("            default frame: %d\n"
+                "            aspect ratio: %dx%d\n"
+                "            interlace flags: %02x\n"
+                "            copy protect: %02x\n",
+                fmt_desc->bDefaultFrameIndex,
+                fmt_desc->bAspectRatioX,
+                fmt_desc->bAspectRatioY,
+                fmt_desc->bmInterlaceFlags,
+                fmt_desc->bCopyProtect);
+
+            DL_FOREACH(fmt_desc->frame_descs, frame_desc) {
+              uint32_t *interval_ptr;
+
+              printf("               FrameDescriptor(%d)\n"
+                  "                  capabilities: %02x\n"
+                  "                  size: %dx%d\n"
+                  "                  bit rate: %d-%d\n"
+                  "                  max frame size: %d\n"
+                  "                  default interval: 1/%d\n",
+                  frame_desc->bFrameIndex,
+                  frame_desc->bmCapabilities,
+                  frame_desc->wWidth,
+                  frame_desc->wHeight,
+                  frame_desc->dwMinBitRate,
+                  frame_desc->dwMaxBitRate,
+                  frame_desc->dwMaxVideoFrameBufferSize,
+                  10000000 / frame_desc->dwDefaultFrameInterval);
+              if (frame_desc->intervals) {
+                for (interval_ptr = frame_desc->intervals;
+                     *interval_ptr;
+                     ++interval_ptr) {
+                  printf("                  interval[%d]: 1/%d\n",
+		      (int) (interval_ptr - frame_desc->intervals),
+		      10000000 / *interval_ptr);
+                }
+              } else {
+                printf("                  min interval[%d] = 1/%d\n"
+                    "                  max interval[%d] = 1/%d\n",
+                    frame_desc->dwMinFrameInterval,
+                    10000000 / frame_desc->dwMinFrameInterval,
+                    frame_desc->dwMaxFrameInterval,
+                    10000000 / frame_desc->dwMaxFrameInterval);
+                if (frame_desc->dwFrameIntervalStep)
+                  printf("                  interval step[%d] = 1/%d\n",
+                      frame_desc->dwFrameIntervalStep,
+                      10000000 / frame_desc->dwFrameIntervalStep);
+              }
+            }
+            break;
+          default:
+            printf("\t-UnknownFormat (%d)\n",fmt_desc->bDescriptorSubtype );
+        }
+      }
+    }
+  } else {
+    printf("uvc_print_frameformats: Device not configured!\n");
+  }
+}
