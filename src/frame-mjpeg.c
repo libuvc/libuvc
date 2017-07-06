@@ -170,7 +170,7 @@ uvc_error_t uvc_mjpeg2rgb(uvc_frame_t *in, uvc_frame_t *out) {
 
   lines_read = 0;
   while (dinfo.output_scanline < dinfo.output_height) {
-    unsigned char *buffer[1] = { out->data + lines_read * out->step };
+    unsigned char *buffer[1] = {( unsigned char*) out->data + lines_read * out->step };
     int num_scanlines;
 
     num_scanlines = jpeg_read_scanlines(&dinfo, buffer, 1);
