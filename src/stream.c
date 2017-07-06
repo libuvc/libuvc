@@ -647,8 +647,30 @@ void LIBUSB_CALL _uvc_stream_callback(struct libusb_transfer *transfer) {
     break;
   }
   
-  if ( strmh->running && resubmit )
-    libusb_submit_transfer(transfer);
+  if ( resubmit ) {
+    if ( strmh->running ) {
+      libusb_submit_transfer(transfer);
+    } else {
+      int i;
+      pthread_mutex_lock(&strmh->cb_mutex);
+
+      /* Mark transfer as deleted. */
+      for(i=0; i < LIBUVC_NUM_TRANSFER_BUFS; i++) {
+        if(strmh->transfers[i] == transfer) {
+          UVC_DEBUG("Freeing orphan transfer %d (%p)", i, transfer);
+          free(transfer->buffer);
+          libusb_free_transfer(transfer);
+          strmh->transfers[i] = NULL;
+        }
+      }
+      if(i == LIBUVC_NUM_TRANSFER_BUFS ) {
+        UVC_DEBUG("orphan transfer %p not found; not freeing!", transfer);
+      }
+
+      pthread_cond_broadcast(&strmh->cb_cond);
+      pthread_mutex_unlock(&strmh->cb_mutex);
+    }
+  }
 }
 
 /** Begin streaming video from the camera into the callback function.
