@@ -812,7 +812,7 @@ uvc_error_t uvc_stream_start(
   uvc_stream_ctrl_t *ctrl;
   uvc_error_t ret;
   /* Total amount of data per transfer */
-  size_t total_transfer_size;
+  size_t total_transfer_size = 0;
   struct libusb_transfer *transfer;
   int transfer_id;
 
@@ -855,15 +855,15 @@ uvc_error_t uvc_stream_start(
   if (isochronous) {
     /* For isochronous streaming, we choose an appropriate altsetting for the endpoint
      * and set up several transfers */
-    const struct libusb_interface_descriptor *altsetting;
+    const struct libusb_interface_descriptor *altsetting = 0;
     const struct libusb_endpoint_descriptor *endpoint;
     /* The greatest number of bytes that the device might provide, per packet, in this
      * configuration */
     size_t config_bytes_per_packet;
     /* Number of packets per transfer */
-    size_t packets_per_transfer;
+    size_t packets_per_transfer = 0;
     /* Size of packet transferable from the chosen endpoint */
-    size_t endpoint_bytes_per_packet;
+    size_t endpoint_bytes_per_packet = 0;
     /* Index of the altsetting */
     int alt_idx, ep_idx;
     
