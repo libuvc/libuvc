@@ -609,26 +609,37 @@ uvc_error_t uvc_get_device_list(
     if ( libusb_get_device_descriptor ( usb_dev, &desc ) != LIBUSB_SUCCESS )
       continue;
 
-    // Special case for Imaging Source cameras
-    if ( 0x199e == desc.idVendor && 0x8101 == desc.idProduct ) {
-      got_interface = 1;
-    } else {
+    for (interface_idx = 0;
+	 !got_interface && interface_idx < config->bNumInterfaces;
+	 ++interface_idx) {
+      interface = &config->interface[interface_idx];
 
-      for (interface_idx = 0;
-	   !got_interface && interface_idx < config->bNumInterfaces;
-	   ++interface_idx) {
-        interface = &config->interface[interface_idx];
+      for (altsetting_idx = 0;
+	   !got_interface && altsetting_idx < interface->num_altsetting;
+	   ++altsetting_idx) {
+	if_desc = &interface->altsetting[altsetting_idx];
 
-        for (altsetting_idx = 0;
-	     !got_interface && altsetting_idx < interface->num_altsetting;
-	     ++altsetting_idx) {
-	  if_desc = &interface->altsetting[altsetting_idx];
+        // Skip TIS cameras that definitely aren't UVC even though they might
+        // look that way
 
-	  /* Video, Streaming */
-	  if (if_desc->bInterfaceClass == 14 && if_desc->bInterfaceSubClass == 2) {
-	    got_interface = 1;
-	  }
+        if ( 0x199e == desc.idVendor && desc.idProduct  >= 0x8201 &&
+            desc.idProduct <= 0x8208 ) {
+          continue;
         }
+
+        // Special case for Imaging Source cameras
+	/* Video, Streaming */
+        if ( 0x199e == desc.idVendor && ( 0x8101 == desc.idProduct ||
+            0x8102 == desc.idProduct ) &&
+            if_desc->bInterfaceClass == 255 &&
+            if_desc->bInterfaceSubClass == 2 ) {
+	  got_interface = 1;
+	}
+
+	/* Video, Streaming */
+	if (if_desc->bInterfaceClass == 14 && if_desc->bInterfaceSubClass == 2) {
+	  got_interface = 1;
+	}
       }
     }
 
@@ -917,25 +928,23 @@ uvc_error_t uvc_scan_control(uvc_device_t *dev, uvc_device_info_t *info) {
   ret = UVC_SUCCESS;
   if_desc = NULL;
 
+  uvc_device_descriptor_t* dev_desc;
+  int haveTISCamera = 0;
+  uvc_get_device_descriptor ( dev, &dev_desc );
+  if ( 0x199e == dev_desc->idVendor && ( 0x8101 == dev_desc->idProduct ||
+      0x8102 == dev_desc->idProduct )) {
+    haveTISCamera = 1;
+  }
+  uvc_free_device_descriptor ( dev_desc );
+
   for (interface_idx = 0; interface_idx < info->config->bNumInterfaces; ++interface_idx) {
     if_desc = &info->config->interface[interface_idx].altsetting[0];
 
-    if (if_desc->bInterfaceClass == 14 && if_desc->bInterfaceSubClass == 1) // Video, Control
+    if ( haveTISCamera && if_desc->bInterfaceClass == 255 && if_desc->bInterfaceSubClass == 1) // Video, Control
       break;
 
-    // Another TIS camera hack.
-    if ( if_desc->bInterfaceClass == 255 && if_desc->bInterfaceSubClass == 1 ) {
-      uvc_device_descriptor_t* dev_desc;
-      int haveTISCamera = 0;
-      uvc_get_device_descriptor ( dev, &dev_desc );
-      if ( dev_desc->idVendor == 0x199e && dev_desc->idProduct == 0x8101 ) {
-        haveTISCamera = 1;
-      }
-      uvc_free_device_descriptor ( dev_desc );
-      if ( haveTISCamera ) {
-        break;
-      }
-    }
+    if (if_desc->bInterfaceClass == 14 && if_desc->bInterfaceSubClass == 1) // Video, Control
+      break;
 
     if_desc = NULL;
   }
@@ -1702,7 +1711,10 @@ void LIBUSB_CALL _uvc_status_callback(struct libusb_transfer *transfer) {
     break;
   }
 
-  uvc_error_t ret = libusb_submit_transfer(transfer);
+#ifdef UVC_DEBUGGING
+  uvc_error_t ret =
+#endif
+      libusb_submit_transfer(transfer);
   UVC_DEBUG("libusb_submit_transfer() = %d", ret);
 
   UVC_EXIT_VOID();
