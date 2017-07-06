@@ -72,7 +72,9 @@ enum uvc_frame_format {
   UVC_FRAME_FORMAT_BGR,
   /** Motion-JPEG (or JPEG) encoded images */
   UVC_FRAME_FORMAT_MJPEG,
+  /** Greyscale images */
   UVC_FRAME_FORMAT_GRAY8,
+  UVC_FRAME_FORMAT_GRAY16,
   /* Raw colour mosaic images */
   UVC_FRAME_FORMAT_BY8,
   UVC_FRAME_FORMAT_BA81,
@@ -95,6 +97,7 @@ enum uvc_frame_format {
 #define UVC_COLOR_FORMAT_BGR UVC_FRAME_FORMAT_BGR
 #define UVC_COLOR_FORMAT_MJPEG UVC_FRAME_FORMAT_MJPEG
 #define UVC_COLOR_FORMAT_GRAY8 UVC_FRAME_FORMAT_GRAY8
+#define UVC_COLOR_FORMAT_GRAY16 UVC_FRAME_FORMAT_GRAY16
 
 /** VideoStreaming interface descriptor subtype (A.6) */
 enum uvc_vs_desc_subtype {
