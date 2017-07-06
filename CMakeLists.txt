@@ -16,6 +16,10 @@ set(libuvc_VERSION_MINOR 0)
 set(libuvc_VERSION_PATCH 5)
 set(libuvc_VERSION ${libuvc_VERSION_MAJOR}.${libuvc_VERSION_MINOR}.${libuvc_VERSION_PATCH})
 
+set(libuvc_DESCRIPTION "A user-space interface for UVC-compliant cameras.")
+set(libuvc_URL "https://github.com/ktossell/libuvc")
+
+
 find_package(PkgConfig)
 pkg_check_modules(LIBUSB libusb-1.0)
 
@@ -102,3 +106,14 @@ install(FILES
 
 install(EXPORT libuvcTargets
   DESTINATION "${INSTALL_CMAKE_DIR}")
+
+# pkg-config
+configure_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/libuvc.pc.cmake.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/libuvc.pc"
+  @ONLY
+)
+install(FILES
+  "${CMAKE_CURRENT_BINARY_DIR}/libuvc.pc"
+  DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
+)
