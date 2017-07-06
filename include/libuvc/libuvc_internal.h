@@ -270,6 +270,7 @@ struct uvc_device_handle {
   uvc_stream_handle_t *streams;
   /** Whether the camera is an iSight that sends one header per frame */
   uint8_t is_isight;
+  uint32_t claimed;
 };
 
 /** Context within which we communicate with devices */

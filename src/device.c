@@ -853,9 +853,15 @@ void uvc_unref_device(uvc_device_t *dev) {
  * @param idx UVC interface index
  */
 uvc_error_t uvc_claim_if(uvc_device_handle_t *devh, int idx) {
-  int ret;
+  int ret = UVC_SUCCESS;
 
   UVC_ENTER();
+
+  if ( devh->claimed & ( 1 << idx )) {
+    fprintf ( stderr, "attempt to claim already-claimed interface %d\n", idx );
+    UVC_EXIT(ret);
+    return ret;
+  }
 
   /* Tell libusb to detach any active kernel drivers. libusb will keep track of whether
    * it found a kernel driver for this interface. */
@@ -863,7 +869,9 @@ uvc_error_t uvc_claim_if(uvc_device_handle_t *devh, int idx) {
 
   if (ret == UVC_SUCCESS || ret == LIBUSB_ERROR_NOT_FOUND || ret == LIBUSB_ERROR_NOT_SUPPORTED) {
     UVC_DEBUG("claiming interface %d", idx);
-    ret = libusb_claim_interface(devh->usb_devh, idx);
+    if (!( ret = libusb_claim_interface(devh->usb_devh, idx))) {
+      devh->claimed |= ( 1 << idx );
+    }
   } else {
     UVC_DEBUG("not claiming interface %d: unable to detach kernel driver (%s)",
               idx, uvc_strerror(ret));
@@ -881,10 +889,16 @@ uvc_error_t uvc_claim_if(uvc_device_handle_t *devh, int idx) {
  * @param idx UVC interface index
  */
 uvc_error_t uvc_release_if(uvc_device_handle_t *devh, int idx) {
-  int ret;
+  int ret = UVC_SUCCESS;
 
   UVC_ENTER();
   UVC_DEBUG("releasing interface %d", idx);
+  if (!( devh->claimed & ( 1 << idx ))) {
+    fprintf ( stderr, "attempt to release unclaimed interface %d\n", idx );
+    UVC_EXIT(ret);
+    return ret;
+  }
+
   /* libusb_release_interface *should* reset the alternate setting to the first available,
      but sometimes (e.g. on Darwin) it doesn't. Thus, we do it explicitly here.
      This is needed to de-initialize certain cameras. */
@@ -892,6 +906,7 @@ uvc_error_t uvc_release_if(uvc_device_handle_t *devh, int idx) {
   ret = libusb_release_interface(devh->usb_devh, idx);
 
   if (UVC_SUCCESS == ret) {
+    devh->claimed &= ~( 1 << idx );
     /* Reattach any kernel drivers that were disabled when we claimed this interface */
     ret = libusb_attach_kernel_driver(devh->usb_devh, idx);
 
