@@ -561,7 +561,6 @@ void uvc_free_device_descriptor(
 uvc_error_t uvc_get_device_list(
     uvc_context_t *ctx,
     uvc_device_t ***list) {
-  uvc_error_t ret;
   struct libusb_device **usb_dev_list;
   struct libusb_device *usb_dev;
   int num_usb_devices;
@@ -571,7 +570,6 @@ uvc_error_t uvc_get_device_list(
 
   /* per device */
   int dev_idx;
-  struct libusb_device_handle *usb_devh;
   struct libusb_config_descriptor *config;
   struct libusb_device_descriptor desc;
   uint8_t got_interface;
@@ -600,7 +598,6 @@ uvc_error_t uvc_get_device_list(
   dev_idx = -1;
 
   while ((usb_dev = usb_dev_list[++dev_idx]) != NULL) {
-    usb_devh = NULL;
     got_interface = 0;
 
     if (libusb_get_config_descriptor(usb_dev, 0, &config) != 0)
@@ -1091,7 +1088,6 @@ uvc_error_t uvc_parse_vc_selector_unit(uvc_device_t *dev,
 					 uvc_device_info_t *info,
 					 const unsigned char *block, size_t block_size) {
   uvc_selector_unit_t *unit;
-  size_t i;
 
   UVC_ENTER();
 
