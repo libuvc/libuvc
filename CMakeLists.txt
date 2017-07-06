@@ -7,8 +7,8 @@ if (NOT CMAKE_BUILD_TYPE)
 endif ()
 
 if (NOT CMAKE_BUILD_TARGET)
-  message(STATUS "No target type selected, default to shared library")
-  set(CMAKE_BUILD_TARGET "Shared" CACHE STRING "" FORCE)
+  message(STATUS "No target type selected, default to both shared and static library")
+  set(CMAKE_BUILD_TARGET "Both" CACHE STRING "" FORCE)
 endif()
 
 set(libuvc_VERSION_MAJOR 0)
@@ -61,6 +61,10 @@ if(${CMAKE_BUILD_TARGET} MATCHES "Shared")
   add_library(uvc SHARED ${SOURCES})
 elseif(${CMAKE_BUILD_TARGET} MATCHES "Static")
   add_library(uvc STATIC ${SOURCES})
+elseif(${CMAKE_BUILD_TARGET} MATCHES "Both")
+  add_library(uvc SHARED ${SOURCES})
+  add_library(uvc_static STATIC ${SOURCES})
+  set_target_properties(uvc_static PROPERTIES OUTPUT_NAME uvc)
 else()
   message( FATAL_ERROR "Invalid build type ${CMAKE_BUILD_TARGET}" )
 endif()
@@ -81,10 +85,10 @@ target_link_libraries(uvc ${LIBUSB_LIBRARIES})
 #target_link_libraries(test uvc ${LIBUSB_LIBRARIES} opencv_highgui
 #  opencv_core)
 
-install(TARGETS uvc
+install(TARGETS uvc uvc_static
   EXPORT libuvcTargets
-  LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
-  ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
+  LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/${CMAKE_LIBRARY_ARCHITECTURE}"
+  ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/${CMAKE_LIBRARY_ARCHITECTURE}"
   PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_PREFIX}/include/libuvc"
 )
 
@@ -93,6 +97,7 @@ export(TARGETS uvc
 export(PACKAGE libuvc)
 
 set(CONF_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/include")
+set(CONF_LIBRARY_DIR "${CMAKE_INSTALL_PREFIX}/lib/${CMAKE_LIBRARY_ARCHITECTURE}")
 set(CONF_LIBRARY "${CMAKE_INSTALL_PREFIX}/lib/${CMAKE_SHARED_LIBRARY_PREFIX}uvc${CMAKE_SHARED_LIBRARY_SUFFIX}")
 
 configure_file(libuvcConfig.cmake.in ${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/libuvcConfig.cmake)
