@@ -1462,8 +1462,7 @@ uvc_error_t uvc_parse_vs(
     break;
   default:
     /** @todo handle JPEG and maybe still frames or even DV... */
-    fprintf ( stderr, "unsupported descriptor subtype: %d\n",
-        descriptor_subtype );
+    //fprintf ( stderr, "unsupported descriptor subtype: %d\n",descriptor_subtype );
     break;
   }
 
