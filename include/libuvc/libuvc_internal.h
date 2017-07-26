@@ -215,6 +215,8 @@ typedef struct uvc_device_info {
  */
 #ifdef __APPLE__
 #define LIBUVC_NUM_TRANSFER_BUFS 8
+#elif WIN32
+#define LIBUVC_NUM_TRANSFER_BUFS 50
 #else
 #define LIBUVC_NUM_TRANSFER_BUFS 100
 #endif
