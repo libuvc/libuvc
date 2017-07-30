@@ -21,11 +21,19 @@ pkg_check_modules(LIBUSB libusb-1.0)
 
 # Try to find JPEG using a module or pkg-config. If that doesn't work, search for the header.
 find_package(jpeg QUIET)
-if(NOT JPEG_FOUND)
-  find_path(JPEG_INCLUDE_DIR jpeglib.h)
-  if(JPEG_INCLUDE_DIR)
-    set(JPEG_FOUND ON)
-    set(JPEG_LIBRARIES -ljpeg)
+if(JPEG_FOUND)
+  set(JPEG_LINK_FLAGS ${JPEG_LIBRARIES})
+else()
+  pkg_check_modules(JPEG libjpeg)
+  if(JPEG_FOUND)
+      set(JPEG_INCLUDE_DIR ${JPEG_INCLUDE_DIRS})
+      set(JPEG_LINK_FLAGS ${JPEG_LDFLAGS})
+  else()
+    find_path(JPEG_INCLUDE_DIR jpeglib.h)
+    if(JPEG_INCLUDE_DIR)
+      set(JPEG_FOUND ON)
+      set(JPEG_LINK_FLAGS -ljpeg)
+    endif()
   endif()
 endif()
 
@@ -68,7 +76,7 @@ set_target_properties(uvc PROPERTIES
   PUBLIC_HEADER "include/libuvc/libuvc.h;${libuvc_BINARY_DIR}/include/libuvc/libuvc_config.h" )
 
 if(JPEG_FOUND)
-  target_link_libraries (uvc ${JPEG_LIBRARIES})
+  target_link_libraries (uvc ${JPEG_LINK_FLAGS})
 endif(JPEG_FOUND)
 
 target_link_libraries(uvc ${LIBUSB_LIBRARIES})
