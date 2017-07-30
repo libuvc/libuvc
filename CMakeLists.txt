@@ -103,6 +103,8 @@ configure_file(libuvcConfig.cmake.in ${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTOR
 
 configure_file(libuvcConfigVersion.cmake.in ${PROJECT_BINARY_DIR}/libuvcConfigVersion.cmake @ONLY)
 
+configure_file(libuvc.pc.in ${PROJECT_BINARY_DIR}/libuvc.pc @ONLY)
+
 install(FILES
   "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/libuvcConfig.cmake"
   "${PROJECT_BINARY_DIR}/libuvcConfigVersion.cmake"
@@ -110,3 +112,6 @@ install(FILES
 
 install(EXPORT libuvcTargets
   DESTINATION "${INSTALL_CMAKE_DIR}")
+
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/libuvc.pc"
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig")
