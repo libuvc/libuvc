@@ -25,11 +25,19 @@ pkg_check_modules(LIBUSB libusb-1.0)
 
 # Try to find JPEG using a module or pkg-config. If that doesn't work, search for the header.
 find_package(jpeg QUIET)
-if(NOT JPEG_FOUND)
-  find_path(JPEG_INCLUDE_DIR jpeglib.h)
-  if(JPEG_INCLUDE_DIR)
-    set(JPEG_FOUND ON)
-    set(JPEG_LIBRARIES -ljpeg)
+if(JPEG_FOUND)
+  set(JPEG_LINK_FLAGS ${JPEG_LIBRARIES})
+else()
+  pkg_check_modules(JPEG libjpeg)
+  if(JPEG_FOUND)
+      set(JPEG_INCLUDE_DIR ${JPEG_INCLUDE_DIRS})
+      set(JPEG_LINK_FLAGS ${JPEG_LDFLAGS})
+  else()
+    find_path(JPEG_INCLUDE_DIR jpeglib.h)
+    if(JPEG_INCLUDE_DIR)
+      set(JPEG_FOUND ON)
+      set(JPEG_LINK_FLAGS -ljpeg)
+    endif()
   endif()
 endif()
 
@@ -76,7 +84,7 @@ set_target_properties(uvc PROPERTIES
   PUBLIC_HEADER "include/libuvc/libuvc.h;${libuvc_BINARY_DIR}/include/libuvc/libuvc_config.h" )
 
 if(JPEG_FOUND)
-  target_link_libraries (uvc ${JPEG_LIBRARIES})
+  target_link_libraries (uvc ${JPEG_LINK_FLAGS})
 endif(JPEG_FOUND)
 
 target_link_libraries(uvc ${LIBUSB_LIBRARIES})
@@ -104,6 +112,8 @@ configure_file(libuvcConfig.cmake.in ${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTOR
 
 configure_file(libuvcConfigVersion.cmake.in ${PROJECT_BINARY_DIR}/libuvcConfigVersion.cmake @ONLY)
 
+configure_file(libuvc.pc.in ${PROJECT_BINARY_DIR}/libuvc.pc @ONLY)
+
 install(FILES
   "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/libuvcConfig.cmake"
   "${PROJECT_BINARY_DIR}/libuvcConfigVersion.cmake"
@@ -112,13 +122,7 @@ install(FILES
 install(EXPORT libuvcTargets
   DESTINATION "${INSTALL_CMAKE_DIR}")
 
-# pkg-config
-configure_file(
-  "${CMAKE_CURRENT_SOURCE_DIR}/libuvc.pc.cmake.in"
-  "${CMAKE_CURRENT_BINARY_DIR}/libuvc.pc"
-  @ONLY
-)
 install(FILES
-  "${CMAKE_CURRENT_BINARY_DIR}/libuvc.pc"
+  "${PROJECT_BINARY_DIR}/libuvc.pc"
   DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
 )
