@@ -606,26 +606,37 @@ uvc_error_t uvc_get_device_list(
     if ( libusb_get_device_descriptor ( usb_dev, &desc ) != LIBUSB_SUCCESS )
       continue;
 
-    // Special case for Imaging Source cameras
-    if ( 0x199e == desc.idVendor && 0x8101 == desc.idProduct ) {
-      got_interface = 1;
-    } else {
+    for (interface_idx = 0;
+	 !got_interface && interface_idx < config->bNumInterfaces;
+	 ++interface_idx) {
+      interface = &config->interface[interface_idx];
 
-      for (interface_idx = 0;
-	   !got_interface && interface_idx < config->bNumInterfaces;
-	   ++interface_idx) {
-        interface = &config->interface[interface_idx];
+      for (altsetting_idx = 0;
+	   !got_interface && altsetting_idx < interface->num_altsetting;
+	   ++altsetting_idx) {
+	if_desc = &interface->altsetting[altsetting_idx];
 
-        for (altsetting_idx = 0;
-	     !got_interface && altsetting_idx < interface->num_altsetting;
-	     ++altsetting_idx) {
-	  if_desc = &interface->altsetting[altsetting_idx];
+        // Skip TIS cameras that definitely aren't UVC even though they might
+        // look that way
 
-	  /* Video, Streaming */
-	  if (if_desc->bInterfaceClass == 14 && if_desc->bInterfaceSubClass == 2) {
-	    got_interface = 1;
-	  }
+        if ( 0x199e == desc.idVendor && desc.idProduct  >= 0x8201 &&
+            desc.idProduct <= 0x8208 ) {
+          continue;
         }
+
+        // Special case for Imaging Source cameras
+	/* Video, Streaming */
+        if ( 0x199e == desc.idVendor && ( 0x8101 == desc.idProduct ||
+            0x8102 == desc.idProduct ) &&
+            if_desc->bInterfaceClass == 255 &&
+            if_desc->bInterfaceSubClass == 2 ) {
+	  got_interface = 1;
+	}
+
+	/* Video, Streaming */
+	if (if_desc->bInterfaceClass == 14 && if_desc->bInterfaceSubClass == 2) {
+	  got_interface = 1;
+	}
       }
     }
 
@@ -842,9 +853,15 @@ void uvc_unref_device(uvc_device_t *dev) {
  * @param idx UVC interface index
  */
 uvc_error_t uvc_claim_if(uvc_device_handle_t *devh, int idx) {
-  int ret;
+  int ret = UVC_SUCCESS;
 
   UVC_ENTER();
+
+  if ( devh->claimed & ( 1 << idx )) {
+    fprintf ( stderr, "attempt to claim already-claimed interface %d\n", idx );
+    UVC_EXIT(ret);
+    return ret;
+  }
 
   /* Tell libusb to detach any active kernel drivers. libusb will keep track of whether
    * it found a kernel driver for this interface. */
@@ -852,7 +869,9 @@ uvc_error_t uvc_claim_if(uvc_device_handle_t *devh, int idx) {
 
   if (ret == UVC_SUCCESS || ret == LIBUSB_ERROR_NOT_FOUND || ret == LIBUSB_ERROR_NOT_SUPPORTED) {
     UVC_DEBUG("claiming interface %d", idx);
-    ret = libusb_claim_interface(devh->usb_devh, idx);
+    if (!( ret = libusb_claim_interface(devh->usb_devh, idx))) {
+      devh->claimed |= ( 1 << idx );
+    }
   } else {
     UVC_DEBUG("not claiming interface %d: unable to detach kernel driver (%s)",
               idx, uvc_strerror(ret));
@@ -870,10 +889,16 @@ uvc_error_t uvc_claim_if(uvc_device_handle_t *devh, int idx) {
  * @param idx UVC interface index
  */
 uvc_error_t uvc_release_if(uvc_device_handle_t *devh, int idx) {
-  int ret;
+  int ret = UVC_SUCCESS;
 
   UVC_ENTER();
   UVC_DEBUG("releasing interface %d", idx);
+  if (!( devh->claimed & ( 1 << idx ))) {
+    fprintf ( stderr, "attempt to release unclaimed interface %d\n", idx );
+    UVC_EXIT(ret);
+    return ret;
+  }
+
   /* libusb_release_interface *should* reset the alternate setting to the first available,
      but sometimes (e.g. on Darwin) it doesn't. Thus, we do it explicitly here.
      This is needed to de-initialize certain cameras. */
@@ -881,6 +906,7 @@ uvc_error_t uvc_release_if(uvc_device_handle_t *devh, int idx) {
   ret = libusb_release_interface(devh->usb_devh, idx);
 
   if (UVC_SUCCESS == ret) {
+    devh->claimed &= ~( 1 << idx );
     /* Reattach any kernel drivers that were disabled when we claimed this interface */
     ret = libusb_attach_kernel_driver(devh->usb_devh, idx);
 
@@ -914,25 +940,23 @@ uvc_error_t uvc_scan_control(uvc_device_t *dev, uvc_device_info_t *info) {
   ret = UVC_SUCCESS;
   if_desc = NULL;
 
+  uvc_device_descriptor_t* dev_desc;
+  int haveTISCamera = 0;
+  uvc_get_device_descriptor ( dev, &dev_desc );
+  if ( 0x199e == dev_desc->idVendor && ( 0x8101 == dev_desc->idProduct ||
+      0x8102 == dev_desc->idProduct )) {
+    haveTISCamera = 1;
+  }
+  uvc_free_device_descriptor ( dev_desc );
+
   for (interface_idx = 0; interface_idx < info->config->bNumInterfaces; ++interface_idx) {
     if_desc = &info->config->interface[interface_idx].altsetting[0];
 
-    if (if_desc->bInterfaceClass == 14 && if_desc->bInterfaceSubClass == 1) // Video, Control
+    if ( haveTISCamera && if_desc->bInterfaceClass == 255 && if_desc->bInterfaceSubClass == 1) // Video, Control
       break;
 
-    // Another TIS camera hack.
-    if ( if_desc->bInterfaceClass == 255 && if_desc->bInterfaceSubClass == 1 ) {
-      uvc_device_descriptor_t* dev_desc;
-      int haveTISCamera = 0;
-      uvc_get_device_descriptor ( dev, &dev_desc );
-      if ( dev_desc->idVendor == 0x199e && dev_desc->idProduct == 0x8101 ) {
-        haveTISCamera = 1;
-      }
-      uvc_free_device_descriptor ( dev_desc );
-      if ( haveTISCamera ) {
-        break;
-      }
-    }
+    if (if_desc->bInterfaceClass == 14 && if_desc->bInterfaceSubClass == 1) // Video, Control
+      break;
 
     if_desc = NULL;
   }
@@ -1440,6 +1464,12 @@ uvc_error_t uvc_parse_vs(
   case UVC_VS_INPUT_HEADER:
     ret = uvc_parse_vs_input_header(stream_if, block, block_size);
     break;
+  case UVC_VS_OUTPUT_HEADER:
+    fprintf ( stderr, "unsupported descriptor subtype VS_OUTPUT_HEADER\n" );
+    break;
+  case UVC_VS_STILL_IMAGE_FRAME:
+    fprintf ( stderr, "unsupported descriptor subtype VS_STILL_IMAGE_FRAME\n" );
+    break;
   case UVC_VS_FORMAT_UNCOMPRESSED:
     ret = uvc_parse_vs_format_uncompressed(stream_if, block, block_size);
     break;
@@ -1450,11 +1480,23 @@ uvc_error_t uvc_parse_vs(
   case UVC_VS_FRAME_MJPEG:
     ret = uvc_parse_vs_frame_uncompressed(stream_if, block, block_size);
     break;
+  case UVC_VS_FORMAT_MPEG2TS:
+    fprintf ( stderr, "unsupported descriptor subtype VS_FORMAT_MPEG2TS\n" );
+    break;
+  case UVC_VS_FORMAT_DV:
+    fprintf ( stderr, "unsupported descriptor subtype VS_FORMAT_DV\n" );
+    break;
+  case UVC_VS_COLORFORMAT:
+    fprintf ( stderr, "unsupported descriptor subtype VS_COLORFORMAT\n" );
+    break;
   case UVC_VS_FORMAT_FRAME_BASED:
     ret = uvc_parse_vs_frame_format ( stream_if, block, block_size );
     break;
   case UVC_VS_FRAME_FRAME_BASED:
     ret = uvc_parse_vs_frame_frame ( stream_if, block, block_size );
+    break;
+  case UVC_VS_FORMAT_STREAM_BASED:
+    fprintf ( stderr, "unsupported descriptor subtype VS_FORMAT_STREAM_BASED\n" );
     break;
   default:
     /** @todo handle JPEG and maybe still frames or even DV... */
@@ -1697,7 +1739,10 @@ void LIBUSB_CALL _uvc_status_callback(struct libusb_transfer *transfer) {
     break;
   }
 
-  uvc_error_t ret = libusb_submit_transfer(transfer);
+#ifdef UVC_DEBUGGING
+  uvc_error_t ret =
+#endif
+      libusb_submit_transfer(transfer);
   UVC_DEBUG("libusb_submit_transfer() = %d", ret);
 
   UVC_EXIT_VOID();

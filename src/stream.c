@@ -100,17 +100,29 @@ struct format_table_entry *_get_format_entry(enum uvc_frame_format format) {
     ABS_FMT(UVC_FRAME_FORMAT_ANY, 2,
       {UVC_FRAME_FORMAT_UNCOMPRESSED, UVC_FRAME_FORMAT_COMPRESSED})
 
-    ABS_FMT(UVC_FRAME_FORMAT_UNCOMPRESSED, 3,
-      {UVC_FRAME_FORMAT_YUYV, UVC_FRAME_FORMAT_UYVY, UVC_FRAME_FORMAT_GRAY8})
+    ABS_FMT(UVC_FRAME_FORMAT_UNCOMPRESSED, 4,
+      {UVC_FRAME_FORMAT_YUYV, UVC_FRAME_FORMAT_UYVY, UVC_FRAME_FORMAT_GRAY8,
+      UVC_FRAME_FORMAT_GRAY16})
     FMT(UVC_FRAME_FORMAT_YUYV,
       {'Y',  'U',  'Y',  '2', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
     FMT(UVC_FRAME_FORMAT_UYVY,
       {'U',  'Y',  'V',  'Y', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
     FMT(UVC_FRAME_FORMAT_GRAY8,
       {'Y',  '8',  '0',  '0', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+    FMT(UVC_FRAME_FORMAT_GRAY16,
+      {'Y',  '1',  '6',  ' ', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
     FMT(UVC_FRAME_FORMAT_BY8,
       {'B',  'Y',  '8',  ' ', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
-
+    FMT(UVC_FRAME_FORMAT_BA81,
+      {'B',  'A',  '8',  '1', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+    FMT(UVC_FRAME_FORMAT_SGRBG8,
+      {'G',  'R',  'B',  'G', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+    FMT(UVC_FRAME_FORMAT_SGBRG8,
+      {'G',  'B',  'R',  'G', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+    FMT(UVC_FRAME_FORMAT_SRGGB8,
+      {'R',  'G',  'G',  'B', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+    FMT(UVC_FRAME_FORMAT_SBGGR8,
+      {'B',  'G',  'G',  'R', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
     ABS_FMT(UVC_FRAME_FORMAT_COMPRESSED, 1,
       {UVC_FRAME_FORMAT_MJPEG})
     FMT(UVC_FRAME_FORMAT_MJPEG,
@@ -368,15 +380,16 @@ uvc_error_t uvc_get_stream_ctrl_format_size(
 
         uint32_t *interval;
 
+        ctrl->bInterfaceNumber = stream_if->bInterfaceNumber;
+        UVC_DEBUG("claiming streaming interface %d", stream_if->bInterfaceNumber );
+        uvc_claim_if(devh, ctrl->bInterfaceNumber);
+        /* get the max values */
+        uvc_query_stream_ctrl( devh, ctrl, 1, UVC_GET_MAX);
+
         if (frame->intervals) {
           for (interval = frame->intervals; *interval; ++interval) {
             // allow a fps rate of zero to mean "accept first rate available"
             if (10000000 / *interval == (unsigned int) fps || fps == 0) {
-
-              /* get the max values -- we need the interface number to be able
-                 to do this */
-              ctrl->bInterfaceNumber = stream_if->bInterfaceNumber;
-              uvc_query_stream_ctrl( devh, ctrl, 1, UVC_GET_MAX);
 
               ctrl->bmHint = (1 << 0); /* don't negotiate interval */
               ctrl->bFormatIndex = format->bFormatIndex;
@@ -394,11 +407,6 @@ uvc_error_t uvc_get_stream_ctrl_format_size(
               && interval_100ns <= frame->dwMaxFrameInterval
               && !(interval_offset
                    && (interval_offset % frame->dwFrameIntervalStep))) {
-
-            /* get the max values -- we need the interface number to be able
-               to do this */
-            ctrl->bInterfaceNumber = stream_if->bInterfaceNumber;
-            uvc_query_stream_ctrl( devh, ctrl, 1, UVC_GET_MAX);
 
             ctrl->bmHint = (1 << 0);
             ctrl->bFormatIndex = format->bFormatIndex;
@@ -428,8 +436,6 @@ uvc_error_t uvc_probe_stream_ctrl(
     uvc_device_handle_t *devh,
     uvc_stream_ctrl_t *ctrl) {
  
-  uvc_claim_if(devh, ctrl->bInterfaceNumber);
-
   uvc_query_stream_ctrl(
       devh, ctrl, 1, UVC_SET_CUR
   );
@@ -641,8 +647,30 @@ void LIBUSB_CALL _uvc_stream_callback(struct libusb_transfer *transfer) {
     break;
   }
   
-  if ( strmh->running && resubmit )
-    libusb_submit_transfer(transfer);
+  if ( resubmit ) {
+    if ( strmh->running ) {
+      libusb_submit_transfer(transfer);
+    } else {
+      int i;
+      pthread_mutex_lock(&strmh->cb_mutex);
+
+      /* Mark transfer as deleted. */
+      for(i=0; i < LIBUVC_NUM_TRANSFER_BUFS; i++) {
+        if(strmh->transfers[i] == transfer) {
+          UVC_DEBUG("Freeing orphan transfer %d (%p)", i, transfer);
+          free(transfer->buffer);
+          libusb_free_transfer(transfer);
+          strmh->transfers[i] = NULL;
+        }
+      }
+      if(i == LIBUVC_NUM_TRANSFER_BUFS ) {
+        UVC_DEBUG("orphan transfer %p not found; not freeing!", transfer);
+      }
+
+      pthread_cond_broadcast(&strmh->cb_cond);
+      pthread_mutex_unlock(&strmh->cb_mutex);
+    }
+  }
 }
 
 /** Begin streaming video from the camera into the callback function.
@@ -811,7 +839,7 @@ uvc_error_t uvc_stream_start(
   uvc_stream_ctrl_t *ctrl;
   uvc_error_t ret;
   /* Total amount of data per transfer */
-  size_t total_transfer_size;
+  size_t total_transfer_size = 0;
   struct libusb_transfer *transfer;
   int transfer_id;
 
@@ -854,15 +882,15 @@ uvc_error_t uvc_stream_start(
   if (isochronous) {
     /* For isochronous streaming, we choose an appropriate altsetting for the endpoint
      * and set up several transfers */
-    const struct libusb_interface_descriptor *altsetting;
+    const struct libusb_interface_descriptor *altsetting = 0;
     const struct libusb_endpoint_descriptor *endpoint;
     /* The greatest number of bytes that the device might provide, per packet, in this
      * configuration */
     size_t config_bytes_per_packet;
     /* Number of packets per transfer */
-    size_t packets_per_transfer;
+    size_t packets_per_transfer = 0;
     /* Size of packet transferable from the chosen endpoint */
-    size_t endpoint_bytes_per_packet;
+    size_t endpoint_bytes_per_packet = 0;
     /* Index of the altsetting */
     int alt_idx, ep_idx;
     
@@ -960,9 +988,18 @@ uvc_error_t uvc_stream_start(
       transfer_id++) {
     ret = libusb_submit_transfer(strmh->transfers[transfer_id]);
     if (ret != UVC_SUCCESS) {
-      UVC_DEBUG("libusb_submit_transfer failed");
+      UVC_DEBUG("libusb_submit_transfer failed: %d",ret);
       break;
     }
+  }
+
+  if ( ret != UVC_SUCCESS && transfer_id > 0 ) {
+    for ( ; transfer_id < LIBUVC_NUM_TRANSFER_BUFS; transfer_id++) {
+      free ( strmh->transfers[transfer_id]->buffer );
+      libusb_free_transfer ( strmh->transfers[transfer_id]);
+      strmh->transfers[transfer_id] = 0;
+    }
+    ret = UVC_SUCCESS;
   }
 
   UVC_EXIT(ret);
