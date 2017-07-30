@@ -556,9 +556,9 @@ void uvc_free_device_descriptor(
  *
  * @param ctx UVC context in which to list devices
  * @param list List of uvc_device structures
- * @return Error if unable to list devices, else SUCCESS
+ * @return number of detected uvc devices
  */
-uvc_error_t uvc_get_device_list(
+int uvc_get_device_list(
     uvc_context_t *ctx,
     uvc_device_t ***list) {
   struct libusb_device **usb_dev_list;
@@ -655,7 +655,7 @@ uvc_error_t uvc_get_device_list(
   *list = list_internal;
 
   UVC_EXIT(UVC_SUCCESS);
-  return UVC_SUCCESS;
+  return num_uvc_devices;
 }
 
 /**
