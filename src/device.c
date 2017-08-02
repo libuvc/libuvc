@@ -858,7 +858,7 @@ uvc_error_t uvc_claim_if(uvc_device_handle_t *devh, int idx) {
   UVC_ENTER();
 
   if ( devh->claimed & ( 1 << idx )) {
-    fprintf ( stderr, "attempt to claim already-claimed interface %d\n", idx );
+    // fprintf ( stderr, "attempt to claim already-claimed interface %d\n", idx );
     UVC_EXIT(ret);
     return ret;
   }
@@ -1465,10 +1465,10 @@ uvc_error_t uvc_parse_vs(
     ret = uvc_parse_vs_input_header(stream_if, block, block_size);
     break;
   case UVC_VS_OUTPUT_HEADER:
-    fprintf ( stderr, "unsupported descriptor subtype VS_OUTPUT_HEADER\n" );
+    // fprintf ( stderr, "unsupported descriptor subtype VS_OUTPUT_HEADER\n" );
     break;
   case UVC_VS_STILL_IMAGE_FRAME:
-    fprintf ( stderr, "unsupported descriptor subtype VS_STILL_IMAGE_FRAME\n" );
+    // fprintf ( stderr, "unsupported descriptor subtype VS_STILL_IMAGE_FRAME\n" );
     break;
   case UVC_VS_FORMAT_UNCOMPRESSED:
     ret = uvc_parse_vs_format_uncompressed(stream_if, block, block_size);
@@ -1481,13 +1481,13 @@ uvc_error_t uvc_parse_vs(
     ret = uvc_parse_vs_frame_uncompressed(stream_if, block, block_size);
     break;
   case UVC_VS_FORMAT_MPEG2TS:
-    fprintf ( stderr, "unsupported descriptor subtype VS_FORMAT_MPEG2TS\n" );
+    // fprintf ( stderr, "unsupported descriptor subtype VS_FORMAT_MPEG2TS\n" );
     break;
   case UVC_VS_FORMAT_DV:
-    fprintf ( stderr, "unsupported descriptor subtype VS_FORMAT_DV\n" );
+    // fprintf ( stderr, "unsupported descriptor subtype VS_FORMAT_DV\n" );
     break;
   case UVC_VS_COLORFORMAT:
-    fprintf ( stderr, "unsupported descriptor subtype VS_COLORFORMAT\n" );
+    // fprintf ( stderr, "unsupported descriptor subtype VS_COLORFORMAT\n" );
     break;
   case UVC_VS_FORMAT_FRAME_BASED:
     ret = uvc_parse_vs_frame_format ( stream_if, block, block_size );
@@ -1496,7 +1496,7 @@ uvc_error_t uvc_parse_vs(
     ret = uvc_parse_vs_frame_frame ( stream_if, block, block_size );
     break;
   case UVC_VS_FORMAT_STREAM_BASED:
-    fprintf ( stderr, "unsupported descriptor subtype VS_FORMAT_STREAM_BASED\n" );
+    // fprintf ( stderr, "unsupported descriptor subtype VS_FORMAT_STREAM_BASED\n" );
     break;
   default:
     /** @todo handle JPEG and maybe still frames or even DV... */
