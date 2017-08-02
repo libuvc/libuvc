@@ -11,7 +11,11 @@
 #include <string.h>
 #include <pthread.h>
 #include <signal.h>
+#ifndef WIN32
+#include <libusb-1.0/libusb.h>
+#else
 #include <libusb.h>
+#endif
 #include "utlist.h"
 
 /** Converts an unaligned four-byte little-endian integer into an int32 */
@@ -214,7 +218,13 @@ typedef struct uvc_device_info {
   We could/should change this to allow reduce it to, say, 5 by default
   and then allow the user to change the number of buffers as required.
  */
+#ifdef __APPLE__
+#define LIBUVC_NUM_TRANSFER_BUFS 8
+#elif WIN32
+#define LIBUVC_NUM_TRANSFER_BUFS 50
+#else
 #define LIBUVC_NUM_TRANSFER_BUFS 100
+#endif
 
 #define LIBUVC_XFER_BUF_SIZE	( 16 * 1024 * 1024 )
 

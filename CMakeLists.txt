@@ -38,9 +38,18 @@ else()
       set(JPEG_LINK_FLAGS -ljpeg)
     endif()
   endif()
+
+if(WIN32)
+  find_library(PTHREAD_LIBRARIES pthreadVC2
+        PATHS D:/install/pthreads-w32-2-9-1-release/lib/x64)
+  find_path(PTHREAD_INCLUDE_DIR pthread.h
+        PATHS D:/install/pthreads-w32-2-9-1-release/include)
+SET(EXTRA_DEFS "-D_TIMESPEC_DEFINED")
+add_definitions(${EXTRA_DEFS})
+else()
+SET(CMAKE_C_FLAGS_DEBUG "-g  -DUVC_DEBUGGING")
 endif()
 
-SET(CMAKE_C_FLAGS_DEBUG "-g -DUVC_DEBUGGING")
 
 SET(INSTALL_CMAKE_DIR "${CMAKE_INSTALL_PREFIX}/lib/cmake/libuvc" CACHE PATH
 	"Installation directory for CMake files")
@@ -53,6 +62,7 @@ include_directories(
   ${libuvc_SOURCE_DIR}/include
   ${libuvc_BINARY_DIR}/include
   ${LIBUSB_INCLUDE_DIRS}
+  ${PTHREAD_INCLUDE_DIR}
 )
 
 if(JPEG_FOUND)
@@ -80,13 +90,17 @@ configure_file(include/libuvc/libuvc_config.h.in
   ${PROJECT_BINARY_DIR}/include/libuvc/libuvc_config.h @ONLY)
 
 set_target_properties(uvc PROPERTIES
-  PUBLIC_HEADER "include/libuvc/libuvc.h;${libuvc_BINARY_DIR}/include/libuvc/libuvc_config.h" )
+  PUBLIC_HEADER "include/libuvc/libuvc.h;${libuvc_BINARY_DIR}/include/libuvc/libuvc_config.h" WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
+
+set_target_properties(uvc PROPERTIES VERSION ${libuvc_VERSION}
+                                         SOVERSION ${libuvc_VERSION_MAJOR})
 
 if(JPEG_FOUND)
   target_link_libraries (uvc ${JPEG_LINK_FLAGS})
 endif(JPEG_FOUND)
 
-target_link_libraries(uvc ${LIBUSB_LIBRARIES})
+
+target_link_libraries(uvc ${LIBUSB_LIBRARIES} ${PTHREAD_LIBRARIES} ${JPEG_LIBRARIES})
 
 #add_executable(test src/test.c)
 #target_link_libraries(test uvc ${LIBUSB_LIBRARIES} opencv_highgui

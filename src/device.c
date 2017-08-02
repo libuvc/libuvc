@@ -1659,12 +1659,12 @@ void uvc_process_control_status(uvc_device_handle_t *devh, unsigned char *data, 
                     content, content_len,
                     devh->status_user_ptr);
   }
-  
+
   UVC_EXIT_VOID();
 }
 
 void uvc_process_streaming_status(uvc_device_handle_t *devh, unsigned char *data, int len) {
-  
+
   UVC_ENTER();
 
   if (len < 3) {
@@ -1680,7 +1680,7 @@ void uvc_process_streaming_status(uvc_device_handle_t *devh, unsigned char *data
       return;
     }
     UVC_DEBUG("Button (intf %u) %s len %d\n", data[1], data[3] ? "pressed" : "released", len);
-    
+
     if(devh->button_cb) {
       UVC_DEBUG("Running user-supplied button callback");
       devh->button_cb(data[1],
@@ -1695,7 +1695,7 @@ void uvc_process_streaming_status(uvc_device_handle_t *devh, unsigned char *data
 }
 
 void uvc_process_status_xfer(uvc_device_handle_t *devh, struct libusb_transfer *transfer) {
-  
+
   UVC_ENTER();
 
   /* printf("Got transfer of aLen = %d\n", transfer->actual_length); */
