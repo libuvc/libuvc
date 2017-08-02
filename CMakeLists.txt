@@ -38,6 +38,7 @@ else()
       set(JPEG_LINK_FLAGS -ljpeg)
     endif()
   endif()
+endif()
 
 if(WIN32)
   find_library(PTHREAD_LIBRARIES pthreadVC2
