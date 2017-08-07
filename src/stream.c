@@ -570,6 +570,7 @@ void _uvc_process_payload(uvc_stream_handle_t *strmh, uint8_t *payload, size_t p
  * @param transfer Active transfer
  */
 void LIBUSB_CALL _uvc_stream_callback(struct libusb_transfer *transfer) {
+  UVC_DEBUG("stream_callback!");
   uvc_stream_handle_t *strmh = transfer->user_data;
 
   int resubmit = 1;
@@ -606,26 +607,34 @@ void LIBUSB_CALL _uvc_stream_callback(struct libusb_transfer *transfer) {
   case LIBUSB_TRANSFER_NO_DEVICE: {
     int i;
     UVC_DEBUG("not retrying transfer, status = %d", transfer->status);
-    pthread_mutex_lock(&strmh->cb_mutex);
 
-    /* Mark transfer as deleted. */
-    for(i=0; i < LIBUVC_NUM_TRANSFER_BUFS; i++) {
-      if(strmh->transfers[i] == transfer) {
-        UVC_DEBUG("Freeing transfer %d (%p)", i, transfer);
-        free(transfer->buffer);
-        libusb_free_transfer(transfer);
-        strmh->transfers[i] = NULL;
-        break;
-      }
-    }
-    if(i == LIBUVC_NUM_TRANSFER_BUFS ) {
-      UVC_DEBUG("transfer %p not found; not freeing!", transfer);
-    }
+    if (0 == pthread_mutex_lock(&strmh->cb_mutex)) {
 
-    resubmit = 0;
+        /* Mark transfer as deleted. */
+        for(i=0; i < LIBUVC_NUM_TRANSFER_BUFS; i++) {
+          if(strmh->transfers[i] == transfer) {
+            UVC_DEBUG("Freeing transfer %d   (%p) buffer %p ", i, transfer, transfer->buffer);
+            free(transfer->buffer);
+            UVC_DEBUG("Freeing transfer %d  (%p)", i, transfer);
+            libusb_free_transfer(transfer);
+            strmh->transfers[i] = NULL;
+            strmh->flying_xfers--;
+            break;
+          }
+        }
+        if(i == LIBUVC_NUM_TRANSFER_BUFS ) {
+          UVC_DEBUG("transfer %p not found; not freeing!", transfer);
+        }
 
-    pthread_cond_broadcast(&strmh->cb_cond);
-    pthread_mutex_unlock(&strmh->cb_mutex);
+        resubmit = 0;
+
+        UVC_DEBUG("Broadcasting cond...");
+
+        pthread_cond_broadcast(&strmh->cb_cond);
+	UVC_DEBUG("Unlocking");
+        pthread_mutex_unlock(&strmh->cb_mutex);
+
+   }
 
     break;
   }
@@ -635,13 +644,18 @@ void LIBUSB_CALL _uvc_stream_callback(struct libusb_transfer *transfer) {
     UVC_DEBUG("retrying transfer, status = %d", transfer->status);
     break;
   }
+
   if ( resubmit ) {
+    if (0 != pthread_mutex_lock(&strmh->cb_mutex)) {
+        return;
+    }
+
+
     if ( strmh->running ) {
+      UVC_DEBUG("Submitting ransfer %p", transfer);
       libusb_submit_transfer(transfer);
     } else {
       int i;
-      pthread_mutex_lock(&strmh->cb_mutex);
-
       /* Mark transfer as deleted. */
       for(i=0; i < LIBUVC_NUM_TRANSFER_BUFS; i++) {
         if(strmh->transfers[i] == transfer) {
@@ -649,15 +663,15 @@ void LIBUSB_CALL _uvc_stream_callback(struct libusb_transfer *transfer) {
           free(transfer->buffer);
           libusb_free_transfer(transfer);
           strmh->transfers[i] = NULL;
+          strmh->flying_xfers--;
         }
       }
       if(i == LIBUVC_NUM_TRANSFER_BUFS ) {
         UVC_DEBUG("orphan transfer %p not found; not freeing!", transfer);
       }
-
       pthread_cond_broadcast(&strmh->cb_cond);
-      pthread_mutex_unlock(&strmh->cb_mutex);
     }
+    pthread_mutex_unlock(&strmh->cb_mutex);
   }
 }
 
@@ -991,6 +1005,8 @@ uvc_error_t uvc_stream_start(
     pthread_create(&strmh->cb_thread, NULL, _uvc_user_caller, (void*) strmh);
   }
 
+  strmh->flying_xfers = LIBUVC_NUM_TRANSFER_BUFS;
+
   for (transfer_id = 0; transfer_id < LIBUVC_NUM_TRANSFER_BUFS;
       transfer_id++) {
     ret = libusb_submit_transfer(strmh->transfers[transfer_id]);
@@ -1005,6 +1021,7 @@ uvc_error_t uvc_stream_start(
       free ( strmh->transfers[transfer_id]->buffer );
       libusb_free_transfer ( strmh->transfers[transfer_id]);
       strmh->transfers[transfer_id] = 0;
+      strmh->flying_xfers--;
     }
     ret = UVC_SUCCESS;
   }
@@ -1054,6 +1071,7 @@ void *_uvc_user_caller(void *arg) {
     }
 
     if (!strmh->running) {
+      pthread_cond_broadcast(&strmh->cb_cond);
       pthread_mutex_unlock(&strmh->cb_mutex);
       break;
     }
@@ -1145,7 +1163,11 @@ uvc_error_t uvc_stream_get_frame(uvc_stream_handle_t *strmh,
     }
 else {
       ts = get_abs_future_time_coarse(timeout_us/1000);
-      pthread_cond_timedwait(&strmh->cb_cond, &strmh->cb_mutex, &ts);
+      if (ETIMEDOUT ==  pthread_cond_timedwait(&strmh->cb_cond, &strmh->cb_mutex, &ts)) {
+        UVC_DEBUG("TIMEOUT!");
+      }
+
+
     }
 
     if (strmh->last_polled_seq < strmh->hold_seq) {
@@ -1178,6 +1200,8 @@ else {
 void uvc_stop_streaming(uvc_device_handle_t *devh) {
   uvc_stream_handle_t *strmh, *strmh_tmp;
 
+  UVC_DEBUG("Enter uvc_stop_streaming!");
+
   DL_FOREACH_SAFE(devh->streams, strmh, strmh_tmp) {
     uvc_stream_close(strmh);
   }
@@ -1199,37 +1223,37 @@ uvc_error_t uvc_stream_stop(uvc_stream_handle_t *strmh) {
   if (!strmh->running)
     return UVC_ERROR_INVALID_PARAM;
 
-  strmh->running = 0;
 
   pthread_mutex_lock(&strmh->cb_mutex);
 
+  UVC_DEBUG("Locked, stropping stream\n");
+
+  strmh->running = 0;
   for(i=0; i < LIBUVC_NUM_TRANSFER_BUFS; i++) {
     if(strmh->transfers[i] != NULL) {
       int res = libusb_cancel_transfer(strmh->transfers[i]);
-      if(res < 0 && res != LIBUSB_ERROR_NOT_FOUND ) {
+      if(res < 0 && res == LIBUSB_ERROR_NOT_FOUND ) {
+	UVC_DEBUG("[stream_stop] Freeing transfer %d (%p)", i, strmh->transfers[i]);
         free(strmh->transfers[i]->buffer);
         libusb_free_transfer(strmh->transfers[i]);
         strmh->transfers[i] = NULL;
+	strmh->flying_xfers--;
+      } else {
+	UVC_DEBUG("cancel_res = %d\n", res);
       }
+
     }
   }
 
+  UVC_DEBUG("Waiting for %d transfers..\n",strmh->flying_xfers);
+
   /* Wait for transfers to complete/cancel */
-  do {
-    for(i=0; i < LIBUVC_NUM_TRANSFER_BUFS; i++) {
-      if(strmh->transfers[i] != NULL)
-        break;
-    }
-    if(i == LIBUVC_NUM_TRANSFER_BUFS )
-      break;
-    // this ones sometimes does not return.
-    // pthread_cond_wait(&strmh->cb_cond, &strmh->cb_mutex);
+  while(strmh->flying_xfers) {
+    UVC_DEBUG("Flying xfers %d", strmh->flying_xfers);
     ts = get_abs_future_time_coarse(timeout_us/1000);
-    if (ETIMEDOUT == pthread_cond_timedwait(&strmh->cb_cond, &strmh->cb_mutex, &ts)){
-      ret = UVC_ERROR_TIMEOUT;
-      break;
-      }
-  } while(1);
+    pthread_cond_timedwait(&strmh->cb_cond, &strmh->cb_mutex, &ts);
+  }
+  UVC_DEBUG("Done waiting for transfers..");
   // Kick the user thread awake
   pthread_cond_broadcast(&strmh->cb_cond);
   pthread_mutex_unlock(&strmh->cb_mutex);
@@ -1241,6 +1265,8 @@ uvc_error_t uvc_stream_stop(uvc_stream_handle_t *strmh) {
      * LIBUSB_TRANSFER_CANCELLED transfer) */
     pthread_join(strmh->cb_thread, NULL);
   }
+
+  UVC_DEBUG("Exiting");
 
   return ret;
 }
@@ -1256,11 +1282,17 @@ void uvc_stream_close(uvc_stream_handle_t *strmh) {
   if (strmh->running)
     uvc_stream_stop(strmh);
 
+
+  UVC_DEBUG("Releasing IF\n");
   uvc_release_if(strmh->devh, strmh->stream_if->bInterfaceNumber);
+  UVC_DEBUG("Released IF\n");
 
-  if (strmh->frame.data)
+  if (strmh->frame.data) {
+     UVC_DEBUG("Freeing frame data");
     free(strmh->frame.data);
+  }
 
+  UVC_DEBUG("Freeing out and hold");
   free(strmh->outbuf);
   free(strmh->holdbuf);
 
