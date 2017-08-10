@@ -15,13 +15,20 @@ set(libuvc_VERSION_MAJOR 0)
 set(libuvc_VERSION_MINOR 0)
 set(libuvc_VERSION_PATCH 5)
 set(libuvc_VERSION ${libuvc_VERSION_MAJOR}.${libuvc_VERSION_MINOR}.${libuvc_VERSION_PATCH})
-
 set(libuvc_DESCRIPTION "A cross-platform library for USB video devices")
 set(libuvc_URL "https://github.com/ktossell/libuvc")
 
-find_package(PkgConfig)
-pkg_check_modules(LIBUSB libusb-1.0)
+if(WIN32)
 
+  find_library(LIBUSB_LIBRARIES usb-1.0
+	PATHS /opt/local/lib)
+
+  find_path(LIBUSB_INCLUDE_DIR libusb-1.0/libusb.h
+	PATHS /opt/local/include)
+else()
+  find_package(PkgConfig)
+  pkg_check_modules(LIBUSB libusb-1.0)
+endif()
 if (NOT WITHOUT_JPEG)
 
   # Try to find JPEG using a module or pkg-config. If that doesn't work, search for the header.
@@ -65,7 +72,7 @@ SET(SOURCES src/ctrl.c src/ctrl-gen.c src/device.c src/diag.c
 include_directories(
   ${libuvc_SOURCE_DIR}/include
   ${libuvc_BINARY_DIR}/include
-  ${LIBUSB_INCLUDE_DIRS}
+  ${LIBUSB_INCLUDE_DIR}
   ${PTHREAD_INCLUDE_DIR}
 )
 
