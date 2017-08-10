@@ -1538,6 +1538,8 @@ void uvc_close(uvc_device_handle_t *devh) {
   UVC_ENTER();
   uvc_context_t *ctx = devh->dev->ctx;
 
+  UVC_DEBUG("Entering uvc_close()");
+
   if (devh->streams)
     uvc_stop_streaming(devh);
 
