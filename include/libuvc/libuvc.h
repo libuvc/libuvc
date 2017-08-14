@@ -10,7 +10,7 @@ extern "C" {
 #ifndef WIN32
 #include <sys/time.h>
 #else
-#include <winsock2.h>
+#include <winsock.h>
 #endif
 #include <libuvc/libuvc_config.h>
 
