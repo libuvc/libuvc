@@ -38,6 +38,7 @@
 
 #include "libuvc/libuvc.h"
 #include "libuvc/libuvc_internal.h"
+#include "errno.h"
 
 
 #ifdef __APPLE__
@@ -85,17 +86,29 @@ struct format_table_entry *_get_format_entry(enum uvc_frame_format format) {
     ABS_FMT(UVC_FRAME_FORMAT_ANY, 2,
       {UVC_FRAME_FORMAT_UNCOMPRESSED, UVC_FRAME_FORMAT_COMPRESSED})
 
-    ABS_FMT(UVC_FRAME_FORMAT_UNCOMPRESSED, 3,
-      {UVC_FRAME_FORMAT_YUYV, UVC_FRAME_FORMAT_UYVY, UVC_FRAME_FORMAT_GRAY8})
+    ABS_FMT(UVC_FRAME_FORMAT_UNCOMPRESSED, 4,
+      {UVC_FRAME_FORMAT_YUYV, UVC_FRAME_FORMAT_UYVY, UVC_FRAME_FORMAT_GRAY8,
+      UVC_FRAME_FORMAT_GRAY16})
     FMT(UVC_FRAME_FORMAT_YUYV,
       {'Y',  'U',  'Y',  '2', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
     FMT(UVC_FRAME_FORMAT_UYVY,
       {'U',  'Y',  'V',  'Y', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
     FMT(UVC_FRAME_FORMAT_GRAY8,
       {'Y',  '8',  '0',  '0', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+    FMT(UVC_FRAME_FORMAT_GRAY16,
+      {'Y',  '1',  '6',  ' ', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
     FMT(UVC_FRAME_FORMAT_BY8,
       {'B',  'Y',  '8',  ' ', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
-
+    FMT(UVC_FRAME_FORMAT_BA81,
+      {'B',  'A',  '8',  '1', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+    FMT(UVC_FRAME_FORMAT_SGRBG8,
+      {'G',  'R',  'B',  'G', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+    FMT(UVC_FRAME_FORMAT_SGBRG8,
+      {'G',  'B',  'R',  'G', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+    FMT(UVC_FRAME_FORMAT_SRGGB8,
+      {'R',  'G',  'G',  'B', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+    FMT(UVC_FRAME_FORMAT_SBGGR8,
+      {'B',  'G',  'G',  'R', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
     ABS_FMT(UVC_FRAME_FORMAT_COMPRESSED, 1,
       {UVC_FRAME_FORMAT_MJPEG})
     FMT(UVC_FRAME_FORMAT_MJPEG,
@@ -229,6 +242,8 @@ uvc_error_t uvc_query_stream_ctrl(
     else
       ctrl->dwClockFrequency = devh->info->ctrl_if.dwClockFrequency;
     }
+    else
+      ctrl->dwClockFrequency = devh->info->ctrl_if.dwClockFrequency;
 
     /* fix up block for cameras that fail to set dwMax* */
     if (ctrl->dwMaxVideoFrameSize == 0) {
@@ -353,15 +368,16 @@ uvc_error_t uvc_get_stream_ctrl_format_size(
 
         uint32_t *interval;
 
+        ctrl->bInterfaceNumber = stream_if->bInterfaceNumber;
+        UVC_DEBUG("claiming streaming interface %d", stream_if->bInterfaceNumber );
+        uvc_claim_if(devh, ctrl->bInterfaceNumber);
+        /* get the max values */
+        uvc_query_stream_ctrl( devh, ctrl, 1, UVC_GET_MAX);
+
         if (frame->intervals) {
           for (interval = frame->intervals; *interval; ++interval) {
             // allow a fps rate of zero to mean "accept first rate available"
             if (10000000 / *interval == (unsigned int) fps || fps == 0) {
-
-              /* get the max values -- we need the interface number to be able
-                 to do this */
-              ctrl->bInterfaceNumber = stream_if->bInterfaceNumber;
-              uvc_query_stream_ctrl( devh, ctrl, 1, UVC_GET_MAX);
 
               ctrl->bmHint = (1 << 0); /* don't negotiate interval */
               ctrl->bFormatIndex = format->bFormatIndex;
@@ -379,11 +395,6 @@ uvc_error_t uvc_get_stream_ctrl_format_size(
               && interval_100ns <= frame->dwMaxFrameInterval
               && !(interval_offset
                    && (interval_offset % frame->dwFrameIntervalStep))) {
-
-            /* get the max values -- we need the interface number to be able
-               to do this */
-            ctrl->bInterfaceNumber = stream_if->bInterfaceNumber;
-            uvc_query_stream_ctrl( devh, ctrl, 1, UVC_GET_MAX);
 
             ctrl->bmHint = (1 << 0);
             ctrl->bFormatIndex = format->bFormatIndex;
@@ -412,7 +423,6 @@ found:
 uvc_error_t uvc_probe_stream_ctrl(
     uvc_device_handle_t *devh,
     uvc_stream_ctrl_t *ctrl) {
-
   uvc_claim_if(devh, ctrl->bInterfaceNumber);
 
   uvc_query_stream_ctrl(
@@ -467,7 +477,6 @@ void _uvc_process_payload(uvc_stream_handle_t *strmh, uint8_t *payload, size_t p
   size_t header_len;
   uint8_t header_info;
   size_t data_len;
-  struct libusb_iso_packet_descriptor *pkt;
 
   /* magic numbers for identifying header packets from some iSight cameras */
   static uint8_t isight_tag[] = {
@@ -834,7 +843,7 @@ uvc_error_t uvc_stream_start(
   uvc_stream_ctrl_t *ctrl;
   uvc_error_t ret;
   /* Total amount of data per transfer */
-  size_t total_transfer_size;
+  size_t total_transfer_size = 0;
   struct libusb_transfer *transfer;
   int transfer_id;
 
@@ -848,7 +857,7 @@ uvc_error_t uvc_stream_start(
   }
 
   strmh->running = 1;
-  strmh->seq = 0;
+  strmh->seq = 1;
   strmh->fid = 0;
   strmh->pts = 0;
   strmh->last_scr = 0;
@@ -877,15 +886,15 @@ uvc_error_t uvc_stream_start(
   if (isochronous) {
     /* For isochronous streaming, we choose an appropriate altsetting for the endpoint
      * and set up several transfers */
-    const struct libusb_interface_descriptor *altsetting;
+    const struct libusb_interface_descriptor *altsetting = 0;
     const struct libusb_endpoint_descriptor *endpoint;
     /* The greatest number of bytes that the device might provide, per packet, in this
      * configuration */
     size_t config_bytes_per_packet;
     /* Number of packets per transfer */
-    size_t packets_per_transfer;
+    size_t packets_per_transfer = 0;
     /* Size of packet transferable from the chosen endpoint */
-    size_t endpoint_bytes_per_packet;
+    size_t endpoint_bytes_per_packet = 0;
     /* Index of the altsetting */
     int alt_idx, ep_idx;
 
@@ -1002,7 +1011,7 @@ uvc_error_t uvc_stream_start(
       transfer_id++) {
     ret = libusb_submit_transfer(strmh->transfers[transfer_id]);
     if (ret != UVC_SUCCESS) {
-      UVC_DEBUG("libusb_submit_transfer failed");
+      UVC_DEBUG("libusb_submit_transfer failed: %d",ret);
       break;
     }
   }
@@ -1083,7 +1092,6 @@ void *_uvc_user_caller(void *arg) {
  * must be called with stream cb lock held!
  */
 void _uvc_populate_frame(uvc_stream_handle_t *strmh) {
-  size_t alloc_size = strmh->cur_ctrl.dwMaxVideoFrameSize;
   uvc_frame_t *frame = &strmh->frame;
   uvc_frame_desc_t *frame_desc;
 
@@ -1112,7 +1120,6 @@ void _uvc_populate_frame(uvc_stream_handle_t *strmh) {
     break;
   }
 
-  /** @todo set the frame time */
   frame->sequence = strmh->hold_seq;
   frame->capture_time.tv_usec = strmh->hold_pts;
   if (frame->data_bytes < strmh->hold_bytes) {

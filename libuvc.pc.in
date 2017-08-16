@@ -1,0 +1,11 @@
+libdir=@CONF_LIBRARY_DIR@
+includedir=@CONF_INCLUDE_DIR@
+
+Name: libuvc
+Description: @libuvc_DESCRIPTION@
+URL: @libuvc_URL@
+Version: @libuvc_VERSION@
+Libs: -L${libdir} -luvc
+Libs.private: -lusb-1.0
+Cflags: -I${includedir}
+Requires: libusb-1.0

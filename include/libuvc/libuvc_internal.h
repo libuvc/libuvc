@@ -11,6 +11,11 @@
 #include <string.h>
 #include <pthread.h>
 #include <signal.h>
+#ifndef WIN32
+#include <libusb-1.0/libusb.h>
+#else
+#include <libusb.h>
+#endif
 #include "utlist.h"
 
 /** Converts an unaligned four-byte little-endian integer into an int32 */
@@ -276,6 +281,7 @@ struct uvc_device_handle {
   uvc_stream_handle_t *streams;
   /** Whether the camera is an iSight that sends one header per frame */
   uint8_t is_isight;
+  uint32_t claimed;
 };
 
 /** Context within which we communicate with devices */
