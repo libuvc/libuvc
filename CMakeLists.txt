@@ -27,12 +27,7 @@ if(WIN32)
 	PATHS /opt/local/include)
 else()
   find_package(PkgConfig)
-  pkg_check_modules(LIBUSB libusb-1.0)
-endif()
-if (NOT WITHOUT_JPEG)
-
-  # Try to find JPEG using a module or pkg-config. If that doesn't work, search for the header.
-  find_package(jpeg QUIET)
+  pkg_check_modules(JPEG QUIET libjpeg)
   if(JPEG_FOUND)
     set(JPEG_LINK_FLAGS ${JPEG_LIBRARIES})
   else()
@@ -55,12 +50,12 @@ if(WIN32)
         PATHS D:/install/pthreads-w32-2-9-1-release/lib/x64)
   find_path(PTHREAD_INCLUDE_DIR pthread.h
         PATHS D:/install/pthreads-w32-2-9-1-release/include)
-SET(EXTRA_DEFS "-D_TIMESPEC_DEFINED")
-add_definitions(${EXTRA_DEFS})
+  SET(EXTRA_DEFS "-D_TIMESPEC_DEFINED")
+  add_definitions(${EXTRA_DEFS})
 else()
-SET(CMAKE_C_FLAGS_DEBUG "-g  -DUVC_DEBUGGING")
+  include(GNUInstallDirs)
+  SET(CMAKE_C_FLAGS_DEBUG "-g  -DUVC_DEBUGGING")
 endif()
-
 
 SET(INSTALL_CMAKE_DIR "${CMAKE_INSTALL_PREFIX}/lib/cmake/libuvc" CACHE PATH
 	"Installation directory for CMake files")
@@ -86,45 +81,55 @@ else()
 endif()
 
 if(${CMAKE_BUILD_TARGET} MATCHES "Shared")
-  add_library(uvc SHARED ${SOURCES})
+  set(BUILD_UVC_SHARED TRUE)
 elseif(${CMAKE_BUILD_TARGET} MATCHES "Static")
-  add_library(uvc STATIC ${SOURCES})
+  set(BUILD_UVC_STATIC TRUE)
 elseif(${CMAKE_BUILD_TARGET} MATCHES "Both")
-  add_library(uvc SHARED ${SOURCES})
-  add_library(uvc_static STATIC ${SOURCES})
-  set_target_properties(uvc_static PROPERTIES OUTPUT_NAME uvc)
+  set(BUILD_UVC_SHARED TRUE)
+  set(BUILD_UVC_STATIC TRUE)
 else()
   message( FATAL_ERROR "Invalid build type ${CMAKE_BUILD_TARGET}" )
+endif()
+
+if(BUILD_UVC_SHARED)
+  add_library(uvc SHARED ${SOURCES})
+  list(APPEND UVC_TARGETS uvc)
+endif()
+
+if(BUILD_UVC_STATIC)
+  add_library(uvc_static STATIC ${SOURCES})
+  set_target_properties(uvc_static PROPERTIES OUTPUT_NAME uvc)
+  list(APPEND UVC_TARGETS uvc_static)
 endif()
 
 configure_file(include/libuvc/libuvc_config.h.in
   ${PROJECT_BINARY_DIR}/include/libuvc/libuvc_config.h @ONLY)
 
-set_target_properties(uvc PROPERTIES
-  PUBLIC_HEADER "include/libuvc/libuvc.h;${libuvc_BINARY_DIR}/include/libuvc/libuvc_config.h" WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
+foreach(target_name ${UVC_TARGETS})
+  set_target_properties(${target_name} PROPERTIES
+    PUBLIC_HEADER "include/libuvc/libuvc.h;${libuvc_BINARY_DIR}/include/libuvc/libuvc_config.h" )
+endforeach()
 
-set_target_properties(uvc PROPERTIES VERSION ${libuvc_VERSION}
-                                         SOVERSION ${libuvc_VERSION_MAJOR})
+if(BUILD_UVC_SHARED)
+  if(JPEG_FOUND)
+    target_link_libraries (uvc ${JPEG_LINK_FLAGS})
+  endif(JPEG_FOUND)
 
-if(JPEG_FOUND)
-  target_link_libraries (uvc ${JPEG_LINK_FLAGS})
-endif(JPEG_FOUND)
+  target_link_libraries(uvc ${LIBUSB_LIBRARIES} ${PTHREAD_LIBRARIES} ${JPEG_LIBRARIES})
 
+  #add_executable(test src/test.c)
+  #target_link_libraries(test uvc ${LIBUSB_LIBRARIES} opencv_highgui
+  #  opencv_core)
+endif()
 
-target_link_libraries(uvc ${LIBUSB_LIBRARIES} ${PTHREAD_LIBRARIES} ${JPEG_LIBRARIES})
-
-#add_executable(test src/test.c)
-#target_link_libraries(test uvc ${LIBUSB_LIBRARIES} opencv_highgui
-#  opencv_core)
-
-install(TARGETS uvc uvc_static
-  EXPORT libuvcTargets
+install(TARGETS ${UVC_TARGETS}
+    EXPORT libuvcTargets
   LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/${CMAKE_LIBRARY_ARCHITECTURE}"
   ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/${CMAKE_LIBRARY_ARCHITECTURE}"
   PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_PREFIX}/include/libuvc"
 )
 
-export(TARGETS uvc
+export(TARGETS ${UVC_TARGETS}
   FILE "${PROJECT_BINARY_DIR}/libuvcTargets.cmake")
 export(PACKAGE libuvc)
 
