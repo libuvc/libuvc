@@ -1226,7 +1226,7 @@ uvc_error_t uvc_stream_stop(uvc_stream_handle_t *strmh) {
 
   pthread_mutex_lock(&strmh->cb_mutex);
 
-  UVC_DEBUG("Locked, stropping stream\n");
+  UVC_DEBUG("Locked, stopping stream\n");
 
   strmh->running = 0;
   for(i=0; i < LIBUVC_NUM_TRANSFER_BUFS; i++) {
