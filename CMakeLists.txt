@@ -11,6 +11,9 @@ if (NOT CMAKE_BUILD_TARGET)
   set(CMAKE_BUILD_TARGET "Both" CACHE STRING "" FORCE)
 endif()
 
+option(BUILD_EXAMPLE "Build example program" OFF)
+option(BUILD_TEST "Build test program" OFF)
+
 set(libuvc_VERSION_MAJOR 0)
 set(libuvc_VERSION_MINOR 0)
 set(libuvc_VERSION_PATCH 5)
@@ -106,6 +109,29 @@ if(BUILD_UVC_SHARED)
   #add_executable(test src/test.c)
   #target_link_libraries(test uvc ${LIBUSB_LIBRARIES} opencv_highgui
   #  opencv_core)
+endif()
+
+if(BUILD_EXAMPLE)
+  add_executable(example src/example.c)
+  target_link_libraries(example uvc)
+endif()
+
+if(BUILD_TEST)
+
+    # Try to find OpenCV using a module or pkg-config. If that doesn't work, search for the header.
+  find_package(opencv QUIET)
+  if(OPENCV_FOUND)
+    set(OPENCV_LINK_FLAGS ${OPENCV_LIBRARIES})
+  else()
+    pkg_check_modules(OPENCV QUIET opencv)
+    if(OPENCV_FOUND)
+        set(OPENCV_INCLUDE_DIR ${OPENCV_INCLUDE_DIRS})
+        set(OPENCV_LINK_FLAGS ${OPENCV_LDFLAGS})
+    endif()
+  endif()
+
+  add_executable(uvc_test src/test.c)
+  target_link_libraries(uvc_test uvc ${OPENCV_LDFLAGS})
 endif()
 
 install(TARGETS ${UVC_TARGETS}
