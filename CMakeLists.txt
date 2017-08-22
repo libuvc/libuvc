@@ -113,7 +113,7 @@ endif()
 
 if(BUILD_EXAMPLE)
   add_executable(example src/example.c)
-  target_link_libraries(example uvc)
+  target_link_libraries(example uvc pthread)
 endif()
 
 if(BUILD_TEST)
