@@ -7,8 +7,8 @@ if (NOT CMAKE_BUILD_TYPE)
 endif ()
 
 if (NOT CMAKE_BUILD_TARGET)
-  message(STATUS "No target type selected, default to both shared and static library")
-  set(CMAKE_BUILD_TARGET "Both" CACHE STRING "" FORCE)
+  message(STATUS "No target type selected, default to shared  library")
+  set(CMAKE_BUILD_TARGET "Shared" CACHE STRING "" FORCE)
 endif()
 
 set(libuvc_VERSION_MAJOR 0)
