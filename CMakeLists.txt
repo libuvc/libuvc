@@ -15,16 +15,17 @@ set(libuvc_VERSION_MAJOR 0)
 set(libuvc_VERSION_MINOR 0)
 set(libuvc_VERSION_PATCH 5)
 set(libuvc_VERSION ${libuvc_VERSION_MAJOR}.${libuvc_VERSION_MINOR}.${libuvc_VERSION_PATCH})
+
 set(libuvc_DESCRIPTION "A cross-platform library for USB video devices")
 set(libuvc_URL "https://github.com/ktossell/libuvc")
 
 if(WIN32)
 
   find_library(LIBUSB_LIBRARIES usb-1.0
-	PATHS /opt/local/lib)
+  PATHS /opt/local/lib)
 
   find_path(LIBUSB_INCLUDE_DIR libusb-1.0/libusb.h
-	PATHS /opt/local/include)
+  PATHS /opt/local/include)
 else()
   find_package(PkgConfig)
   pkg_check_modules(JPEG QUIET libjpeg)
@@ -43,7 +44,11 @@ else()
       endif()
     endif()
   endif()
+else()
+  find_package(PkgConfig)
+  pkg_check_modules(LIBUSB libusb-1.0)
 endif()
+
 
 if(WIN32)
   find_library(PTHREAD_LIBRARIES pthreadVC2
@@ -58,7 +63,7 @@ else()
 endif()
 
 SET(INSTALL_CMAKE_DIR "${CMAKE_INSTALL_PREFIX}/lib/cmake/libuvc" CACHE PATH
-	"Installation directory for CMake files")
+  "Installation directory for CMake files")
 
 SET(SOURCES src/ctrl.c src/ctrl-gen.c src/device.c src/diag.c
            src/frame.c src/init.c src/stream.c
