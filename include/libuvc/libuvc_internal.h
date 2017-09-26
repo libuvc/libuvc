@@ -220,7 +220,7 @@ typedef struct uvc_device_info {
   and then allow the user to change the number of buffers as required.
  */
 #ifdef __APPLE__
-#define LIBUVC_NUM_TRANSFER_BUFS 8
+#define LIBUVC_NUM_TRANSFER_BUFS 40
 #elif WIN32
 #define LIBUVC_NUM_TRANSFER_BUFS 50
 #else
