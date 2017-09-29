@@ -79,6 +79,8 @@ endif()
 
 if(BUILD_UVC_SHARED)
   add_library(uvc SHARED ${SOURCES})
+  set_property(TARGET uvc PROPERTY VERSION ${libuvc_VERSION} )
+  set_property(TARGET uvc PROPERTY SOVERSION ${libuvc_VERSION_MAJOR} )
   list(APPEND UVC_TARGETS uvc)
 endif()
 
