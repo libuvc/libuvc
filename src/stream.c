@@ -73,6 +73,9 @@ uvc_frame_desc_t *uvc_find_frame_desc(uvc_device_handle_t *devh,
 void *_uvc_user_caller(void *arg);
 void _uvc_populate_frame(uvc_stream_handle_t *strmh);
 
+static uvc_streaming_interface_t *_uvc_get_stream_if(uvc_device_handle_t *devh, int interface_idx);
+static uvc_stream_handle_t *_uvc_get_stream_by_interface(uvc_device_handle_t *devh, int interface_idx);
+
 struct format_table_entry {
   enum uvc_frame_format format;
   uint8_t abstract_fmt;
@@ -269,6 +272,103 @@ uvc_error_t uvc_query_stream_ctrl(
   return UVC_SUCCESS;
 }
 
+/** @internal
+ * Run a streaming control query
+ * @param[in] devh UVC device
+ * @param[in,out] ctrl Control block
+ * @param[in] probe Whether this is a probe query or a commit query
+ * @param[in] req Query type
+ */
+uvc_error_t uvc_query_still_ctrl(
+  uvc_device_handle_t *devh,
+  uvc_still_ctrl_t *still_ctrl,
+  uint8_t probe,
+  enum uvc_req_code req) {
+
+  uint8_t buf[11];
+  const size_t len = 11;
+  uvc_error_t err;
+
+  memset(buf, 0, sizeof(buf));
+
+  if (req == UVC_SET_CUR) {
+    /* prepare for a SET transfer */
+    buf[0] = still_ctrl->bFormatIndex;
+    buf[1] = still_ctrl->bFrameIndex;
+    buf[2] = still_ctrl->bCompressionIndex;
+    INT_TO_DW(still_ctrl->dwMaxVideoFrameSize, buf + 3);
+    INT_TO_DW(still_ctrl->dwMaxPayloadTransferSize, buf + 7);
+  }
+
+  /* do the transfer */
+  err = libusb_control_transfer(
+      devh->usb_devh,
+      req == UVC_SET_CUR ? 0x21 : 0xA1,
+      req,
+      probe ? (UVC_VS_STILL_PROBE_CONTROL << 8) : (UVC_VS_STILL_COMMIT_CONTROL << 8),
+      still_ctrl->bInterfaceNumber,
+      buf, len, 0
+  );
+
+  if (err <= 0) {
+    return err;
+  }
+
+  /* now decode following a GET transfer */
+  if (req != UVC_SET_CUR) {
+    still_ctrl->bFormatIndex = buf[0];
+    still_ctrl->bFrameIndex = buf[1];
+    still_ctrl->bCompressionIndex = buf[2];
+    still_ctrl->dwMaxVideoFrameSize = DW_TO_INT(buf + 3);
+    still_ctrl->dwMaxPayloadTransferSize = DW_TO_INT(buf + 7);
+  }
+
+  return UVC_SUCCESS;
+}
+
+/** Initiate a method 2 (in stream) still capture
+ * @ingroup streaming
+ *
+ * @param[in] devh Device handle
+ * @param[in] still_ctrl Still capture control block
+ */
+uvc_error_t uvc_trigger_still(
+    uvc_device_handle_t *devh,
+    uvc_still_ctrl_t *still_ctrl) {
+  uvc_stream_handle_t* stream;
+  uvc_streaming_interface_t* stream_if;
+  uint8_t buf;
+  uvc_error_t err;
+
+  /* Stream must be running for method 2 to work */
+  stream = _uvc_get_stream_by_interface(devh, still_ctrl->bInterfaceNumber);
+  if (!stream || !stream->running)
+    return UVC_ERROR_NOT_SUPPORTED;
+
+  /* Only method 2 is supported */
+  stream_if = _uvc_get_stream_if(devh, still_ctrl->bInterfaceNumber);
+  if(!stream_if || stream_if->bStillCaptureMethod != 2)
+      return UVC_ERROR_NOT_SUPPORTED;
+
+  /* prepare for a SET transfer */
+  buf = 1;
+
+  /* do the transfer */
+  err = libusb_control_transfer(
+      devh->usb_devh,
+      0x21, //type set
+      UVC_SET_CUR,
+      (UVC_VS_STILL_IMAGE_TRIGGER_CONTROL << 8),
+      still_ctrl->bInterfaceNumber,
+      &buf, 1, 0);
+
+  if (err <= 0) {
+    return err;
+  }
+
+  return UVC_SUCCESS;
+}
+
 /** @brief Reconfigure stream with a new stream format.
  * @ingroup streaming
  *
@@ -426,6 +526,61 @@ found:
   return uvc_probe_stream_ctrl(devh, ctrl);
 }
 
+/** Get a negotiated still control block for some common parameters.
+ * @ingroup streaming
+ *
+ * @param[in] devh Device handle
+ * @param[in] ctrl Control block
+ * @param[in, out] still_ctrl Still capture control block
+ * @param[in] width Desired frame width
+ * @param[in] height Desired frame height
+ */
+uvc_error_t uvc_get_still_ctrl_format_size(
+    uvc_device_handle_t *devh,
+    uvc_stream_ctrl_t *ctrl,
+    uvc_still_ctrl_t *still_ctrl,
+    int width, int height) {
+  uvc_streaming_interface_t *stream_if;
+  uvc_still_frame_desc_t *still;
+  uvc_format_desc_t *format;
+  uvc_still_frame_res_t *sizePattern;
+
+  stream_if = _uvc_get_stream_if(devh, ctrl->bInterfaceNumber);
+
+  /* Only method 2 is supported */
+  if(!stream_if || stream_if->bStillCaptureMethod != 2)
+    return UVC_ERROR_NOT_SUPPORTED;
+
+  DL_FOREACH(stream_if->format_descs, format) {
+
+    if (ctrl->bFormatIndex != format->bFormatIndex)
+      continue;
+
+    /* get the max values */
+    uvc_query_still_ctrl(devh, still_ctrl, 1, UVC_GET_MAX);
+
+    //look for still format
+    DL_FOREACH(format->still_frame_desc, still) {
+      DL_FOREACH(still->imageSizePatterns, sizePattern) {
+
+        if (sizePattern->wWidth != width || sizePattern->wHeight != height)
+          continue;
+
+        still_ctrl->bInterfaceNumber = ctrl->bInterfaceNumber;
+        still_ctrl->bFormatIndex = format->bFormatIndex;
+        still_ctrl->bFrameIndex = sizePattern->bResolutionIndex;
+        still_ctrl->bCompressionIndex = 0; //TODO support compression index
+        goto found;
+      }
+    }
+  }
+
+  return UVC_ERROR_INVALID_MODE;
+
+  found:
+    return uvc_probe_still_ctrl(devh, still_ctrl);
+}
+
 /** @internal
  * Negotiate streaming parameters with the device
  *
@@ -446,6 +601,35 @@ uvc_error_t uvc_probe_stream_ctrl(
 
   /** @todo make sure that worked */
   return UVC_SUCCESS;
+}
+
+/** @internal
+ * Negotiate still parameters with the device
+ *
+ * @param[in] devh UVC device
+ * @param[in,out] still_ctrl Still capture control block
+ */
+uvc_error_t uvc_probe_still_ctrl(
+    uvc_device_handle_t *devh,
+    uvc_still_ctrl_t *still_ctrl) {
+
+  int res = uvc_query_still_ctrl(
+    devh, still_ctrl, 1, UVC_SET_CUR
+  );
+
+  if(res == UVC_SUCCESS) {
+    res = uvc_query_still_ctrl(
+      devh, still_ctrl, 1, UVC_GET_CUR
+    );
+
+    if(res == UVC_SUCCESS) {
+      res = uvc_query_still_ctrl(
+        devh, still_ctrl, 0, UVC_SET_CUR
+      );
+    }
+  }
+
+  return res;
 }
 
 /** @internal

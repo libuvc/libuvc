@@ -120,6 +120,28 @@ enum uvc_vs_desc_subtype {
 struct uvc_format_desc;
 struct uvc_frame_desc;
 
+typedef struct uvc_still_frame_res {
+  struct uvc_still_frame_res *prev, *next;
+  uint8_t bResolutionIndex;
+  /** Image width */
+  uint16_t wWidth;
+  /** Image height */
+  uint16_t wHeight;
+} uvc_still_frame_res_t;
+
+typedef struct uvc_still_frame_desc {
+  struct uvc_format_desc *parent;
+  struct uvc_still_frame_desc *prev, *next;
+  /** Type of frame, such as JPEG frame or uncompressed frme */
+  enum uvc_vs_desc_subtype bDescriptorSubtype;
+  /** Index of the frame within the list of specs available for this format */
+  uint8_t bEndPointAddress;
+  uvc_still_frame_res_t* imageSizePatterns;
+  uint8_t bNumCompressionPattern;
+  /* indication of compression level, the higher, the more compression is applied to image */
+  uint8_t* bCompression;
+} uvc_still_frame_desc_t;
+
 /** Frame descriptor
  *
  * A "frame" is a configuration of a streaming format
@@ -194,6 +216,7 @@ typedef struct uvc_format_desc {
   uint8_t bVariableSize;
   /** Available frame specifications for this format */
   struct uvc_frame_desc *frame_descs;
+  struct uvc_still_frame_desc *still_frame_desc;
 } uvc_format_desc_t;
 
 /** UVC request code (A.8) */
@@ -480,6 +503,20 @@ typedef struct uvc_stream_ctrl {
   uint8_t bInterfaceNumber;
 } uvc_stream_ctrl_t;
 
+typedef struct uvc_still_ctrl {
+  /* Video format index from a format descriptor */
+  uint8_t bFormatIndex;
+  /* Video frame index from a frame descriptor */
+  uint8_t bFrameIndex;
+  /* Compression index from a frame descriptor */
+  uint8_t bCompressionIndex;
+  /* Maximum still image size in bytes. */
+  uint32_t dwMaxVideoFrameSize;
+  /* Maximum number of byte per payload*/
+  uint32_t dwMaxPayloadTransferSize;
+  uint8_t bInterfaceNumber;
+} uvc_still_ctrl_t;
+
 uvc_error_t uvc_init(uvc_context_t **ctx, struct libusb_context *usb_ctx);
 void uvc_exit(uvc_context_t *ctx);
 
@@ -541,11 +578,25 @@ uvc_error_t uvc_get_stream_ctrl_format_size(
     int fps
     );
 
+uvc_error_t uvc_get_still_ctrl_format_size(
+    uvc_device_handle_t *devh,
+    uvc_stream_ctrl_t *ctrl,
+    uvc_still_ctrl_t *still_ctrl,
+    int width, int height);
+
+uvc_error_t uvc_trigger_still(
+    uvc_device_handle_t *devh,
+    uvc_still_ctrl_t *still_ctrl);
+
 const uvc_format_desc_t *uvc_get_format_descs(uvc_device_handle_t* );
 
 uvc_error_t uvc_probe_stream_ctrl(
     uvc_device_handle_t *devh,
     uvc_stream_ctrl_t *ctrl);
+
+uvc_error_t uvc_probe_still_ctrl(
+    uvc_device_handle_t *devh,
+    uvc_still_ctrl_t *still_ctrl);
 
 uvc_error_t uvc_start_streaming(
     uvc_device_handle_t *devh,

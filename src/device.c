@@ -415,6 +415,8 @@ void uvc_free_device_info(uvc_device_info_t *info) {
   uvc_streaming_interface_t *stream_if, *stream_if_tmp;
   uvc_format_desc_t *format, *format_tmp;
   uvc_frame_desc_t *frame, *frame_tmp;
+  uvc_still_frame_desc_t *still_frame, *still_frame_tmp;
+  uvc_still_frame_res_t *still_res, *still_res_tmp;
 
   UVC_ENTER();
 
@@ -441,6 +443,19 @@ void uvc_free_device_info(uvc_device_info_t *info) {
 
         DL_DELETE(format->frame_descs, frame);
         free(frame);
+      }
+
+      if(format->still_frame_desc) {
+        DL_FOREACH_SAFE(format->still_frame_desc, still_frame, still_frame_tmp) {
+          DL_FOREACH_SAFE(still_frame->imageSizePatterns, still_res, still_res_tmp) {
+            free(still_res);
+          }
+
+          if(still_frame->bCompression) {
+              free(still_frame->bCompression);
+          }
+          free(still_frame);
+        }
       }
 
       DL_DELETE(stream_if->format_descs, format);
@@ -1245,6 +1260,7 @@ uvc_error_t uvc_parse_vs_input_header(uvc_streaming_interface_t *stream_if,
 
   stream_if->bEndpointAddress = block[6] & 0x8f;
   stream_if->bTerminalLink = block[8];
+  stream_if->bStillCaptureMethod = block[9];
 
   UVC_EXIT(UVC_SUCCESS);
   return UVC_SUCCESS;
@@ -1444,6 +1460,69 @@ uvc_error_t uvc_parse_vs_frame_uncompressed(uvc_streaming_interface_t *stream_if
 }
 
 /** @internal
+ * @brief Parse a VideoStreaming still iamge frame
+ * @ingroup device
+ */
+uvc_error_t uvc_parse_vs_still_image_frame(uvc_streaming_interface_t *stream_if,
+                        const unsigned char *block,
+                        size_t block_size) {
+
+  struct uvc_still_frame_desc* frame;
+  uvc_format_desc_t *format;
+
+  const unsigned char *p;
+  int i;
+
+  UVC_ENTER();
+
+  format = stream_if->format_descs->prev;
+  frame = calloc(1, sizeof(*frame));
+
+  frame->parent = format;
+
+  frame->bDescriptorSubtype = block[2];
+  frame->bEndPointAddress   = block[3];
+  uint8_t numImageSizePatterns = block[4];
+
+  frame->imageSizePatterns = NULL;
+
+  p = &block[5];
+
+  for (i = 1; i <= numImageSizePatterns; ++i) {
+    uvc_still_frame_res_t* res = calloc(1, sizeof(uvc_still_frame_res_t));
+    res->bResolutionIndex = i;
+    res->wWidth = SW_TO_SHORT(p);
+    p += 2;
+    res->wHeight = SW_TO_SHORT(p);
+    p += 2;
+
+    DL_APPEND(frame->imageSizePatterns, res);
+  }
+
+  p = &block[5+4*numImageSizePatterns];
+  frame->bNumCompressionPattern = *p;
+
+  if(frame->bNumCompressionPattern)
+  {
+      frame->bCompression = calloc(frame->bNumCompressionPattern, sizeof(frame->bCompression[0]));
+      for(i = 0; i < frame->bNumCompressionPattern; ++i)
+      {
+          ++p;
+          frame->bCompression[i] = *p;
+      }
+  }
+  else
+  {
+      frame->bCompression = NULL;
+  }
+
+  DL_APPEND(format->still_frame_desc, frame);
+
+  UVC_EXIT(UVC_SUCCESS);
+  return UVC_SUCCESS;
+}
+
+/** @internal
  * Process a single VideoStreaming descriptor block
  * @ingroup device
  */
@@ -1468,7 +1547,7 @@ uvc_error_t uvc_parse_vs(
     fprintf ( stderr, "unsupported descriptor subtype VS_OUTPUT_HEADER\n" );
     break;
   case UVC_VS_STILL_IMAGE_FRAME:
-    fprintf ( stderr, "unsupported descriptor subtype VS_STILL_IMAGE_FRAME\n" );
+    ret = uvc_parse_vs_still_image_frame(stream_if, block, block_size);
     break;
   case UVC_VS_FORMAT_UNCOMPRESSED:
     ret = uvc_parse_vs_format_uncompressed(stream_if, block, block_size);
