@@ -471,7 +471,7 @@ int64_t get_precise_timestamp_freq(int64_t *perf_freq)
   QueryPerformanceFrequency(&li);
   perf_freq = li.QuadPart;
 #elif __linux__
-  *perf_freq = BILLION;
+  *perf_freq = MILLION;
 #endif
 }
 
@@ -509,7 +509,7 @@ void get_precise_timestamp(int64_t *ts)
 #elif __linux__
   struct timespec tspec;
   clock_gettime(CLOCK_MONOTONIC, &tspec);
-  *ts = tspec.tv_sec * BILLION + tspec.tv_nsec;
+  *ts = tspec.tv_sec * MILLION + tspec.tv_nsec / 1000;
 #elif __APPLE__
   *ts = mach_absolute_time();
 #endif
@@ -625,9 +625,9 @@ void _uvc_process_payload(uvc_stream_handle_t *strmh, uint8_t *payload, size_t p
       if (strmh->dev_clk_start_host_us) {
         int64_t pts = strmh->pts;
         if (strmh->pts < strmh->hold_pts) {
-          pts += UINT_MAX;
+            strmh->pts_time_base += get_dev_time_us(strmh, (1UL << 32));
         }
-        strmh->frame_ts_us = strmh->dev_clk_start_host_us + get_dev_time_us(strmh, pts);
+        strmh->frame_ts_us = strmh->dev_clk_start_host_us + strmh->pts_time_base + get_dev_time_us(strmh, pts);
       }
 
       /* The EOF bit is set, so publish the complete frame */
@@ -940,6 +940,7 @@ uvc_error_t uvc_stream_start(
   strmh->last_scr = 0;
   strmh->dev_clk_start_host_us = 0;
   strmh->frame_xfer_len_mf = 0;
+  strmh->pts_time_base = 0;
 
   frame_desc = uvc_find_frame_desc_stream(strmh, ctrl->bFormatIndex, ctrl->bFrameIndex);
   if (!frame_desc) {

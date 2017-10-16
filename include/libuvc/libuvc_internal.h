@@ -263,6 +263,7 @@ struct uvc_stream_handle {
   int64_t last_iso_ts_us;
   int64_t frame_ts_us;
   int64_t hold_frame_ts_us;
+  int64_t pts_time_base;
   /** Transfer duration of frame in microframes */
   int frame_xfer_len_mf;
   int packets_per_iso_xfer;
