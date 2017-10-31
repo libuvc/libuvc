@@ -29,22 +29,6 @@ if(WIN32)
 else()
   find_package(PkgConfig)
   pkg_check_modules(LIBUSB libusb-1.0)
-  pkg_check_modules(JPEG QUIET libjpeg)
-  if(JPEG_FOUND)
-    set(JPEG_LINK_FLAGS ${JPEG_LIBRARIES})
-  else()
-    pkg_check_modules(JPEG libjpeg)
-    if(JPEG_FOUND)
-        set(JPEG_INCLUDE_DIR ${JPEG_INCLUDE_DIRS})
-        set(JPEG_LINK_FLAGS ${JPEG_LDFLAGS})
-    else()
-      find_path(JPEG_INCLUDE_DIR jpeglib.h)
-      if(JPEG_INCLUDE_DIR)
-        set(JPEG_FOUND ON)
-        set(JPEG_LINK_FLAGS -ljpeg)
-      endif()
-    endif()
-  endif()
 endif()
 
 
@@ -73,15 +57,6 @@ include_directories(
   ${LIBUSB_INCLUDE_DIR}
   ${PTHREAD_INCLUDE_DIR}
 )
-
-if(JPEG_FOUND)
-  message(STATUS "Building libuvc with JPEG support.")
-  include_directories(${JPEG_INCLUDE_DIR})
-  SET(LIBUVC_HAS_JPEG TRUE)
-  SET(SOURCES ${SOURCES} src/frame-mjpeg.c)
-else()
-  message(WARNING "JPEG not found. libuvc will not support JPEG decoding.")
-endif()
 
 if(${CMAKE_BUILD_TARGET} MATCHES "Shared")
   set(BUILD_UVC_SHARED TRUE)
@@ -117,11 +92,7 @@ foreach(target_name ${UVC_TARGETS})
 endforeach()
 
 if(BUILD_UVC_SHARED)
-  if(JPEG_FOUND)
-    target_link_libraries (uvc ${JPEG_LINK_FLAGS})
-  endif(JPEG_FOUND)
-
-  target_link_libraries(uvc ${LIBUSB_LIBRARIES} ${PTHREAD_LIBRARIES} ${JPEG_LIBRARIES})
+  target_link_libraries(uvc ${LIBUSB_LIBRARIES} ${PTHREAD_LIBRARIES})
 
   #add_executable(test src/test.c)
   #target_link_libraries(test uvc ${LIBUSB_LIBRARIES} opencv_highgui
