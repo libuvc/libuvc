@@ -7,11 +7,16 @@ extern "C" {
 
 #include <stdio.h> // FILE
 #include <stdint.h>
+#ifndef WIN32
 #include <sys/time.h>
+#else
+#include <winsock.h>
+#endif
 #include <libuvc/libuvc_config.h>
 
 struct libusb_context;
 struct libusb_device_handle;
+
 
 /** UVC error types, based on libusb errors
  * @ingroup diag
@@ -567,6 +572,7 @@ uvc_error_t uvc_stream_ctrl(uvc_stream_handle_t *strmh, uvc_stream_ctrl_t *ctrl)
 uvc_error_t uvc_stream_start(uvc_stream_handle_t *strmh,
     uvc_frame_callback_t *cb,
     void *user_ptr,
+    float bandwidth_factor,
     uint8_t flags);
 uvc_error_t uvc_stream_start_iso(uvc_stream_handle_t *strmh,
     uvc_frame_callback_t *cb,

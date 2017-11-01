@@ -11,9 +11,14 @@
 #include <string.h>
 #include <pthread.h>
 #include <signal.h>
+#ifndef WIN32
+#include <libusb-1.0/libusb.h>
+#else
 #include <libusb.h>
+#endif
 #include "utlist.h"
 
+#define DEBUG_PTS_LEN (60 * 200)
 /** Converts an unaligned four-byte little-endian integer into an int32 */
 #define DW_TO_INT(p) ((p)[0] | ((p)[1] << 8) | ((p)[2] << 16) | ((p)[3] << 24))
 /** Converts an unaligned two-byte little-endian integer into an int16 */
@@ -214,7 +219,13 @@ typedef struct uvc_device_info {
   We could/should change this to allow reduce it to, say, 5 by default
   and then allow the user to change the number of buffers as required.
  */
+#ifdef __APPLE__
+#define LIBUVC_NUM_TRANSFER_BUFS 40
+#elif WIN32
+#define LIBUVC_NUM_TRANSFER_BUFS 50
+#else
 #define LIBUVC_NUM_TRANSFER_BUFS 100
+#endif
 
 #define LIBUVC_XFER_BUF_SIZE	( 16 * 1024 * 1024 )
 
@@ -230,7 +241,7 @@ struct uvc_stream_handle {
 
   /* listeners may only access hold*, and only when holding a
    * lock on cb_mutex (probably signaled with cb_cond) */
-  uint8_t fid;
+  int8_t fid;
   uint32_t seq, hold_seq;
   uint32_t pts, hold_pts;
   uint32_t last_scr, hold_last_scr;
@@ -246,6 +257,20 @@ struct uvc_stream_handle {
   uint8_t *transfer_bufs[LIBUVC_NUM_TRANSFER_BUFS];
   struct uvc_frame frame;
   enum uvc_frame_format frame_format;
+  int flying_xfers;
+  /** Start time of device clock in host time, in us */
+  int64_t  dev_clk_start_host_us;
+  int64_t last_iso_ts_us;
+  int64_t frame_ts_us;
+  int64_t hold_frame_ts_us;
+  int64_t pts_time_base;
+  /** Transfer duration of frame in microframes */
+  int frame_xfer_len_mf;
+  int packets_per_iso_xfer;
+  int64_t pts_diff[DEBUG_PTS_LEN];
+  int pts_start;
+  int pts_end;
+  int64_t trts, hold_trts;
 };
 
 /** Handle on an open UVC device
