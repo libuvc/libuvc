@@ -13,7 +13,7 @@ endif()
 
 set(libuvc_VERSION_MAJOR 0)
 set(libuvc_VERSION_MINOR 0)
-set(libuvc_VERSION_PATCH 6)
+set(libuvc_VERSION_PATCH 7)
 set(libuvc_VERSION ${libuvc_VERSION_MAJOR}.${libuvc_VERSION_MINOR}.${libuvc_VERSION_PATCH})
 
 set(libuvc_DESCRIPTION "A cross-platform library for USB video devices")
