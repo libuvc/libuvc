@@ -983,17 +983,17 @@ uvc_error_t uvc_stream_start(
 
 
     // our way: estimate it:
-    size_t bandwidth = frame_desc->wWidth * frame_desc->wHeight / 8 * bandwidth_factor; //the last one is bpp default 4 but we use if for compression, 2 is save, 1.5 is needed to run 3 high speed cameras. on one bus.
-    bandwidth *= 10000000 / strmh->cur_ctrl.dwFrameInterval + 1;
-    bandwidth /= 1000; //unit
-    bandwidth /= 8; // 8 high speed usb microframes per ms
-    bandwidth += 12; //header size
-    config_bytes_per_packet = bandwidth;
-
-    //config_bytes_per_packet *= 2;
-
-
-    // config_bytes_per_packet /= 2;
+	if (strmh->frame_format==UVC_FRAME_FORMAT_MJPEG) {
+		size_t bandwidth = frame_desc->wWidth * frame_desc->wHeight / 8 * bandwidth_factor; //the last one is bpp default 4 but we use if for compression, 2 is save, 1.5 is needed to run 3 high speed cameras. on one bus.
+		bandwidth *= 10000000 / strmh->cur_ctrl.dwFrameInterval + 1;
+		bandwidth /= 1000; //unit
+		bandwidth /= 8; // 8 high speed usb microframes per ms
+		bandwidth += 12; //header size
+		config_bytes_per_packet = bandwidth;
+		//config_bytes_per_packet *= 2;
+		// config_bytes_per_packet /= 2;
+	}
+    
     /* Go through the altsettings and find one whose packets are at least
      * as big as our format's maximum per-packet usage. Assume that the
      * packet sizes are increasing. */
