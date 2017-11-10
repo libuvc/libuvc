@@ -625,7 +625,7 @@ void _uvc_process_payload(uvc_stream_handle_t *strmh, uint8_t *payload, size_t p
       if (strmh->dev_clk_start_host_us) {
         int64_t pts = strmh->pts;
         if (strmh->pts < strmh->hold_pts) {
-            strmh->pts_time_base += get_dev_time_us(strmh, (1UL << 32));
+            strmh->pts_time_base += get_dev_time_us(strmh, (1LL << 32));
         }
         strmh->frame_ts_us = strmh->dev_clk_start_host_us + strmh->pts_time_base + get_dev_time_us(strmh, pts);
       }
