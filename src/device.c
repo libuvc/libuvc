@@ -1218,9 +1218,9 @@ uvc_error_t uvc_scan_streaming(uvc_device_t *dev,
 
   if (buffer_left) {
       stream_if = calloc(1, sizeof( * stream_if));
-      stream_if - > parent = info;
-      stream_if - > bInterfaceNumber = if_desc - > bInterfaceNumber;
-      DL_APPEND(info - > stream_ifs, stream_if);
+      stream_if->parent = info;
+      stream_if->bInterfaceNumber = if_desc->bInterfaceNumber;
+      DL_APPEND(info->stream_ifs, stream_if);
 
       while (buffer_left >= 3) {
         block_size = buffer[0];
@@ -1235,7 +1235,7 @@ uvc_error_t uvc_scan_streaming(uvc_device_t *dev,
         buffer += block_size;
       }
   }
-  for (int i = 0; i < if_desc - > bNumEndpoints != 0; i++) {
+  for (int i = 0; i < if_desc->bNumEndpoints != 0; i++) {
      uvc_scan_streaming_endpoint(dev, info, if_desc, i);
   }
 
@@ -1261,9 +1261,9 @@ uvc_error_t uvc_scan_streaming_endpoint(uvc_device_t * dev,
 
     ret = UVC_SUCCESS;
 
-    ep_desc = & if_desc - > endpoint[endpoint_idx];
-    buffer = ep_desc - > extra;
-    buffer_left = ep_desc - > extra_length;
+    ep_desc = & if_desc->endpoint[endpoint_idx];
+    buffer = ep_desc->extra;
+    buffer_left = ep_desc->extra_length;
 
     // Some USB Cameras attach streaming interfaces to endpoints
     // Check each block to see if it's an interface, then assume
@@ -1847,4 +1847,3 @@ void uvc_set_button_callback(uvc_device_handle_t *devh,
 const uvc_format_desc_t *uvc_get_format_descs(uvc_device_handle_t *devh) {
   return devh->info->stream_ifs->format_descs;
 }
-
