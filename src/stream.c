@@ -515,6 +515,25 @@ void get_precise_timestamp(int64_t *ts)
 #endif
 }
 
+/** @internal
+ * @brief Populate frame_ts_us if possible
+ */
+void _uvc_populate_frame_ts_us(uvc_stream_handle_t *strmh, int packet_id) {
+	if (!strmh->dev_clk_start_host_us) {
+		int64_t frame_end_time_us = get_dev_time_us(strmh, strmh->last_scr);
+		int64_t frame_end_time_host_us = get_host_time_us(strmh->last_iso_ts_us);
+		frame_end_time_host_us -= (strmh->frame_xfer_len_mf + strmh->packets_per_iso_xfer - packet_id) * 125;
+		frame_end_time_host_us -= frame_end_time_us;
+		strmh->dev_clk_start_host_us = frame_end_time_host_us;
+	} else {
+		int64_t pts = strmh->pts;
+		if (strmh->pts < strmh->hold_pts) {
+			strmh->pts_time_base += get_dev_time_us(strmh, (1LL << 32));
+		}
+		strmh->frame_ts_us = strmh->dev_clk_start_host_us + strmh->pts_time_base + get_dev_time_us(strmh, pts);
+	}
+}
+
 
 /** @internal
  * @brief Process a payload transfer
@@ -583,6 +602,7 @@ void _uvc_process_payload(uvc_stream_handle_t *strmh, uint8_t *payload, size_t p
     }
 
     if (strmh->fid != (header_info & 1) && strmh->got_bytes != 0) {
+      _uvc_populate_frame_ts_us(strmh, packet_id);
       /* The frame ID bit was flipped, but we have image data sitting
          around from prior transfers. This means the camera didn't send
          an EOF for the last transfer of the previous frame. */
@@ -614,22 +634,7 @@ void _uvc_process_payload(uvc_stream_handle_t *strmh, uint8_t *payload, size_t p
     strmh->got_bytes += data_len;
 
     if (header_info & (1 << 1)) {
-      if (!strmh->dev_clk_start_host_us) {
-        int64_t frame_end_time_us = get_dev_time_us(strmh, strmh->last_scr);
-        int64_t frame_end_time_host_us = get_host_time_us(strmh->last_iso_ts_us);
-        frame_end_time_host_us -= (strmh->frame_xfer_len_mf + strmh->packets_per_iso_xfer - packet_id) * 125;
-        frame_end_time_host_us -= frame_end_time_us;
-        strmh->dev_clk_start_host_us = frame_end_time_host_us;
-      }
-
-      if (strmh->dev_clk_start_host_us) {
-        int64_t pts = strmh->pts;
-        if (strmh->pts < strmh->hold_pts) {
-            strmh->pts_time_base += get_dev_time_us(strmh, (1LL << 32));
-        }
-        strmh->frame_ts_us = strmh->dev_clk_start_host_us + strmh->pts_time_base + get_dev_time_us(strmh, pts);
-      }
-
+      _uvc_populate_frame_ts_us(strmh, packet_id);
       /* The EOF bit is set, so publish the complete frame */
       _uvc_swap_buffers(strmh);
     }
