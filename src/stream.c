@@ -39,7 +39,7 @@
 #include "libuvc/libuvc.h"
 #include "libuvc/libuvc_internal.h"
 #include "errno.h"
-
+#include "math.h"
 #ifdef __APPLE__
     #include "time_mac.h"
 #endif
@@ -50,6 +50,7 @@
     #include "time_windows.h"
 #endif
 
+#define ABS(x) (((x) > 0) ? (x) : -(x))
 
 uvc_frame_desc_t *uvc_find_frame_desc_stream(uvc_stream_handle_t *strmh,
     uint16_t format_id, uint16_t frame_id);
@@ -241,9 +242,11 @@ uvc_error_t uvc_query_stream_ctrl(
       }
     else
       ctrl->dwClockFrequency = devh->info->ctrl_if.dwClockFrequency;
+
     }
     else
       ctrl->dwClockFrequency = devh->info->ctrl_if.dwClockFrequency;
+
 
     /* fix up block for cameras that fail to set dwMax* */
     if (ctrl->dwMaxVideoFrameSize == 0) {
@@ -477,9 +480,7 @@ int64_t get_precise_timestamp_freq(int64_t *perf_freq)
 
 inline int64_t get_dev_time_us(uvc_stream_handle_t *strmh, int64_t dev_ticks)
 {
-  uint32_t clk = strmh->cur_ctrl.dwClockFrequency;
-
-  int64_t time_us = ((int64_t)dev_ticks * MILLION) / clk;
+  int64_t time_us = ((int64_t)dev_ticks * MILLION + (strmh->corrected_clock_freq >> 1)) / strmh->corrected_clock_freq;
 
   return time_us;
 }
@@ -526,11 +527,43 @@ void _uvc_populate_frame_ts_us(uvc_stream_handle_t *strmh, int packet_id) {
 		frame_end_time_host_us -= frame_end_time_us;
 		strmh->dev_clk_start_host_us = frame_end_time_host_us;
 	} else {
+		const first_measure_int = 30 * 30;
 		int64_t pts = strmh->pts;
 		if (strmh->pts < strmh->hold_pts) {
-			strmh->pts_time_base += get_dev_time_us(strmh, (1LL << 32));
+			strmh->pts_time_base += 1LL << 32;//get_dev_time_us(strmh, (1LL << 32));
 		}
-		strmh->frame_ts_us = strmh->dev_clk_start_host_us + strmh->pts_time_base + get_dev_time_us(strmh, pts);
+		strmh->frame_ts_us = strmh->dev_clk_start_host_us + get_dev_time_us(strmh, strmh->pts_time_base + pts);
+		int64_t host_ts;
+		get_precise_timestamp(&host_ts);
+		int64_t time_diff = host_ts - strmh->frame_ts_us;
+		strmh->avg_diff  += time_diff;
+
+
+
+		if (!((strmh->seq+1) % first_measure_int)) {
+			strmh->avg_diff /= first_measure_int;
+			if (strmh->initial_avg_diff < 0) {
+				strmh->initial_avg_diff = strmh->avg_diff;
+				strmh->initial_host_ts = host_ts;
+			} else {
+				strmh->diff_measures++;
+				int64_t diff_incr = strmh->avg_diff - strmh->initial_avg_diff;
+				int64_t td = host_ts - strmh->initial_host_ts;
+				double slope = (double)diff_incr / td;
+				//printf("**** After %d frames, avg_diff = %lld, slope=%f\n", strmh->seq+1, strmh->avg_diff, slope);
+				if (strmh->diff_measures > 10 && fabs(slope) > 0.0000005/* 0.000005*/ ) {
+					strmh->corrected_clock_freq *= 1.0 - slope;
+					strmh->initial_avg_diff = -1;
+					printf("*** Correcting clock frequency to %llu\n", strmh->corrected_clock_freq );
+				}
+			}
+			strmh->avg_diff = 0;
+
+		}
+		//if (!((strmh->seq+1) % 60)) {
+		//	printf("host_ts - frame_time = %lld\n", time_diff);
+		//}
+
 	}
 }
 
@@ -946,6 +979,8 @@ uvc_error_t uvc_stream_start(
   strmh->dev_clk_start_host_us = 0;
   strmh->frame_xfer_len_mf = 0;
   strmh->pts_time_base = 0;
+  strmh->initial_avg_diff = -1;
+
 
   frame_desc = uvc_find_frame_desc_stream(strmh, ctrl->bFormatIndex, ctrl->bFrameIndex);
   if (!frame_desc) {
@@ -1057,6 +1092,7 @@ uvc_error_t uvc_stream_start(
 
     printf("!!!!Packets per transfer = %lu frameInterval = %u\n", packets_per_transfer, strmh->cur_ctrl.dwFrameInterval);
 
+    strmh->corrected_clock_freq = strmh->cur_ctrl.dwClockFrequency;
     /* Set up the transfers */
     for (transfer_id = 0; transfer_id < LIBUVC_NUM_TRANSFER_BUFS; ++transfer_id) {
       transfer = libusb_alloc_transfer(packets_per_transfer);
