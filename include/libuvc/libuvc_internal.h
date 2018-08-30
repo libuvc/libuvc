@@ -271,6 +271,11 @@ struct uvc_stream_handle {
   int pts_start;
   int pts_end;
   int64_t trts, hold_trts;
+  int64_t avg_diff;
+  int64_t initial_avg_diff;
+  int64_t initial_host_ts;
+  int64_t diff_measures;
+  uint64_t corrected_clock_freq;
 };
 
 /** Handle on an open UVC device
