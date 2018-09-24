@@ -304,7 +304,7 @@ uvc_error_t uvc_stream_ctrl(uvc_stream_handle_t *strmh, uvc_stream_ctrl_t *ctrl)
  */
 static uvc_frame_desc_t *_uvc_find_frame_desc_stream_if(uvc_streaming_interface_t *stream_if,
     uint16_t format_id, uint16_t frame_id) {
- 
+
   uvc_format_desc_t *format = NULL;
   uvc_frame_desc_t *frame = NULL;
 
@@ -333,7 +333,7 @@ uvc_frame_desc_t *uvc_find_frame_desc_stream(uvc_stream_handle_t *strmh,
  */
 uvc_frame_desc_t *uvc_find_frame_desc(uvc_device_handle_t *devh,
     uint16_t format_id, uint16_t frame_id) {
- 
+
   uvc_streaming_interface_t *stream_if;
   uvc_frame_desc_t *frame;
 
@@ -435,7 +435,7 @@ found:
 uvc_error_t uvc_probe_stream_ctrl(
     uvc_device_handle_t *devh,
     uvc_stream_ctrl_t *ctrl) {
- 
+
   uvc_query_stream_ctrl(
       devh, ctrl, 1, UVC_SET_CUR
   );
@@ -476,7 +476,7 @@ void _uvc_swap_buffers(uvc_stream_handle_t *strmh) {
 
 /** @internal
  * @brief Process a payload transfer
- * 
+ *
  * Processes stream, places frames into buffer, signals listeners
  * (such as user callback thread and any polling thread) on new frame
  *
@@ -612,7 +612,7 @@ void LIBUSB_CALL _uvc_stream_callback(struct libusb_transfer *transfer) {
       }
     }
     break;
-  case LIBUSB_TRANSFER_CANCELLED: 
+  case LIBUSB_TRANSFER_CANCELLED:
   case LIBUSB_TRANSFER_ERROR:
   case LIBUSB_TRANSFER_NO_DEVICE: {
     int i;
@@ -620,7 +620,7 @@ void LIBUSB_CALL _uvc_stream_callback(struct libusb_transfer *transfer) {
     pthread_mutex_lock(&strmh->cb_mutex);
 
     /* Mark transfer as deleted. */
-    for(i=0; i < LIBUVC_NUM_TRANSFER_BUFS; i++) {
+    for(i=0; i < strmh->number_of_transport_buffers; i++) {
       if(strmh->transfers[i] == transfer) {
         UVC_DEBUG("Freeing transfer %d (%p)", i, transfer);
         free(transfer->buffer);
@@ -629,7 +629,7 @@ void LIBUSB_CALL _uvc_stream_callback(struct libusb_transfer *transfer) {
         break;
       }
     }
-    if(i == LIBUVC_NUM_TRANSFER_BUFS ) {
+    if(i == strmh->number_of_transport_buffers ) {
       UVC_DEBUG("transfer %p not found; not freeing!", transfer);
     }
 
@@ -646,7 +646,7 @@ void LIBUSB_CALL _uvc_stream_callback(struct libusb_transfer *transfer) {
     UVC_DEBUG("retrying transfer, status = %d", transfer->status);
     break;
   }
-  
+
   if ( resubmit ) {
     if ( strmh->running ) {
       libusb_submit_transfer(transfer);
@@ -655,7 +655,7 @@ void LIBUSB_CALL _uvc_stream_callback(struct libusb_transfer *transfer) {
       pthread_mutex_lock(&strmh->cb_mutex);
 
       /* Mark transfer as deleted. */
-      for(i=0; i < LIBUVC_NUM_TRANSFER_BUFS; i++) {
+      for(i=0; i < strmh->number_of_transport_buffers; i++) {
         if(strmh->transfers[i] == transfer) {
           UVC_DEBUG("Freeing orphan transfer %d (%p)", i, transfer);
           free(transfer->buffer);
@@ -663,7 +663,7 @@ void LIBUSB_CALL _uvc_stream_callback(struct libusb_transfer *transfer) {
           strmh->transfers[i] = NULL;
         }
       }
-      if(i == LIBUVC_NUM_TRANSFER_BUFS ) {
+      if(i == strmh->number_of_transport_buffers ) {
         UVC_DEBUG("orphan transfer %p not found; not freeing!", transfer);
       }
 
@@ -746,9 +746,20 @@ static uvc_streaming_interface_t *_uvc_get_stream_if(uvc_device_handle_t *devh, 
     if (stream_if->bInterfaceNumber == interface_idx)
       return stream_if;
   }
-  
+
   return NULL;
 }
+
+static struct {
+    size_t number_of_transport_buffers;
+    size_t size_of_transport_buffer;
+} uvc_stream_config = {
+    .number_of_transport_buffers = 10,
+    .size_of_transport_buffer = 8 * 1024 * 1024
+};
+
+void uvc_stream_set_default_number_of_transport_buffers(size_t s);
+void uvc_stream_set_default_size_of_transport_buffer(size_t s);
 
 /** Open a new video stream.
  * @ingroup streaming
@@ -781,6 +792,18 @@ uvc_error_t uvc_stream_open_ctrl(uvc_device_handle_t *devh, uvc_stream_handle_t 
     ret = UVC_ERROR_NO_MEM;
     goto fail;
   }
+  strmh->number_of_transport_buffers = uvc_stream_config.number_of_transport_buffers;
+  strmh->transfers = calloc( strmh->number_of_transport_buffers, sizeof(struct libusb_transfer *));
+  strmh->transfer_bufs = calloc( strmh->number_of_transport_buffers, sizeof(uint8_t *));
+  /** @todo take only what we need */
+  strmh->outbuf = malloc( uvc_stream_config.size_of_transport_buffer );
+  strmh->holdbuf = malloc( uvc_stream_config.size_of_transport_buffer );
+
+  if (!strmh->transfers || !strmh->transfer_bufs || !strmh->outbuf || !strmh->holdbuf) {
+    ret = UVC_ERROR_NO_MEM;
+    goto fail;
+  }
+
   strmh->devh = devh;
   strmh->stream_if = stream_if;
   strmh->frame.library_owns_data = 1;
@@ -795,10 +818,7 @@ uvc_error_t uvc_stream_open_ctrl(uvc_device_handle_t *devh, uvc_stream_handle_t 
 
   // Set up the streaming status and data space
   strmh->running = 0;
-  /** @todo take only what we need */
-  strmh->outbuf = malloc( LIBUVC_XFER_BUF_SIZE );
-  strmh->holdbuf = malloc( LIBUVC_XFER_BUF_SIZE );
-   
+
   pthread_mutex_init(&strmh->cb_mutex, NULL);
   pthread_cond_init(&strmh->cb_cond, NULL);
 
@@ -810,6 +830,18 @@ uvc_error_t uvc_stream_open_ctrl(uvc_device_handle_t *devh, uvc_stream_handle_t 
   return UVC_SUCCESS;
 
 fail:
+  if (strmh->transfers) {
+    free(strmh->transfers);
+  }
+  if (strmh->transfer_bufs) {
+    free(strmh->transfer_bufs);
+  }
+  if (strmh->outbuf) {
+    free(strmh->outbuf);
+  }
+  if (strmh->holdbuf) {
+    free(strmh->holdbuf);
+  }
   if(strmh)
     free(strmh);
   UVC_EXIT(ret);
@@ -893,7 +925,7 @@ uvc_error_t uvc_stream_start(
     size_t endpoint_bytes_per_packet = 0;
     /* Index of the altsetting */
     int alt_idx, ep_idx;
-    
+
     config_bytes_per_packet = strmh->cur_ctrl.dwMaxPayloadTransferSize;
 
     /* Go through the altsettings and find one whose packets are at least
@@ -925,7 +957,7 @@ uvc_error_t uvc_stream_start(
         /* But keep a reasonable limit: Otherwise we start dropping data */
         if (packets_per_transfer > 32)
           packets_per_transfer = 32;
-        
+
         total_transfer_size = packets_per_transfer * endpoint_bytes_per_packet;
         break;
       }
@@ -947,9 +979,9 @@ uvc_error_t uvc_stream_start(
     }
 
     /* Set up the transfers */
-    for (transfer_id = 0; transfer_id < LIBUVC_NUM_TRANSFER_BUFS; ++transfer_id) {
+    for (transfer_id = 0; transfer_id < strmh->number_of_transport_buffers; ++transfer_id) {
       transfer = libusb_alloc_transfer(packets_per_transfer);
-      strmh->transfers[transfer_id] = transfer;      
+      strmh->transfers[transfer_id] = transfer;
       strmh->transfer_bufs[transfer_id] = malloc(total_transfer_size);
 
       libusb_fill_iso_transfer(
@@ -960,7 +992,7 @@ uvc_error_t uvc_stream_start(
       libusb_set_iso_packet_lengths(transfer, endpoint_bytes_per_packet);
     }
   } else {
-    for (transfer_id = 0; transfer_id < LIBUVC_NUM_TRANSFER_BUFS;
+    for (transfer_id = 0; transfer_id < strmh->number_of_transport_buffers;
         ++transfer_id) {
       transfer = libusb_alloc_transfer(0);
       strmh->transfers[transfer_id] = transfer;
@@ -984,7 +1016,7 @@ uvc_error_t uvc_stream_start(
     pthread_create(&strmh->cb_thread, NULL, _uvc_user_caller, (void*) strmh);
   }
 
-  for (transfer_id = 0; transfer_id < LIBUVC_NUM_TRANSFER_BUFS;
+  for (transfer_id = 0; transfer_id < strmh->number_of_transport_buffers;
       transfer_id++) {
     ret = libusb_submit_transfer(strmh->transfers[transfer_id]);
     if (ret != UVC_SUCCESS) {
@@ -994,7 +1026,7 @@ uvc_error_t uvc_stream_start(
   }
 
   if ( ret != UVC_SUCCESS && transfer_id > 0 ) {
-    for ( ; transfer_id < LIBUVC_NUM_TRANSFER_BUFS; transfer_id++) {
+    for ( ; transfer_id < strmh->number_of_transport_buffers; transfer_id++) {
       free ( strmh->transfers[transfer_id]->buffer );
       libusb_free_transfer ( strmh->transfers[transfer_id]);
       strmh->transfers[transfer_id] = 0;
@@ -1050,12 +1082,12 @@ void *_uvc_user_caller(void *arg) {
       pthread_mutex_unlock(&strmh->cb_mutex);
       break;
     }
-    
+
     last_seq = strmh->hold_seq;
     _uvc_populate_frame(strmh);
-    
+
     pthread_mutex_unlock(&strmh->cb_mutex);
-    
+
     strmh->user_cb(&strmh->frame, strmh->user_ptr);
   } while(1);
 
@@ -1079,10 +1111,10 @@ void _uvc_populate_frame(uvc_stream_handle_t *strmh) {
 				   strmh->cur_ctrl.bFrameIndex);
 
   frame->frame_format = strmh->frame_format;
-  
+
   frame->width = frame_desc->wWidth;
   frame->height = frame_desc->wHeight;
-  
+
   switch (frame->frame_format) {
   case UVC_FRAME_FORMAT_YUYV:
     frame->step = frame->width * 2;
@@ -1176,7 +1208,7 @@ uvc_error_t uvc_stream_get_frame(uvc_stream_handle_t *strmh,
           return UVC_ERROR_TIMEOUT;
       }
     }
-    
+
     if (strmh->last_polled_seq < strmh->hold_seq) {
       _uvc_populate_frame(strmh);
       *frame = &strmh->frame;
@@ -1225,7 +1257,7 @@ uvc_error_t uvc_stream_stop(uvc_stream_handle_t *strmh) {
 
   pthread_mutex_lock(&strmh->cb_mutex);
 
-  for(i=0; i < LIBUVC_NUM_TRANSFER_BUFS; i++) {
+  for(i=0; i < strmh->number_of_transport_buffers; i++) {
     if(strmh->transfers[i] != NULL) {
       int res = libusb_cancel_transfer(strmh->transfers[i]);
       if(res < 0 && res != LIBUSB_ERROR_NOT_FOUND ) {
@@ -1238,11 +1270,11 @@ uvc_error_t uvc_stream_stop(uvc_stream_handle_t *strmh) {
 
   /* Wait for transfers to complete/cancel */
   do {
-    for(i=0; i < LIBUVC_NUM_TRANSFER_BUFS; i++) {
+    for(i=0; i < strmh->number_of_transport_buffers; i++) {
       if(strmh->transfers[i] != NULL)
         break;
     }
-    if(i == LIBUVC_NUM_TRANSFER_BUFS )
+    if(i == strmh->number_of_transport_buffers )
       break;
     pthread_cond_wait(&strmh->cb_cond, &strmh->cb_mutex);
   } while(1);

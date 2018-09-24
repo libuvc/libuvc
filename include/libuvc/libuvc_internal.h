@@ -214,9 +214,6 @@ typedef struct uvc_device_info {
   We could/should change this to allow reduce it to, say, 5 by default
   and then allow the user to change the number of buffers as required.
  */
-#define LIBUVC_NUM_TRANSFER_BUFS 100
-
-#define LIBUVC_XFER_BUF_SIZE	( 16 * 1024 * 1024 )
 
 struct uvc_stream_handle {
   struct uvc_device_handle *devh;
@@ -242,8 +239,10 @@ struct uvc_stream_handle {
   uint32_t last_polled_seq;
   uvc_frame_callback_t *user_cb;
   void *user_ptr;
-  struct libusb_transfer *transfers[LIBUVC_NUM_TRANSFER_BUFS];
-  uint8_t *transfer_bufs[LIBUVC_NUM_TRANSFER_BUFS];
+
+  size_t number_of_transport_buffers;
+  struct libusb_transfer **transfers;
+  uint8_t **transfer_bufs;
   struct uvc_frame frame;
   enum uvc_frame_format frame_format;
 };
