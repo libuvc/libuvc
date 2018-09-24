@@ -1309,8 +1309,15 @@ void uvc_stream_close(uvc_stream_handle_t *strmh) {
   if (strmh->frame.data)
     free(strmh->frame.data);
 
-  free(strmh->outbuf);
-  free(strmh->holdbuf);
+  if (strmh->transfers)
+    free(strmh->transfers);
+  if (strmh->transfer_bufs)
+    free(strmh->transfer_bufs);
+
+  if (strmh->outbuf)
+    free(strmh->outbuf);
+  if (strmh->holdbuf)
+    free(strmh->holdbuf);
 
   pthread_cond_destroy(&strmh->cb_cond);
   pthread_mutex_destroy(&strmh->cb_mutex);
