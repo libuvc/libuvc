@@ -161,3 +161,27 @@ void uvc_start_handler_thread(uvc_context_t *ctx) {
     pthread_create(&ctx->handler_thread, NULL, _uvc_handle_events, (void*) ctx);
 }
 
+static uvc_log_func_t *uvc_log_func = NULL;
+#define UVC_LOG_LINE_MAX_LEN 2048
+void uvc_log_set_function(uvc_log_func_t func) {
+    uvc_log_func = func;
+}
+
+#include <stdarg.h>
+#include <libgen.h>
+void uvc_log(char *filename, unsigned line, const char *function, const char *format, ...) {
+    char buf_line[UVC_LOG_LINE_MAX_LEN];
+    memset(buf_line, 0, sizeof(buf_line));
+
+    va_list org;
+    va_start(org, format);
+    vsnprintf(buf_line, sizeof(buf_line), format, org);
+    if (uvc_log_func) {
+        (*uvc_log_func)(filename, line, function, buf_line);
+    } else {
+        fprintf(stderr, "[%s:%d] %s - %s\n", basename(filename), line, function, buf_line);
+    }
+    va_end(org);
+
+}
+

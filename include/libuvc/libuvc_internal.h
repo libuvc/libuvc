@@ -50,12 +50,12 @@
 
 #ifdef UVC_DEBUGGING
 #include <libgen.h>
-#define UVC_DEBUG(format, ...) fprintf(stderr, "[%s:%d/%s] " format "\n", basename(__FILE__), __LINE__, __FUNCTION__, ##__VA_ARGS__)
-#define UVC_ENTER() fprintf(stderr, "[%s:%d] begin %s\n", basename(__FILE__), __LINE__, __FUNCTION__)
-#define UVC_EXIT(code) fprintf(stderr, "[%s:%d] end %s (%d)\n", basename(__FILE__), __LINE__, __FUNCTION__, code)
-#define UVC_EXIT_VOID() fprintf(stderr, "[%s:%d] end %s\n", basename(__FILE__), __LINE__, __FUNCTION__)
+#define UVC_DEBUG(...) uvc_log(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
+#define UVC_ENTER()            uvc_log(__FILE__, __LINE__, __FUNCTION__, "Entering")
+#define UVC_EXIT(code)         uvc_log(__FILE__, __LINE__, __FUNCTION__, "Ending: %d", code)
+#define UVC_EXIT_VOID()        uvc_log(__FILE__, __LINE__, __FUNCTION__, "Ending")
 #else
-#define UVC_DEBUG(format, ...)
+#define UVC_DEBUG(...)
 #define UVC_ENTER()
 #define UVC_EXIT_VOID()
 #define UVC_EXIT(code)

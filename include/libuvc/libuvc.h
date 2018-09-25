@@ -732,6 +732,11 @@ uvc_error_t uvc_any2bgr(uvc_frame_t *in, uvc_frame_t *out);
 uvc_error_t uvc_yuyv2y(uvc_frame_t *in, uvc_frame_t *out);
 uvc_error_t uvc_yuyv2uv(uvc_frame_t *in, uvc_frame_t *out);
 
+typedef void (uvc_log_func_t)(const char *filename, unsigned line, const char *function, const char *log);
+void uvc_log_set_function(uvc_log_func_t func);
+void uvc_log(char *filename, unsigned line, const char *function, const char *format, ...);
+
+
 #ifdef LIBUVC_HAS_JPEG
 uvc_error_t uvc_mjpeg2rgb(uvc_frame_t *in, uvc_frame_t *out);
 #endif
