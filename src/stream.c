@@ -754,12 +754,16 @@ static struct {
     size_t number_of_transport_buffers;
     size_t size_of_transport_buffer;
 } uvc_stream_config = {
-    .number_of_transport_buffers = 10,
-    .size_of_transport_buffer = 8 * 1024 * 1024
+    .number_of_transport_buffers = 5,
+    .size_of_transport_buffer = 8 * 1024 * 1024,
 };
 
-void uvc_stream_set_default_number_of_transport_buffers(size_t s);
-void uvc_stream_set_default_size_of_transport_buffer(size_t s);
+void uvc_stream_set_default_number_of_transport_buffers(size_t s) {
+    uvc_stream_config.number_of_transport_buffers = s;
+}
+void uvc_stream_set_default_size_of_transport_buffer(size_t s) {
+    uvc_stream_config.size_of_transport_buffer = s;
+}
 
 /** Open a new video stream.
  * @ingroup streaming
@@ -962,6 +966,9 @@ uvc_error_t uvc_stream_start(
         break;
       }
     }
+    UVC_DEBUG("config_bytes_per_packet %zd packets_per_transfer %zd endpoint_bytes_per_packet %zd",
+     config_bytes_per_packet, packets_per_transfer, endpoint_bytes_per_packet);
+    UVC_DEBUG("total_transfer_size %zd", total_transfer_size);
 
     /* If we searched through all the altsettings and found nothing usable */
     if (alt_idx == interface->num_altsetting) {
@@ -1016,9 +1023,15 @@ uvc_error_t uvc_stream_start(
     pthread_create(&strmh->cb_thread, NULL, _uvc_user_caller, (void*) strmh);
   }
 
-  for (transfer_id = 0; transfer_id < strmh->number_of_transport_buffers;
-      transfer_id++) {
-    ret = libusb_submit_transfer(strmh->transfers[transfer_id]);
+  static int n_retry = 3;
+  for (transfer_id = 0; transfer_id < strmh->number_of_transport_buffers; transfer_id++) {
+    int n_try = 0;
+
+    do {
+      ret = libusb_submit_transfer(strmh->transfers[transfer_id]);
+      ++n_try;
+    } while (ret != UVC_SUCCESS && n_try < n_retry);
+
     if (ret != UVC_SUCCESS) {
       UVC_DEBUG("libusb_submit_transfer failed: %d",ret);
       break;
@@ -1026,13 +1039,19 @@ uvc_error_t uvc_stream_start(
   }
 
   if ( ret != UVC_SUCCESS && transfer_id > 0 ) {
+    UVC_DEBUG("Will try to work with %zd transfers instead of %zd", transfer_id, strmh->number_of_transport_buffers);
+    size_t new_number_of_transport_buffers = transfer_id;
+
     for ( ; transfer_id < strmh->number_of_transport_buffers; transfer_id++) {
       free ( strmh->transfers[transfer_id]->buffer );
       libusb_free_transfer ( strmh->transfers[transfer_id]);
       strmh->transfers[transfer_id] = 0;
     }
+
+    strmh->number_of_transport_buffers = new_number_of_transport_buffers;
     ret = UVC_SUCCESS;
   }
+  UVC_DEBUG("Successfully initialized %zd transfers", strmh->number_of_transport_buffers);
 
   UVC_EXIT(ret);
   return ret;
