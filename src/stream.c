@@ -496,7 +496,19 @@ inline int64_t get_host_time_us(int64_t ts)
   mach_timebase_info_data_t timebase;
   mach_timebase_info(&timebase);
 
-  int64_t time_us = ts * timebase.numer / (1000 * timebase.denom);
+  uint64_t num = timebase.numer;
+  uint64_t den = timebase.denom;
+
+  uint64_t high = ts >> 32;
+  uint64_t low = ts & 0xFFFFFFFF;
+
+  uint64_t high_r = high % den;
+  high_r <<= 32;
+  high_r /= den;
+
+  uint64_t time_ns = (((high * num) / den) << 32) + high_r + (low * num) / den;
+
+  int64_t time_us = time_ns / 1000;
 
 #endif
   return time_us;
