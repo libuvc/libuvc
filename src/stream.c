@@ -547,7 +547,8 @@ void _uvc_populate_frame_ts_us(uvc_stream_handle_t *strmh, int packet_id) {
 		strmh->frame_ts_us = strmh->dev_clk_start_host_us + get_dev_time_us(strmh, strmh->pts_time_base + pts);
 		int64_t host_ts;
 		get_precise_timestamp(&host_ts);
-		int64_t time_diff = host_ts - strmh->frame_ts_us;
+		int64_t host_ts_us = get_host_time_us(host_ts);
+		int64_t time_diff = host_ts_us - strmh->frame_ts_us;
 		strmh->avg_diff  += time_diff;
 
 
@@ -556,11 +557,11 @@ void _uvc_populate_frame_ts_us(uvc_stream_handle_t *strmh, int packet_id) {
 			strmh->avg_diff /= first_measure_int;
 			if (strmh->initial_avg_diff < 0) {
 				strmh->initial_avg_diff = strmh->avg_diff;
-				strmh->initial_host_ts = host_ts;
+				strmh->initial_host_ts = host_ts_us;
 			} else {
 				strmh->diff_measures++;
 				int64_t diff_incr = strmh->avg_diff - strmh->initial_avg_diff;
-				int64_t td = host_ts - strmh->initial_host_ts;
+				int64_t td = host_ts_us - strmh->initial_host_ts;
 				double slope = (double)diff_incr / td;
 				//printf("**** After %d frames, avg_diff = %lld, slope=%f\n", strmh->seq+1, strmh->avg_diff, slope);
 				if (strmh->diff_measures > 10 && fabs(slope) > 0.0000005/* 0.000005*/ ) {
