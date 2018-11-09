@@ -539,7 +539,7 @@ void _uvc_populate_frame_ts_us(uvc_stream_handle_t *strmh, int packet_id) {
 		frame_end_time_host_us -= frame_end_time_us;
 		strmh->dev_clk_start_host_us = frame_end_time_host_us;
 	} else {
-		const first_measure_int = 30 * 30;
+		const int first_measure_int = 30 * (10000000L / strmh->cur_ctrl.dwFrameInterval );
 		int64_t pts = strmh->pts;
 		if (strmh->pts < strmh->hold_pts) {
 			strmh->pts_time_base += 1LL << 32;//get_dev_time_us(strmh, (1LL << 32));
@@ -567,7 +567,7 @@ void _uvc_populate_frame_ts_us(uvc_stream_handle_t *strmh, int packet_id) {
 				if (strmh->diff_measures > 10 && fabs(slope) > 0.0000005/* 0.000005*/ ) {
 					strmh->corrected_clock_freq *= 1.0 - slope;
 					strmh->initial_avg_diff = -1;
-					printf("*** Correcting clock frequency to %llu\n", strmh->corrected_clock_freq );
+					printf("*** Correcting clock frequency to %lu\n", strmh->corrected_clock_freq );
 				}
 			}
 			strmh->avg_diff = 0;
