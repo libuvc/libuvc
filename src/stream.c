@@ -496,7 +496,19 @@ inline int64_t get_host_time_us(int64_t ts)
   mach_timebase_info_data_t timebase;
   mach_timebase_info(&timebase);
 
-  int64_t time_us = ts * timebase.numer / (1000 * timebase.denom);
+  uint64_t num = timebase.numer;
+  uint64_t den = timebase.denom;
+
+  uint64_t high = ts >> 32;
+  uint64_t low = ts & 0xFFFFFFFF;
+
+  uint64_t high_r = high % den;
+  high_r <<= 32;
+  high_r /= den;
+
+  uint64_t time_ns = (((high * num) / den) << 32) + high_r + (low * num) / den;
+
+  int64_t time_us = time_ns / 1000;
 
 #endif
   return time_us;
@@ -527,7 +539,7 @@ void _uvc_populate_frame_ts_us(uvc_stream_handle_t *strmh, int packet_id) {
 		frame_end_time_host_us -= frame_end_time_us;
 		strmh->dev_clk_start_host_us = frame_end_time_host_us;
 	} else {
-		const first_measure_int = 30 * 30;
+		const int first_measure_int = 30 * (10000000L / strmh->cur_ctrl.dwFrameInterval );
 		int64_t pts = strmh->pts;
 		if (strmh->pts < strmh->hold_pts) {
 			strmh->pts_time_base += 1LL << 32;//get_dev_time_us(strmh, (1LL << 32));
@@ -535,7 +547,8 @@ void _uvc_populate_frame_ts_us(uvc_stream_handle_t *strmh, int packet_id) {
 		strmh->frame_ts_us = strmh->dev_clk_start_host_us + get_dev_time_us(strmh, strmh->pts_time_base + pts);
 		int64_t host_ts;
 		get_precise_timestamp(&host_ts);
-		int64_t time_diff = host_ts - strmh->frame_ts_us;
+		int64_t host_ts_us = get_host_time_us(host_ts);
+		int64_t time_diff = host_ts_us - strmh->frame_ts_us;
 		strmh->avg_diff  += time_diff;
 
 
@@ -544,17 +557,17 @@ void _uvc_populate_frame_ts_us(uvc_stream_handle_t *strmh, int packet_id) {
 			strmh->avg_diff /= first_measure_int;
 			if (strmh->initial_avg_diff < 0) {
 				strmh->initial_avg_diff = strmh->avg_diff;
-				strmh->initial_host_ts = host_ts;
+				strmh->initial_host_ts = host_ts_us;
 			} else {
 				strmh->diff_measures++;
 				int64_t diff_incr = strmh->avg_diff - strmh->initial_avg_diff;
-				int64_t td = host_ts - strmh->initial_host_ts;
+				int64_t td = host_ts_us - strmh->initial_host_ts;
 				double slope = (double)diff_incr / td;
 				//printf("**** After %d frames, avg_diff = %lld, slope=%f\n", strmh->seq+1, strmh->avg_diff, slope);
 				if (strmh->diff_measures > 10 && fabs(slope) > 0.0000005/* 0.000005*/ ) {
 					strmh->corrected_clock_freq *= 1.0 - slope;
 					strmh->initial_avg_diff = -1;
-					printf("*** Correcting clock frequency to %llu\n", strmh->corrected_clock_freq );
+					printf("*** Correcting clock frequency to %lu\n", strmh->corrected_clock_freq );
 				}
 			}
 			strmh->avg_diff = 0;
