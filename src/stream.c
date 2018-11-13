@@ -407,6 +407,20 @@ uvc_error_t uvc_stream_ctrl(uvc_stream_handle_t *strmh, uvc_stream_ctrl_t *ctrl)
   return UVC_SUCCESS;
 }
 
+/** @brief Gets current stream control block
+ * @ingroup streaming
+ *
+ * This may be executed whether or not the stream is running.
+ *
+ * @param[in] strmh Stream handle
+ * @param[out] ctrl Current control block
+ */
+uvc_error_t uvc_stream_get_current_ctrl(uvc_stream_handle_t *strmh, uvc_stream_ctrl_t *ctrl) {
+
+    *ctrl = strmh->cur_ctrl;
+    return UVC_SUCCESS;
+}
+
 /** @internal
  * @brief Find the descriptor for a specific frame configuration
  * @param stream_if Stream interface
