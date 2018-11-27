@@ -1167,6 +1167,9 @@ uvc_error_t uvc_stream_get_frame(uvc_stream_handle_t *strmh,
       int err = pthread_cond_timedwait(&strmh->cb_cond, &strmh->cb_mutex, &ts);
 
       //TODO: How should we handle EINVAL?
+      if (err) {
+        pthread_mutex_unlock(&strmh->cb_mutex);
+      }
       switch(err){
       case EINVAL:
           *frame = NULL;
