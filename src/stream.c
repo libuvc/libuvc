@@ -1413,6 +1413,9 @@ uvc_error_t uvc_stream_get_frame(uvc_stream_handle_t *strmh,
       ts.tv_nsec = ts.tv_nsec % 1000000000;
 
       int err = pthread_cond_timedwait(&strmh->cb_cond, &strmh->cb_mutex, &ts);
+      if (err) {
+        pthread_mutex_unlock(&strmh->cb_mutex);
+      }
 
       //TODO: How should we handle EINVAL?
       switch(err){
