@@ -29,7 +29,7 @@ if(WIN32)
   PATHS /opt/local/include)
 else()
   find_package(PkgConfig)
-  pkg_check_modules(LIBUSB libusb-1.0)
+  pkg_check_modules(LIBUSB REQUIRED libusb-1.0)
 endif()
 
 
@@ -55,7 +55,7 @@ SET(SOURCES src/ctrl.c src/ctrl-gen.c src/device.c src/diag.c
 include_directories(
   ${libuvc_SOURCE_DIR}/include
   ${libuvc_BINARY_DIR}/include
-  ${LIBUSB_INCLUDE_DIR}
+  ${LIBUSB_INCLUDEDIR}
   ${PTHREAD_INCLUDE_DIR}
 )
 
@@ -93,7 +93,7 @@ foreach(target_name ${UVC_TARGETS})
 endforeach()
 
 if(BUILD_UVC_SHARED)
-  target_link_libraries(uvc ${LIBUSB_LIBRARIES} ${PTHREAD_LIBRARIES})
+  target_link_libraries(uvc "-L${LIBUSB_LIBRARY_DIRS}" ${LIBUSB_LIBRARIES} ${PTHREAD_LIBRARIES})
 
   #add_executable(test src/test.c)
   #target_link_libraries(test uvc ${LIBUSB_LIBRARIES} opencv_highgui
