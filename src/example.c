@@ -1,5 +1,6 @@
 #include "libuvc/libuvc.h"
 #include <stdio.h>
+#include <unistd.h>
 
 /* This callback function runs once per frame. Use it to perform any
  * quick processing you need, or have it put the frame into your application's
@@ -112,7 +113,7 @@ int main(int argc, char **argv) {
         /* Start the video stream. The library will call user function cb:
          *   cb(frame, (void*) 12345)
          */
-        res = uvc_start_streaming(devh, &ctrl, cb, 12345, 0);
+        res = uvc_start_streaming(devh, &ctrl, cb, (void *)12345, 0);
 
         if (res < 0) {
           uvc_perror(res, "start_streaming"); /* unable to start stream */

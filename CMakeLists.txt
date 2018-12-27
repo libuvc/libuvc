@@ -11,8 +11,8 @@ if (NOT CMAKE_BUILD_TARGET)
   set(CMAKE_BUILD_TARGET "Both" CACHE STRING "" FORCE)
 endif()
 
-option(BUILD_EXAMPLE "Build example program" OFF)
-option(BUILD_TEST "Build test program" OFF)
+option(BUILD_EXAMPLE "Build example program" ON)
+option(BUILD_TEST "Build test program" ON)
 
 set(libuvc_VERSION_MAJOR 0)
 set(libuvc_VERSION_MINOR 0)

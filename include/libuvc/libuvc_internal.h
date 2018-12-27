@@ -9,7 +9,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#ifdef _WIN32
+// on Windows, in the case you want to add error checking,
+// please prefer use MingW64 version of winpthreads library
+#include <winpthreads.h>
+#else
 #include <pthread.h>
+#endif
 #include <signal.h>
 #include <libusb.h>
 #include "utlist.h"
