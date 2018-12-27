@@ -1180,9 +1180,15 @@ uvc_error_t uvc_stream_get_frame(uvc_stream_handle_t *strmh,
       ts.tv_sec += ts.tv_nsec / 1000000000;
       ts.tv_nsec = ts.tv_nsec % 1000000000;
 
+      // fixed dead lock caused by thread in uvc_stream_get_frame 
+      // https://github.com/grzegb/libuvc/commit/de41de192a0b8c43d237ad2cc1138d43baa62e93
       int err = pthread_cond_timedwait(&strmh->cb_cond, &strmh->cb_mutex, &ts);
 
       //TODO: How should we handle EINVAL?
+      if (err) {
+        pthread_mutex_unlock(&strmh->cb_mutex);
+      }
+
       switch(err){
       case EINVAL:
           *frame = NULL;
