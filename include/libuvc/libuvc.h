@@ -7,11 +7,19 @@ extern "C" {
 
 #include <stdio.h> // FILE
 #include <stdint.h>
-#include <sys/time.h>
+#include <time.h>
 #include <libuvc/libuvc_config.h>
 
 struct libusb_context;
 struct libusb_device_handle;
+
+
+/* changes based on https://github.com/leapmotion/libuvc/commit/f9265b33e11ea47e1ed6100a5dca03697e9512cd
+ * Similar to "struct timeval", but more portable */
+typedef struct {
+  time_t  tv_sec;
+  int32_t tv_usec;
+} uvc_timeval_t;
 
 /** UVC error types, based on libusb errors
  * @ingroup diag
@@ -439,7 +447,7 @@ typedef struct uvc_frame {
   /** Frame number (may skip, but is strictly monotonically increasing) */
   uint32_t sequence;
   /** Estimate of system time when the device started capturing the image */
-  struct timeval capture_time;
+  uvc_timeval_t timeval capture_time;
   /** Handle on the device that produced the image.
    * @warning You must not call any uvc_* functions during a callback. */
   uvc_device_handle_t *source;
