@@ -447,7 +447,7 @@ typedef struct uvc_frame {
   /** Frame number (may skip, but is strictly monotonically increasing) */
   uint32_t sequence;
   /** Estimate of system time when the device started capturing the image */
-  uvc_timeval_t timeval capture_time;
+  uvc_timeval_t capture_time;
   /** Handle on the device that produced the image.
    * @warning You must not call any uvc_* functions during a callback. */
   uvc_device_handle_t *source;
