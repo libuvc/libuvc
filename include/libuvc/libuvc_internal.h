@@ -227,6 +227,8 @@ struct uvc_stream_handle {
   uint8_t running;
   /** Current control block */
   struct uvc_stream_ctrl cur_ctrl;
+  /** status of last transfer */
+  enum libusb_transfer_status transfer_status;
 
   /* listeners may only access hold*, and only when holding a
    * lock on cb_mutex (probably signaled with cb_cond) */
