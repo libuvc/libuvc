@@ -90,8 +90,13 @@ uvc_frame_t *uvc_allocate_frame(size_t data_bytes) {
  * @param frame Frame to destroy
  */
 void uvc_free_frame(uvc_frame_t *frame) {
-  if (frame->data_bytes > 0 && frame->library_owns_data)
-    free(frame->data);
+  if (frame->library_owns_data)
+  {
+    if (frame->data_bytes > 0)
+      free(frame->data);
+    if (frame->metadata_bytes > 0)
+      free(frame->metadata);
+  }
 
   free(frame);
 }
@@ -119,6 +124,16 @@ uvc_error_t uvc_duplicate_frame(uvc_frame_t *in, uvc_frame_t *out) {
   out->source = in->source;
 
   memcpy(out->data, in->data, in->data_bytes);
+
+  if (in->metadata && in->metadata_bytes > 0)
+  {
+      if (out->metadata_bytes < in->metadata_bytes)
+      {
+          out->metadata = realloc(out->metadata, in->metadata_bytes);
+      }
+      out->metadata_bytes = in->metadata_bytes;
+      memcpy(out->metadata, in->metadata, in->metadata_bytes);
+  }
 
   return UVC_SUCCESS;
 }

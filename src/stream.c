@@ -100,9 +100,9 @@ struct format_table_entry *_get_format_entry(enum uvc_frame_format format) {
     ABS_FMT(UVC_FRAME_FORMAT_ANY, 2,
       {UVC_FRAME_FORMAT_UNCOMPRESSED, UVC_FRAME_FORMAT_COMPRESSED})
 
-    ABS_FMT(UVC_FRAME_FORMAT_UNCOMPRESSED, 4,
+    ABS_FMT(UVC_FRAME_FORMAT_UNCOMPRESSED, 5,
       {UVC_FRAME_FORMAT_YUYV, UVC_FRAME_FORMAT_UYVY, UVC_FRAME_FORMAT_GRAY8,
-      UVC_FRAME_FORMAT_GRAY16})
+      UVC_FRAME_FORMAT_GRAY16, UVC_FRAME_FORMAT_NV12})
     FMT(UVC_FRAME_FORMAT_YUYV,
       {'Y',  'U',  'Y',  '2', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
     FMT(UVC_FRAME_FORMAT_UYVY,
@@ -111,6 +111,8 @@ struct format_table_entry *_get_format_entry(enum uvc_frame_format format) {
       {'Y',  '8',  '0',  '0', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
     FMT(UVC_FRAME_FORMAT_GRAY16,
       {'Y',  '1',  '6',  ' ', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+    FMT(UVC_FRAME_FORMAT_NV12,
+      {'N',  'V',  '1',  '2', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
     FMT(UVC_FRAME_FORMAT_BY8,
       {'B',  'Y',  '8',  ' ', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
     FMT(UVC_FRAME_FORMAT_BA81,
@@ -464,12 +466,19 @@ void _uvc_swap_buffers(uvc_stream_handle_t *strmh) {
   strmh->hold_last_scr = strmh->last_scr;
   strmh->hold_pts = strmh->pts;
   strmh->hold_seq = strmh->seq;
+  
+  /* swap metadata buffer */
+  tmp_buf = strmh->meta_holdbuf;
+  strmh->meta_holdbuf = strmh->meta_outbuf;
+  strmh->meta_outbuf = tmp_buf;
+  strmh->meta_hold_bytes = strmh->meta_got_bytes;
 
   pthread_cond_broadcast(&strmh->cb_cond);
   pthread_mutex_unlock(&strmh->cb_mutex);
 
   strmh->seq++;
   strmh->got_bytes = 0;
+  strmh->meta_got_bytes = 0;
   strmh->last_scr = 0;
   strmh->pts = 0;
 }
@@ -558,6 +567,13 @@ void _uvc_process_payload(uvc_stream_handle_t *strmh, uint8_t *payload, size_t p
       /** @todo read the SOF token counter */
       strmh->last_scr = DW_TO_INT(payload + variable_offset);
       variable_offset += 6;
+    }
+
+    if (header_len > variable_offset)
+    {
+        // Metadata is attached to header
+        memcpy(strmh->meta_outbuf + strmh->meta_got_bytes, payload + variable_offset, header_len - variable_offset);
+        strmh->meta_got_bytes += header_len - variable_offset;
     }
   }
 
@@ -649,7 +665,29 @@ void LIBUSB_CALL _uvc_stream_callback(struct libusb_transfer *transfer) {
   
   if ( resubmit ) {
     if ( strmh->running ) {
-      libusb_submit_transfer(transfer);
+      int libusbRet = libusb_submit_transfer(transfer);
+      if (libusbRet < 0)
+      {
+        int i;
+        pthread_mutex_lock(&strmh->cb_mutex);
+
+        /* Mark transfer as deleted. */
+        for (i = 0; i < LIBUVC_NUM_TRANSFER_BUFS; i++) {
+          if (strmh->transfers[i] == transfer) {
+            UVC_DEBUG("Freeing failed transfer %d (%p)", i, transfer);
+            free(transfer->buffer);
+            libusb_free_transfer(transfer);
+            strmh->transfers[i] = NULL;
+            break;
+          }
+        }
+        if (i == LIBUVC_NUM_TRANSFER_BUFS) {
+          UVC_DEBUG("failed transfer %p not found; not freeing!", transfer);
+        }
+
+        pthread_cond_broadcast(&strmh->cb_cond);
+        pthread_mutex_unlock(&strmh->cb_mutex);
+      }
     } else {
       int i;
       pthread_mutex_lock(&strmh->cb_mutex);
@@ -661,6 +699,7 @@ void LIBUSB_CALL _uvc_stream_callback(struct libusb_transfer *transfer) {
           free(transfer->buffer);
           libusb_free_transfer(transfer);
           strmh->transfers[i] = NULL;
+          break;
         }
       }
       if(i == LIBUVC_NUM_TRANSFER_BUFS ) {
@@ -798,6 +837,9 @@ uvc_error_t uvc_stream_open_ctrl(uvc_device_handle_t *devh, uvc_stream_handle_t 
   /** @todo take only what we need */
   strmh->outbuf = malloc( LIBUVC_XFER_BUF_SIZE );
   strmh->holdbuf = malloc( LIBUVC_XFER_BUF_SIZE );
+
+  strmh->meta_outbuf = malloc( LIBUVC_XFER_META_BUF_SIZE );
+  strmh->meta_holdbuf = malloc( LIBUVC_XFER_META_BUF_SIZE );
    
   pthread_mutex_init(&strmh->cb_mutex, NULL);
   pthread_cond_init(&strmh->cb_cond, NULL);
@@ -883,7 +925,7 @@ uvc_error_t uvc_stream_start(
     /* For isochronous streaming, we choose an appropriate altsetting for the endpoint
      * and set up several transfers */
     const struct libusb_interface_descriptor *altsetting = 0;
-    const struct libusb_endpoint_descriptor *endpoint;
+    const struct libusb_endpoint_descriptor *endpoint = 0;
     /* The greatest number of bytes that the device might provide, per packet, in this
      * configuration */
     size_t config_bytes_per_packet;
@@ -907,12 +949,23 @@ uvc_error_t uvc_stream_start(
       for (ep_idx = 0; ep_idx < altsetting->bNumEndpoints; ep_idx++) {
         endpoint = altsetting->endpoint + ep_idx;
 
-        if (endpoint->bEndpointAddress == format_desc->parent->bEndpointAddress) {
-          endpoint_bytes_per_packet = endpoint->wMaxPacketSize;
-          // wMaxPacketSize: [unused:2 (multiplier-1):3 size:11]
-          endpoint_bytes_per_packet = (endpoint_bytes_per_packet & 0x07ff) *
-                                      (((endpoint_bytes_per_packet >> 11) & 3) + 1);
+        struct libusb_ss_endpoint_companion_descriptor *ep_comp = 0;
+        libusb_get_ss_endpoint_companion_descriptor(NULL, endpoint, &ep_comp);
+        if (ep_comp)
+        {
+          endpoint_bytes_per_packet = ep_comp->wBytesPerInterval;
+          libusb_free_ss_endpoint_companion_descriptor(ep_comp);
           break;
+        }
+        else
+        {
+          if (endpoint->bEndpointAddress == format_desc->parent->bEndpointAddress) {
+              endpoint_bytes_per_packet = endpoint->wMaxPacketSize;
+            // wMaxPacketSize: [unused:2 (multiplier-1):3 size:11]
+            endpoint_bytes_per_packet = (endpoint_bytes_per_packet & 0x07ff) *
+              (((endpoint_bytes_per_packet >> 11) & 3) + 1);
+            break;
+          }
         }
       }
 
@@ -1087,6 +1140,9 @@ void _uvc_populate_frame(uvc_stream_handle_t *strmh) {
   case UVC_FRAME_FORMAT_YUYV:
     frame->step = frame->width * 2;
     break;
+  case UVC_FRAME_FORMAT_NV12:
+    frame->step = frame->width;
+    break;
   case UVC_FRAME_FORMAT_MJPEG:
     frame->step = 0;
     break;
@@ -1106,8 +1162,15 @@ void _uvc_populate_frame(uvc_stream_handle_t *strmh) {
   frame->data_bytes = strmh->hold_bytes;
   memcpy(frame->data, strmh->holdbuf, frame->data_bytes);
 
-
-
+  if (strmh->meta_hold_bytes > 0)
+  {
+      if (frame->metadata_bytes < strmh->meta_hold_bytes)
+      {
+          frame->metadata = realloc(frame->metadata, strmh->meta_hold_bytes);
+      }
+      frame->metadata_bytes = strmh->meta_hold_bytes;
+      memcpy(frame->metadata, strmh->meta_holdbuf, frame->metadata_bytes);
+  }
 }
 
 /** Poll for a frame
@@ -1279,6 +1342,9 @@ void uvc_stream_close(uvc_stream_handle_t *strmh) {
 
   free(strmh->outbuf);
   free(strmh->holdbuf);
+
+  free(strmh->meta_outbuf);
+  free(strmh->meta_holdbuf);
 
   pthread_cond_destroy(&strmh->cb_cond);
   pthread_mutex_destroy(&strmh->cb_mutex);

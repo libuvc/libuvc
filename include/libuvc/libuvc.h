@@ -82,6 +82,8 @@ enum uvc_frame_format {
   UVC_FRAME_FORMAT_SGBRG8,
   UVC_FRAME_FORMAT_SRGGB8,
   UVC_FRAME_FORMAT_SBGGR8,
+  /** YUV420: NV12 */
+  UVC_FRAME_FORMAT_NV12,
   /** Number of formats understood */
   UVC_FRAME_FORMAT_COUNT,
 };
@@ -98,6 +100,7 @@ enum uvc_frame_format {
 #define UVC_COLOR_FORMAT_MJPEG UVC_FRAME_FORMAT_MJPEG
 #define UVC_COLOR_FORMAT_GRAY8 UVC_FRAME_FORMAT_GRAY8
 #define UVC_COLOR_FORMAT_GRAY16 UVC_FRAME_FORMAT_GRAY16
+#define UVC_COLOR_FORMAT_NV12 UVC_FRAME_FORMAT_NV12
 
 /** VideoStreaming interface descriptor subtype (A.6) */
 enum uvc_vs_desc_subtype {
@@ -450,6 +453,10 @@ typedef struct uvc_frame {
    * Set this field to zero if you are supplying the buffer.
    */
   uint8_t library_owns_data;
+  /** Metadata for this frame if available */
+  void *metadata;
+  /** Size of metadata buffer */
+  size_t metadata_bytes;
 } uvc_frame_t;
 
 /** A callback function to handle incoming assembled UVC frames

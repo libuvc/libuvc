@@ -217,6 +217,7 @@ typedef struct uvc_device_info {
 #define LIBUVC_NUM_TRANSFER_BUFS 100
 
 #define LIBUVC_XFER_BUF_SIZE	( 16 * 1024 * 1024 )
+#define LIBUVC_XFER_META_BUF_SIZE ( 4 * 1024 )
 
 struct uvc_stream_handle {
   struct uvc_device_handle *devh;
@@ -246,6 +247,10 @@ struct uvc_stream_handle {
   uint8_t *transfer_bufs[LIBUVC_NUM_TRANSFER_BUFS];
   struct uvc_frame frame;
   enum uvc_frame_format frame_format;
+
+  /* raw metadata buffer if available */
+  uint8_t *meta_outbuf, *meta_holdbuf;
+  size_t meta_got_bytes, meta_hold_bytes;
 };
 
 /** Handle on an open UVC device
