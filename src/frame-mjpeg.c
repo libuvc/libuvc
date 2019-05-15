@@ -145,6 +145,7 @@ uvc_error_t uvc_mjpeg2rgb(uvc_frame_t *in, uvc_frame_t *out) {
   out->step = in->width * 3;
   out->sequence = in->sequence;
   out->capture_time = in->capture_time;
+  out->capture_time_finished = in->capture_time_finished;
   out->source = in->source;
 
   dinfo.err = jpeg_std_error(&jerr.super);

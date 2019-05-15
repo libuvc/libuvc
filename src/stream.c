@@ -458,6 +458,8 @@ void _uvc_swap_buffers(uvc_stream_handle_t *strmh) {
 
   pthread_mutex_lock(&strmh->cb_mutex);
 
+  (void)clock_gettime(CLOCK_MONOTONIC, &strmh->capture_time_finished);
+
   /* swap the buffers */
   tmp_buf = strmh->holdbuf;
   strmh->hold_bytes = strmh->got_bytes;
@@ -1152,8 +1154,7 @@ void _uvc_populate_frame(uvc_stream_handle_t *strmh) {
   }
 
   frame->sequence = strmh->hold_seq;
-  /** @todo set the frame time */
-  // frame->capture_time
+  frame->capture_time_finished = strmh->capture_time_finished;
 
   /* copy the image data from the hold buffer to the frame (unnecessary extra buf?) */
   if (frame->data_bytes < strmh->hold_bytes) {

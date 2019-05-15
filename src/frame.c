@@ -121,6 +121,7 @@ uvc_error_t uvc_duplicate_frame(uvc_frame_t *in, uvc_frame_t *out) {
   out->step = in->step;
   out->sequence = in->sequence;
   out->capture_time = in->capture_time;
+  out->capture_time_finished = in->capture_time_finished;
   out->source = in->source;
 
   memcpy(out->data, in->data, in->data_bytes);
@@ -183,6 +184,7 @@ uvc_error_t uvc_yuyv2rgb(uvc_frame_t *in, uvc_frame_t *out) {
   out->step = in->width * 3;
   out->sequence = in->sequence;
   out->capture_time = in->capture_time;
+  out->capture_time_finished = in->capture_time_finished;
   out->source = in->source;
 
   uint8_t *pyuv = in->data;
@@ -233,6 +235,7 @@ uvc_error_t uvc_yuyv2bgr(uvc_frame_t *in, uvc_frame_t *out) {
   out->step = in->width * 3;
   out->sequence = in->sequence;
   out->capture_time = in->capture_time;
+  out->capture_time_finished = in->capture_time_finished;
   out->source = in->source;
 
   uint8_t *pyuv = in->data;
@@ -272,6 +275,7 @@ uvc_error_t uvc_yuyv2y(uvc_frame_t *in, uvc_frame_t *out) {
   out->step = in->width;
   out->sequence = in->sequence;
   out->capture_time = in->capture_time;
+  out->capture_time_finished = in->capture_time_finished;
   out->source = in->source;
 
   uint8_t *pyuv = in->data;
@@ -311,6 +315,7 @@ uvc_error_t uvc_yuyv2uv(uvc_frame_t *in, uvc_frame_t *out) {
   out->step = in->width;
   out->sequence = in->sequence;
   out->capture_time = in->capture_time;
+  out->capture_time_finished = in->capture_time_finished;
   out->source = in->source;
 
   uint8_t *pyuv = in->data;
@@ -360,6 +365,7 @@ uvc_error_t uvc_uyvy2rgb(uvc_frame_t *in, uvc_frame_t *out) {
   out->step = in->width *3;
   out->sequence = in->sequence;
   out->capture_time = in->capture_time;
+  out->capture_time_finished = in->capture_time_finished;
   out->source = in->source;
 
   uint8_t *pyuv = in->data;
@@ -409,6 +415,7 @@ uvc_error_t uvc_uyvy2bgr(uvc_frame_t *in, uvc_frame_t *out) {
   out->step = in->width *3;
   out->sequence = in->sequence;
   out->capture_time = in->capture_time;
+  out->capture_time_finished = in->capture_time_finished;
   out->source = in->source;
 
   uint8_t *pyuv = in->data;

@@ -247,6 +247,7 @@ struct uvc_stream_handle {
   uint8_t *transfer_bufs[LIBUVC_NUM_TRANSFER_BUFS];
   struct uvc_frame frame;
   enum uvc_frame_format frame_format;
+  struct timespec capture_time_finished;
 
   /* raw metadata buffer if available */
   uint8_t *meta_outbuf, *meta_holdbuf;
