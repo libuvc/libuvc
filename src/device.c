@@ -322,14 +322,14 @@ uvc_error_t uvc_open(
                                    _uvc_status_callback,
                                    internal_devh,
                                    0);
-    ret = libusb_submit_transfer(internal_devh->status_xfer);
-    UVC_DEBUG("libusb_submit_transfer() = %d", ret);
+    // ret = libusb_submit_transfer(internal_devh->status_xfer);
+    // UVC_DEBUG("libusb_submit_transfer() = %d", ret);
 
-    if (ret) {
-      fprintf(stderr,
-              "uvc: device has a status interrupt endpoint, but unable to read from it\n");
-      goto fail;
-    }
+    // if (ret) {
+    //   fprintf(stderr,
+    //           "uvc: device has a status interrupt endpoint, but unable to read from it\n");
+    //   goto fail;
+    // }
   }
 
   if (dev->ctx->own_usb_ctx && dev->ctx->open_devices == NULL) {
