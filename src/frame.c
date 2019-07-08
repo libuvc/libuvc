@@ -90,8 +90,13 @@ uvc_frame_t *uvc_allocate_frame(size_t data_bytes) {
  * @param frame Frame to destroy
  */
 void uvc_free_frame(uvc_frame_t *frame) {
-  if (frame->data_bytes > 0 && frame->library_owns_data)
-    free(frame->data);
+  if (frame->library_owns_data)
+  {
+    if (frame->data_bytes > 0)
+      free(frame->data);
+    if (frame->metadata_bytes > 0)
+      free(frame->metadata);
+  }
 
   free(frame);
 }
@@ -116,9 +121,20 @@ uvc_error_t uvc_duplicate_frame(uvc_frame_t *in, uvc_frame_t *out) {
   out->step = in->step;
   out->sequence = in->sequence;
   out->capture_time = in->capture_time;
+  out->capture_time_finished = in->capture_time_finished;
   out->source = in->source;
 
   memcpy(out->data, in->data, in->data_bytes);
+
+  if (in->metadata && in->metadata_bytes > 0)
+  {
+      if (out->metadata_bytes < in->metadata_bytes)
+      {
+          out->metadata = realloc(out->metadata, in->metadata_bytes);
+      }
+      out->metadata_bytes = in->metadata_bytes;
+      memcpy(out->metadata, in->metadata, in->metadata_bytes);
+  }
 
   return UVC_SUCCESS;
 }
@@ -168,6 +184,7 @@ uvc_error_t uvc_yuyv2rgb(uvc_frame_t *in, uvc_frame_t *out) {
   out->step = in->width * 3;
   out->sequence = in->sequence;
   out->capture_time = in->capture_time;
+  out->capture_time_finished = in->capture_time_finished;
   out->source = in->source;
 
   uint8_t *pyuv = in->data;
@@ -218,6 +235,7 @@ uvc_error_t uvc_yuyv2bgr(uvc_frame_t *in, uvc_frame_t *out) {
   out->step = in->width * 3;
   out->sequence = in->sequence;
   out->capture_time = in->capture_time;
+  out->capture_time_finished = in->capture_time_finished;
   out->source = in->source;
 
   uint8_t *pyuv = in->data;
@@ -257,6 +275,7 @@ uvc_error_t uvc_yuyv2y(uvc_frame_t *in, uvc_frame_t *out) {
   out->step = in->width;
   out->sequence = in->sequence;
   out->capture_time = in->capture_time;
+  out->capture_time_finished = in->capture_time_finished;
   out->source = in->source;
 
   uint8_t *pyuv = in->data;
@@ -296,6 +315,7 @@ uvc_error_t uvc_yuyv2uv(uvc_frame_t *in, uvc_frame_t *out) {
   out->step = in->width;
   out->sequence = in->sequence;
   out->capture_time = in->capture_time;
+  out->capture_time_finished = in->capture_time_finished;
   out->source = in->source;
 
   uint8_t *pyuv = in->data;
@@ -345,6 +365,7 @@ uvc_error_t uvc_uyvy2rgb(uvc_frame_t *in, uvc_frame_t *out) {
   out->step = in->width *3;
   out->sequence = in->sequence;
   out->capture_time = in->capture_time;
+  out->capture_time_finished = in->capture_time_finished;
   out->source = in->source;
 
   uint8_t *pyuv = in->data;
@@ -394,6 +415,7 @@ uvc_error_t uvc_uyvy2bgr(uvc_frame_t *in, uvc_frame_t *out) {
   out->step = in->width *3;
   out->sequence = in->sequence;
   out->capture_time = in->capture_time;
+  out->capture_time_finished = in->capture_time_finished;
   out->source = in->source;
 
   uint8_t *pyuv = in->data;
