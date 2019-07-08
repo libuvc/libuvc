@@ -246,6 +246,27 @@ void uvc_print_diag(uvc_device_handle_t *devh, FILE *stream) {
                       10000000 / frame_desc->dwFrameIntervalStep);
               }
             }
+            if(fmt_desc->still_frame_desc)
+            {
+                uvc_still_frame_desc_t* still_frame_desc;
+                DL_FOREACH(fmt_desc->still_frame_desc, still_frame_desc)
+                {
+                    fprintf(stream,
+                        "\t\t\tStillFrameDescriptor\n"
+                        "\t\t\t  bEndPointAddress: %02x\n",
+                        still_frame_desc->bEndPointAddress);
+                    uvc_still_frame_res_t* imageSizePattern;
+                    DL_FOREACH(still_frame_desc->imageSizePatterns, imageSizePattern) {
+                        fprintf(stream,
+                            "\t\t\t  wWidth(%d) = %d\n"
+                            "\t\t\t  wHeight(%d) = %d\n",
+                            imageSizePattern->bResolutionIndex,
+                            imageSizePattern->wWidth,
+                            imageSizePattern->bResolutionIndex,
+                            imageSizePattern->wHeight);
+                    }
+                }
+            }
             break;
           default:
             fprintf(stream, "\t-UnknownFormat (%d)\n",

@@ -19,6 +19,9 @@ To build, you can just run these shell commands:
 and you're set! If you want to change the build configuration, you can edit `CMakeCache.txt`
 in the build directory, or use a CMake GUI to make the desired changes.
 
+There is also `BUILD_EXAMPLE` and `BUILD_TEST` options to enable the compilation of `example` and `uvc_test` programs. To use them, replace the `cmake ..` command above with `cmake .. -DBUILD_TEST=ON -DBUILD_EXAMPLE=ON`.
+Then you can start them with `./example` and `./uvc_test` respectively. Note that you need OpenCV to build the later (for displaying image).
+
 ## Developing with libuvc
 
 The documentation for `libuvc` can currently be found at https://int80k.com/libuvc/doc/.
