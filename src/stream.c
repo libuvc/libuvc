@@ -73,6 +73,9 @@ uvc_frame_desc_t *uvc_find_frame_desc(uvc_device_handle_t *devh,
 void *_uvc_user_caller(void *arg);
 void _uvc_populate_frame(uvc_stream_handle_t *strmh);
 
+static uvc_streaming_interface_t *_uvc_get_stream_if(uvc_device_handle_t *devh, int interface_idx);
+static uvc_stream_handle_t *_uvc_get_stream_by_interface(uvc_device_handle_t *devh, int interface_idx);
+
 struct format_table_entry {
   enum uvc_frame_format format;
   uint8_t abstract_fmt;
@@ -100,9 +103,9 @@ struct format_table_entry *_get_format_entry(enum uvc_frame_format format) {
     ABS_FMT(UVC_FRAME_FORMAT_ANY, 2,
       {UVC_FRAME_FORMAT_UNCOMPRESSED, UVC_FRAME_FORMAT_COMPRESSED})
 
-    ABS_FMT(UVC_FRAME_FORMAT_UNCOMPRESSED, 4,
+    ABS_FMT(UVC_FRAME_FORMAT_UNCOMPRESSED, 5,
       {UVC_FRAME_FORMAT_YUYV, UVC_FRAME_FORMAT_UYVY, UVC_FRAME_FORMAT_GRAY8,
-      UVC_FRAME_FORMAT_GRAY16})
+      UVC_FRAME_FORMAT_GRAY16, UVC_FRAME_FORMAT_NV12})
     FMT(UVC_FRAME_FORMAT_YUYV,
       {'Y',  'U',  'Y',  '2', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
     FMT(UVC_FRAME_FORMAT_UYVY,
@@ -111,6 +114,8 @@ struct format_table_entry *_get_format_entry(enum uvc_frame_format format) {
       {'Y',  '8',  '0',  '0', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
     FMT(UVC_FRAME_FORMAT_GRAY16,
       {'Y',  '1',  '6',  ' ', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+    FMT(UVC_FRAME_FORMAT_NV12,
+      {'N',  'V',  '1',  '2', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
     FMT(UVC_FRAME_FORMAT_BY8,
       {'B',  'Y',  '8',  ' ', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
     FMT(UVC_FRAME_FORMAT_BA81,
@@ -264,6 +269,103 @@ uvc_error_t uvc_query_stream_ctrl(
         ctrl->dwMaxVideoFrameSize = frame->dwMaxVideoFrameBufferSize;
       }
     }
+  }
+
+  return UVC_SUCCESS;
+}
+
+/** @internal
+ * Run a streaming control query
+ * @param[in] devh UVC device
+ * @param[in,out] ctrl Control block
+ * @param[in] probe Whether this is a probe query or a commit query
+ * @param[in] req Query type
+ */
+uvc_error_t uvc_query_still_ctrl(
+  uvc_device_handle_t *devh,
+  uvc_still_ctrl_t *still_ctrl,
+  uint8_t probe,
+  enum uvc_req_code req) {
+
+  uint8_t buf[11];
+  const size_t len = 11;
+  uvc_error_t err;
+
+  memset(buf, 0, sizeof(buf));
+
+  if (req == UVC_SET_CUR) {
+    /* prepare for a SET transfer */
+    buf[0] = still_ctrl->bFormatIndex;
+    buf[1] = still_ctrl->bFrameIndex;
+    buf[2] = still_ctrl->bCompressionIndex;
+    INT_TO_DW(still_ctrl->dwMaxVideoFrameSize, buf + 3);
+    INT_TO_DW(still_ctrl->dwMaxPayloadTransferSize, buf + 7);
+  }
+
+  /* do the transfer */
+  err = libusb_control_transfer(
+      devh->usb_devh,
+      req == UVC_SET_CUR ? 0x21 : 0xA1,
+      req,
+      probe ? (UVC_VS_STILL_PROBE_CONTROL << 8) : (UVC_VS_STILL_COMMIT_CONTROL << 8),
+      still_ctrl->bInterfaceNumber,
+      buf, len, 0
+  );
+
+  if (err <= 0) {
+    return err;
+  }
+
+  /* now decode following a GET transfer */
+  if (req != UVC_SET_CUR) {
+    still_ctrl->bFormatIndex = buf[0];
+    still_ctrl->bFrameIndex = buf[1];
+    still_ctrl->bCompressionIndex = buf[2];
+    still_ctrl->dwMaxVideoFrameSize = DW_TO_INT(buf + 3);
+    still_ctrl->dwMaxPayloadTransferSize = DW_TO_INT(buf + 7);
+  }
+
+  return UVC_SUCCESS;
+}
+
+/** Initiate a method 2 (in stream) still capture
+ * @ingroup streaming
+ *
+ * @param[in] devh Device handle
+ * @param[in] still_ctrl Still capture control block
+ */
+uvc_error_t uvc_trigger_still(
+    uvc_device_handle_t *devh,
+    uvc_still_ctrl_t *still_ctrl) {
+  uvc_stream_handle_t* stream;
+  uvc_streaming_interface_t* stream_if;
+  uint8_t buf;
+  uvc_error_t err;
+
+  /* Stream must be running for method 2 to work */
+  stream = _uvc_get_stream_by_interface(devh, still_ctrl->bInterfaceNumber);
+  if (!stream || !stream->running)
+    return UVC_ERROR_NOT_SUPPORTED;
+
+  /* Only method 2 is supported */
+  stream_if = _uvc_get_stream_if(devh, still_ctrl->bInterfaceNumber);
+  if(!stream_if || stream_if->bStillCaptureMethod != 2)
+      return UVC_ERROR_NOT_SUPPORTED;
+
+  /* prepare for a SET transfer */
+  buf = 1;
+
+  /* do the transfer */
+  err = libusb_control_transfer(
+      devh->usb_devh,
+      0x21, //type set
+      UVC_SET_CUR,
+      (UVC_VS_STILL_IMAGE_TRIGGER_CONTROL << 8),
+      still_ctrl->bInterfaceNumber,
+      &buf, 1, 0);
+
+  if (err <= 0) {
+    return err;
   }
 
   return UVC_SUCCESS;
@@ -426,6 +528,61 @@ found:
   return uvc_probe_stream_ctrl(devh, ctrl);
 }
 
+/** Get a negotiated still control block for some common parameters.
+ * @ingroup streaming
+ *
+ * @param[in] devh Device handle
+ * @param[in] ctrl Control block
+ * @param[in, out] still_ctrl Still capture control block
+ * @param[in] width Desired frame width
+ * @param[in] height Desired frame height
+ */
+uvc_error_t uvc_get_still_ctrl_format_size(
+    uvc_device_handle_t *devh,
+    uvc_stream_ctrl_t *ctrl,
+    uvc_still_ctrl_t *still_ctrl,
+    int width, int height) {
+  uvc_streaming_interface_t *stream_if;
+  uvc_still_frame_desc_t *still;
+  uvc_format_desc_t *format;
+  uvc_still_frame_res_t *sizePattern;
+
+  stream_if = _uvc_get_stream_if(devh, ctrl->bInterfaceNumber);
+
+  /* Only method 2 is supported */
+  if(!stream_if || stream_if->bStillCaptureMethod != 2)
+    return UVC_ERROR_NOT_SUPPORTED;
+
+  DL_FOREACH(stream_if->format_descs, format) {
+
+    if (ctrl->bFormatIndex != format->bFormatIndex)
+      continue;
+
+    /* get the max values */
+    uvc_query_still_ctrl(devh, still_ctrl, 1, UVC_GET_MAX);
+
+    //look for still format
+    DL_FOREACH(format->still_frame_desc, still) {
+      DL_FOREACH(still->imageSizePatterns, sizePattern) {
+
+        if (sizePattern->wWidth != width || sizePattern->wHeight != height)
+          continue;
+
+        still_ctrl->bInterfaceNumber = ctrl->bInterfaceNumber;
+        still_ctrl->bFormatIndex = format->bFormatIndex;
+        still_ctrl->bFrameIndex = sizePattern->bResolutionIndex;
+        still_ctrl->bCompressionIndex = 0; //TODO support compression index
+        goto found;
+      }
+    }
+  }
+
+  return UVC_ERROR_INVALID_MODE;
+
+  found:
+    return uvc_probe_still_ctrl(devh, still_ctrl);
+}
+
 /** @internal
  * Negotiate streaming parameters with the device
  *
@@ -449,12 +606,43 @@ uvc_error_t uvc_probe_stream_ctrl(
 }
 
 /** @internal
+ * Negotiate still parameters with the device
+ *
+ * @param[in] devh UVC device
+ * @param[in,out] still_ctrl Still capture control block
+ */
+uvc_error_t uvc_probe_still_ctrl(
+    uvc_device_handle_t *devh,
+    uvc_still_ctrl_t *still_ctrl) {
+
+  int res = uvc_query_still_ctrl(
+    devh, still_ctrl, 1, UVC_SET_CUR
+  );
+
+  if(res == UVC_SUCCESS) {
+    res = uvc_query_still_ctrl(
+      devh, still_ctrl, 1, UVC_GET_CUR
+    );
+
+    if(res == UVC_SUCCESS) {
+      res = uvc_query_still_ctrl(
+        devh, still_ctrl, 0, UVC_SET_CUR
+      );
+    }
+  }
+
+  return res;
+}
+
+/** @internal
  * @brief Swap the working buffer with the presented buffer and notify consumers
  */
 void _uvc_swap_buffers(uvc_stream_handle_t *strmh) {
   uint8_t *tmp_buf;
 
   pthread_mutex_lock(&strmh->cb_mutex);
+
+  (void)clock_gettime(CLOCK_MONOTONIC, &strmh->capture_time_finished);
 
   /* swap the buffers */
   tmp_buf = strmh->holdbuf;
@@ -464,12 +652,19 @@ void _uvc_swap_buffers(uvc_stream_handle_t *strmh) {
   strmh->hold_last_scr = strmh->last_scr;
   strmh->hold_pts = strmh->pts;
   strmh->hold_seq = strmh->seq;
+  
+  /* swap metadata buffer */
+  tmp_buf = strmh->meta_holdbuf;
+  strmh->meta_holdbuf = strmh->meta_outbuf;
+  strmh->meta_outbuf = tmp_buf;
+  strmh->meta_hold_bytes = strmh->meta_got_bytes;
 
   pthread_cond_broadcast(&strmh->cb_cond);
   pthread_mutex_unlock(&strmh->cb_mutex);
 
   strmh->seq++;
   strmh->got_bytes = 0;
+  strmh->meta_got_bytes = 0;
   strmh->last_scr = 0;
   strmh->pts = 0;
 }
@@ -558,6 +753,13 @@ void _uvc_process_payload(uvc_stream_handle_t *strmh, uint8_t *payload, size_t p
       /** @todo read the SOF token counter */
       strmh->last_scr = DW_TO_INT(payload + variable_offset);
       variable_offset += 6;
+    }
+
+    if (header_len > variable_offset)
+    {
+        // Metadata is attached to header
+        memcpy(strmh->meta_outbuf + strmh->meta_got_bytes, payload + variable_offset, header_len - variable_offset);
+        strmh->meta_got_bytes += header_len - variable_offset;
     }
   }
 
@@ -649,7 +851,29 @@ void LIBUSB_CALL _uvc_stream_callback(struct libusb_transfer *transfer) {
   
   if ( resubmit ) {
     if ( strmh->running ) {
-      libusb_submit_transfer(transfer);
+      int libusbRet = libusb_submit_transfer(transfer);
+      if (libusbRet < 0)
+      {
+        int i;
+        pthread_mutex_lock(&strmh->cb_mutex);
+
+        /* Mark transfer as deleted. */
+        for (i = 0; i < LIBUVC_NUM_TRANSFER_BUFS; i++) {
+          if (strmh->transfers[i] == transfer) {
+            UVC_DEBUG("Freeing failed transfer %d (%p)", i, transfer);
+            free(transfer->buffer);
+            libusb_free_transfer(transfer);
+            strmh->transfers[i] = NULL;
+            break;
+          }
+        }
+        if (i == LIBUVC_NUM_TRANSFER_BUFS) {
+          UVC_DEBUG("failed transfer %p not found; not freeing!", transfer);
+        }
+
+        pthread_cond_broadcast(&strmh->cb_cond);
+        pthread_mutex_unlock(&strmh->cb_mutex);
+      }
     } else {
       int i;
       pthread_mutex_lock(&strmh->cb_mutex);
@@ -661,6 +885,7 @@ void LIBUSB_CALL _uvc_stream_callback(struct libusb_transfer *transfer) {
           free(transfer->buffer);
           libusb_free_transfer(transfer);
           strmh->transfers[i] = NULL;
+          break;
         }
       }
       if(i == LIBUVC_NUM_TRANSFER_BUFS ) {
@@ -798,6 +1023,9 @@ uvc_error_t uvc_stream_open_ctrl(uvc_device_handle_t *devh, uvc_stream_handle_t 
   /** @todo take only what we need */
   strmh->outbuf = malloc( LIBUVC_XFER_BUF_SIZE );
   strmh->holdbuf = malloc( LIBUVC_XFER_BUF_SIZE );
+
+  strmh->meta_outbuf = malloc( LIBUVC_XFER_META_BUF_SIZE );
+  strmh->meta_holdbuf = malloc( LIBUVC_XFER_META_BUF_SIZE );
    
   pthread_mutex_init(&strmh->cb_mutex, NULL);
   pthread_cond_init(&strmh->cb_cond, NULL);
@@ -883,7 +1111,7 @@ uvc_error_t uvc_stream_start(
     /* For isochronous streaming, we choose an appropriate altsetting for the endpoint
      * and set up several transfers */
     const struct libusb_interface_descriptor *altsetting = 0;
-    const struct libusb_endpoint_descriptor *endpoint;
+    const struct libusb_endpoint_descriptor *endpoint = 0;
     /* The greatest number of bytes that the device might provide, per packet, in this
      * configuration */
     size_t config_bytes_per_packet;
@@ -907,12 +1135,23 @@ uvc_error_t uvc_stream_start(
       for (ep_idx = 0; ep_idx < altsetting->bNumEndpoints; ep_idx++) {
         endpoint = altsetting->endpoint + ep_idx;
 
-        if (endpoint->bEndpointAddress == format_desc->parent->bEndpointAddress) {
-          endpoint_bytes_per_packet = endpoint->wMaxPacketSize;
-          // wMaxPacketSize: [unused:2 (multiplier-1):3 size:11]
-          endpoint_bytes_per_packet = (endpoint_bytes_per_packet & 0x07ff) *
-                                      (((endpoint_bytes_per_packet >> 11) & 3) + 1);
+        struct libusb_ss_endpoint_companion_descriptor *ep_comp = 0;
+        libusb_get_ss_endpoint_companion_descriptor(NULL, endpoint, &ep_comp);
+        if (ep_comp)
+        {
+          endpoint_bytes_per_packet = ep_comp->wBytesPerInterval;
+          libusb_free_ss_endpoint_companion_descriptor(ep_comp);
           break;
+        }
+        else
+        {
+          if (endpoint->bEndpointAddress == format_desc->parent->bEndpointAddress) {
+              endpoint_bytes_per_packet = endpoint->wMaxPacketSize;
+            // wMaxPacketSize: [unused:2 (multiplier-1):3 size:11]
+            endpoint_bytes_per_packet = (endpoint_bytes_per_packet & 0x07ff) *
+              (((endpoint_bytes_per_packet >> 11) & 3) + 1);
+            break;
+          }
         }
       }
 
@@ -1087,6 +1326,9 @@ void _uvc_populate_frame(uvc_stream_handle_t *strmh) {
   case UVC_FRAME_FORMAT_YUYV:
     frame->step = frame->width * 2;
     break;
+  case UVC_FRAME_FORMAT_NV12:
+    frame->step = frame->width;
+    break;
   case UVC_FRAME_FORMAT_MJPEG:
     frame->step = 0;
     break;
@@ -1096,8 +1338,7 @@ void _uvc_populate_frame(uvc_stream_handle_t *strmh) {
   }
 
   frame->sequence = strmh->hold_seq;
-  /** @todo set the frame time */
-  // frame->capture_time
+  frame->capture_time_finished = strmh->capture_time_finished;
 
   /* copy the image data from the hold buffer to the frame (unnecessary extra buf?) */
   if (frame->data_bytes < strmh->hold_bytes) {
@@ -1106,8 +1347,15 @@ void _uvc_populate_frame(uvc_stream_handle_t *strmh) {
   frame->data_bytes = strmh->hold_bytes;
   memcpy(frame->data, strmh->holdbuf, frame->data_bytes);
 
-
-
+  if (strmh->meta_hold_bytes > 0)
+  {
+      if (frame->metadata_bytes < strmh->meta_hold_bytes)
+      {
+          frame->metadata = realloc(frame->metadata, strmh->meta_hold_bytes);
+      }
+      frame->metadata_bytes = strmh->meta_hold_bytes;
+      memcpy(frame->metadata, strmh->meta_holdbuf, frame->metadata_bytes);
+  }
 }
 
 /** Poll for a frame
@@ -1279,6 +1527,9 @@ void uvc_stream_close(uvc_stream_handle_t *strmh) {
 
   free(strmh->outbuf);
   free(strmh->holdbuf);
+
+  free(strmh->meta_outbuf);
+  free(strmh->meta_holdbuf);
 
   pthread_cond_destroy(&strmh->cb_cond);
   pthread_mutex_destroy(&strmh->cb_mutex);
