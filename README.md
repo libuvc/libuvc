@@ -27,3 +27,11 @@ Then you can start them with `./example` and `./uvc_test` respectively. Note tha
 The documentation for `libuvc` can currently be found at https://int80k.com/libuvc/doc/.
 
 Happy hacking!
+
+## Uninstalling/Removing libuvc
+
+To remove libuvc the `uninstall` target can be used. Just run the command
+
+    sudo make uninstall
+
+in the `build` directory.
