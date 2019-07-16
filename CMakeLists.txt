@@ -4,10 +4,11 @@ project(libuvc
   LANGUAGES C
 )
 
+# Additional search scripts path for libusb-1.0, libjpeg, OpenCV
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 
 # Xcode and Visual Studio do not using CMAKE_BUILD_TYPE cache variable
-# so to use Release build type with single configuration generators
+# so we use Release build type only with single configuration generators.
 if (NOT CMAKE_CONFIGURATION_TYPES)
   if(NOT CMAKE_BUILD_TYPE)
     message(STATUS "No build type selected, default to Release")
@@ -28,10 +29,6 @@ option(ENABLE_UVC_DEBUGGING "Enable UVC debugging" ON)
 set(libuvc_DESCRIPTION "A cross-platform library for USB video devices")
 set(libuvc_URL "https://github.com/libuvc/libuvc")
 
-
-find_package(LibUSB)
-
-
 set(SOURCES 
   src/ctrl.c
   src/ctrl-gen.c
@@ -43,8 +40,10 @@ set(SOURCES
   src/misc.c
 )
 
+find_package(LibUSB)
+
 # JpegPkg name to differ from shipped with CMake
-find_package(JpegPkg)
+find_package(JpegPkg QUIET)
 if(JPEG_FOUND)
   message(STATUS "Building libuvc with JPEG support.")
   set(LIBUVC_HAS_JPEG TRUE)
@@ -69,12 +68,15 @@ if(BUILD_UVC_SHARED)
   set_target_properties(uvc PROPERTIES
     VERSION ${libuvc_VERSION}
     SOVERSION ${libuvc_VERSION_MAJOR}
+    # Exported name of target within namespace LibUVC
     EXPORT_NAME UVCShared
   )
   list(APPEND UVC_TARGETS uvc)
-  if(NOT LibUVC_STATIC)
+  if(NOT LibUVC_STATIC)  
     add_library(LibUVC::UVC ALIAS uvc)
   endif()
+  # Aliases defined here available only if project included 
+  # via addsubdirectory
   add_library(LibUVC::UVCShared ALIAS uvc)
 endif()
 
@@ -82,6 +84,7 @@ if(BUILD_UVC_STATIC)
   add_library(uvc_static STATIC ${SOURCES})
   set_target_properties(uvc_static PROPERTIES
     OUTPUT_NAME uvc
+    # Exported name of target within namespace LibUVC
     EXPORT_NAME UVCStatic
   )
   list(APPEND UVC_TARGETS uvc_static)
@@ -99,11 +102,14 @@ configure_file(include/libuvc/libuvc_config.h.in
 foreach(target_name IN LISTS UVC_TARGETS)
   target_include_directories(${target_name}
     PUBLIC
-      $<INSTALL_INTERFACE:include>
-      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include$<SEMICOLON>>
+      # Different paths for includes for build and install phase supported 
+      # via INSTALL_INTERFACE and BUILD_INTERFACE generator expressions.
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
+      $<INSTALL_INTERFACE:include>
   )
   target_link_libraries(${target_name}
+    # libusb-1.0 used internally so we link to it privately.
     PRIVATE LibUSB::LibUSB
   )
   if(JPEG_FOUND)
@@ -112,7 +118,7 @@ foreach(target_name IN LISTS UVC_TARGETS)
     )
   endif()
   set_target_properties(${target_name} PROPERTIES
-      PUBLIC_HEADER "include/libuvc/libuvc.h;${libuvc_BINARY_DIR}/include/libuvc/libuvc_config.h"
+      PUBLIC_HEADER "include/libuvc/libuvc.h;${CMAKE_CURRENT_BINARY_DIR}/include/libuvc/libuvc_config.h"
   )
   if(ENABLE_UVC_DEBUGGING)
     target_compile_definitions(${target_name}
@@ -133,11 +139,25 @@ if(BUILD_EXAMPLE)
 endif()
 
 if(BUILD_TEST)
-  find_package(OpenCV
-    REQUIRED COMPONENTS
+  # OpenCV defines targets with transitive dependencies not with namespaces but using opencv_ prefix. 
+  # This targets provide necessary include directories and linked flags.
+  find_package(OpenCVPkg REQUIRED
+    COMPONENTS
       opencv_core
       opencv_highgui
   )
+  if(OpenCVPkg_FOUND)
+    # Our example written in C language but found OpenCV modules does 
+    # not always contains C include files. So we need to additional check.
+    find_file(highgui_path
+      NAMES opencv/highgui.h
+    )
+    if(highgui_path)
+      message(STATUS "C include file for HighGUI OpenCV module found")
+    else()
+      message(FATAL_ERROR "C include file for HighGUI OpenCV module not found. In Ubuntu it located within libopencv-dev")
+    endif()
+  endif()
 
   add_executable(uvc_test src/test.c)
   target_link_libraries(uvc_test
@@ -185,6 +205,8 @@ install(FILES
 )
 
 if(JPEG_FOUND)
+  # If we have used JPEG library we need to 
+  # add linker flag for it in config file for pkgconfig
   set(PKGCONFIG_JPEG_LDFLAG "-ljpeg")
 endif()
 

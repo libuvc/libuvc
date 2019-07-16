@@ -38,7 +38,7 @@ if (NOT TARGET LibUSB::LibUSB)
       )
       if(LibUSB_LIBRARY)
         set_target_properties(LibUSB::LibUSB PROPERTIES
-          # INTERFACE_LINK_LIBRARIES ${LibUSB_LIBRARY}
+          IMPORTED_LINK_INTERFACE_LANGUAGES "C"
           IMPORTED_LOCATION ${LibUSB_LIBRARY}
         )
       else()
