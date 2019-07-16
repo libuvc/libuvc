@@ -32,7 +32,7 @@
 *  POSSIBILITY OF SUCH DAMAGE.
 *********************************************************************/
 #include <stdio.h>
-#include <opencv/highgui.h>
+#include <opencv2/highgui/highgui_c.h>
 
 #include "libuvc/libuvc.h"
 
