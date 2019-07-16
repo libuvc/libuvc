@@ -155,7 +155,7 @@ if(BUILD_TEST)
     if(highgui_path)
       message(STATUS "C include file for HighGUI OpenCV module found")
     else()
-      message(FATAL_ERROR "C include file for HighGUI OpenCV module not found. In Ubuntu it located within libopencv-dev")
+      message(FATAL_ERROR "C include file for HighGUI OpenCV module not found. In Ubuntu it located within libopencv-dev or libhighgui-dev")
     endif()
   endif()
 
