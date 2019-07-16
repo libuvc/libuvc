@@ -50,7 +50,7 @@ endif()
 unset(required_comps_not_found)
 foreach(comp IN LISTS comps)
   string(REPLACE "opencv_" "" comp_name ${comp})
-  set(include_rel_path "opencv2/${comp_name}.hpp")
+  set(include_rel_path "opencv2/${comp_name}.hpp" "opencv2/${comp_name}/${comp_name}.hpp")
   find_path(OpenCV_${comp}_INCLUDE_DIR
     NAMES ${include_rel_path}
   )
