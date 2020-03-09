@@ -122,32 +122,10 @@ static void insert_huff_tables(j_decompress_ptr dinfo) {
   COPY_HUFF_TABLE(dinfo, ac_huff_tbl_ptrs[1], ac_chromi);
 }
 
-/** @brief Convert an MJPEG frame to RGB
- * @ingroup frame
- *
- * @param in MJPEG frame
- * @param out RGB frame
- */
-uvc_error_t uvc_mjpeg2rgb(uvc_frame_t *in, uvc_frame_t *out) {
+static uvc_error_t uvc_mjpeg_convert(uvc_frame_t *in, uvc_frame_t *out) {
   struct jpeg_decompress_struct dinfo;
   struct error_mgr jerr;
   size_t lines_read;
-
-  if (in->frame_format != UVC_FRAME_FORMAT_MJPEG)
-    return UVC_ERROR_INVALID_PARAM;
-
-  if (uvc_ensure_frame_size(out, in->width * in->height * 3) < 0)
-    return UVC_ERROR_NO_MEM;
-
-  out->width = in->width;
-  out->height = in->height;
-  out->frame_format = UVC_FRAME_FORMAT_RGB;
-  out->step = in->width * 3;
-  out->sequence = in->sequence;
-  out->capture_time = in->capture_time;
-  out->capture_time_finished = in->capture_time_finished;
-  out->source = in->source;
-
   dinfo.err = jpeg_std_error(&jerr.super);
   jerr.super.error_exit = _error_exit;
 
@@ -164,7 +142,13 @@ uvc_error_t uvc_mjpeg2rgb(uvc_frame_t *in, uvc_frame_t *out) {
     insert_huff_tables(&dinfo);
   }
 
-  dinfo.out_color_space = JCS_RGB;
+  if (out->frame_format == UVC_FRAME_FORMAT_RGB)
+    dinfo.out_color_space = JCS_RGB;
+  else if (out->frame_format == UVC_FRAME_FORMAT_GRAY8)
+    dinfo.out_color_space = JCS_GRAYSCALE;
+  else
+    goto fail;
+
   dinfo.dct_method = JDCT_IFAST;
 
   jpeg_start_decompress(&dinfo);
@@ -186,3 +170,58 @@ fail:
   jpeg_destroy_decompress(&dinfo);
   return UVC_ERROR_OTHER;
 }
+
+/** @brief Convert an MJPEG frame to RGB
+ * @ingroup frame
+ *
+ * @param in MJPEG frame
+ * @param out RGB frame
+ */
+uvc_error_t uvc_mjpeg2rgb(uvc_frame_t *in, uvc_frame_t *out) {
+  if (in->frame_format != UVC_FRAME_FORMAT_MJPEG)
+    return UVC_ERROR_INVALID_PARAM;
+
+  if (uvc_ensure_frame_size(out, in->width * in->height * 3) < 0)
+    return UVC_ERROR_NO_MEM;
+
+  out->width = in->width;
+  out->height = in->height;
+  out->frame_format = UVC_FRAME_FORMAT_RGB;
+  out->step = in->width * 3;
+  out->sequence = in->sequence;
+  out->capture_time = in->capture_time;
+  out->capture_time_finished = in->capture_time_finished;
+  out->source = in->source;
+
+  return uvc_mjpeg_convert(in, out);
+}
+
+/** @brief Convert an MJPEG frame to GRAY8
+ * @ingroup frame
+ *
+ * @param in MJPEG frame
+ * @param out GRAY8 frame
+ */
+uvc_error_t uvc_mjpeg2gray(uvc_frame_t *in, uvc_frame_t *out) {
+  struct jpeg_decompress_struct dinfo;
+  struct error_mgr jerr;
+  size_t lines_read;
+
+  if (in->frame_format != UVC_FRAME_FORMAT_MJPEG)
+    return UVC_ERROR_INVALID_PARAM;
+
+  if (uvc_ensure_frame_size(out, in->width * in->height) < 0)
+    return UVC_ERROR_NO_MEM;
+
+  out->width = in->width;
+  out->height = in->height;
+  out->frame_format = UVC_FRAME_FORMAT_GRAY8;
+  out->step = in->width;
+  out->sequence = in->sequence;
+  out->capture_time = in->capture_time;
+  out->capture_time_finished = in->capture_time_finished;
+  out->source = in->source;
+
+  return uvc_mjpeg_convert(in, out);
+}
+
