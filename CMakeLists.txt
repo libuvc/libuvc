@@ -21,10 +21,9 @@ if(NOT CMAKE_BUILD_TARGET)
     set(CMAKE_BUILD_TARGET "Both" CACHE STRING "" FORCE)
 endif()
 
-option(BUILD_EXAMPLE "Build example program" OFF)
+option(BUILD_EXAMPLE "Build example program" ON)
 option(BUILD_TEST "Build test program" OFF)
-option(ENABLE_UVC_DEBUGGING "Enable UVC debugging" ON)
-
+option(ENABLE_UVC_DEBUGGING "Enable UVC debugging" OFF)
 
 set(libuvc_DESCRIPTION "A cross-platform library for USB video devices")
 set(libuvc_URL "https://github.com/libuvc/libuvc")
