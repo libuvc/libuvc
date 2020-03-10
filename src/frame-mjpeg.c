@@ -203,10 +203,6 @@ uvc_error_t uvc_mjpeg2rgb(uvc_frame_t *in, uvc_frame_t *out) {
  * @param out GRAY8 frame
  */
 uvc_error_t uvc_mjpeg2gray(uvc_frame_t *in, uvc_frame_t *out) {
-  struct jpeg_decompress_struct dinfo;
-  struct error_mgr jerr;
-  size_t lines_read;
-
   if (in->frame_format != UVC_FRAME_FORMAT_MJPEG)
     return UVC_ERROR_INVALID_PARAM;
 
@@ -224,4 +220,3 @@ uvc_error_t uvc_mjpeg2gray(uvc_frame_t *in, uvc_frame_t *out) {
 
   return uvc_mjpeg_convert(in, out);
 }
-
