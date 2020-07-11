@@ -22,6 +22,7 @@ if(NOT CMAKE_BUILD_TARGET)
 endif()
 
 option(BUILD_EXAMPLE "Build example program" ON)
+option(BUILD_H264_EXAMPLE "Build h264 example program" ON)
 option(BUILD_TEST "Build test program" OFF)
 option(ENABLE_UVC_DEBUGGING "Enable UVC debugging" OFF)
 
@@ -131,6 +132,16 @@ if(BUILD_EXAMPLE)
   add_executable(example src/example.c)
   find_package(Threads)
   target_link_libraries(example
+    PRIVATE
+      LibUVC::UVC
+      Threads::Threads
+  )
+endif()
+
+if(BUILD_H264_EXAMPLE)
+  add_executable(h264_example src/h264_example.c)
+  find_package(Threads)
+  target_link_libraries(h264_example
     PRIVATE
       LibUVC::UVC
       Threads::Threads
