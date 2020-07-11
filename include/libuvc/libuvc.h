@@ -72,6 +72,7 @@ enum uvc_frame_format {
   UVC_FRAME_FORMAT_BGR,
   /** Motion-JPEG (or JPEG) encoded images */
   UVC_FRAME_FORMAT_MJPEG,
+  UVC_FRAME_FORMAT_H264,
   /** Greyscale images */
   UVC_FRAME_FORMAT_GRAY8,
   UVC_FRAME_FORMAT_GRAY16,
