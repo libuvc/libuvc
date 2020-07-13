@@ -1,5 +1,39 @@
 #include "libuvc/libuvc.h"
 #include <stdio.h>
+#include <unistd.h>
+
+static const char *H264_FILE = "iOSDevLog.h264";
+static const char *FORMAT_STRS[] = {
+  /** Any supported format */
+  "UVC_FRAME_FORMAT_ANY",
+  "UVC_FRAME_FORMAT_UNCOMPRESSED",
+  "UVC_FRAME_FORMAT_COMPRESSED",
+  /** YUYV/YUV2/YUV422: YUV encoding with one luminance value per pixel and
+   * one UV (chrominance) pair for every two pixels.
+   */
+  "UVC_FRAME_FORMAT_YUYV",
+  "UVC_FRAME_FORMAT_UYVY",
+  /** 24-bit RGB */
+  "UVC_FRAME_FORMAT_RGB",
+  "UVC_FRAME_FORMAT_BGR",
+  /** Motion-JPEG (or JPEG) encoded images */
+  "UVC_FRAME_FORMAT_MJPEG",
+  "UVC_FRAME_FORMAT_H264",
+  /** Greyscale images */
+  "UVC_FRAME_FORMAT_GRAY8",
+  "UVC_FRAME_FORMAT_GRAY16",
+  /* Raw colour mosaic images */
+  "UVC_FRAME_FORMAT_BY8",
+  "UVC_FRAME_FORMAT_BA81",
+  "UVC_FRAME_FORMAT_SGRBG8",
+  "UVC_FRAME_FORMAT_SGBRG8",
+  "UVC_FRAME_FORMAT_SRGGB8",
+  "UVC_FRAME_FORMAT_SBGGR8",
+  /** YUV420: NV12 */
+  "UVC_FRAME_FORMAT_NV12",
+  /** Number of formats understood */
+  "UVC_FRAME_FORMAT_COUNT",
+};
 
 /* This callback function runs once per frame. Use it to perform any
  * quick processing you need, or have it put the frame into your application's
@@ -7,21 +41,32 @@
 void cb(uvc_frame_t *frame, void *ptr) {
   uvc_frame_t *bgr;
   uvc_error_t ret;
+  int *count_ptr = (int *)ptr;
 
   /* We'll convert the image from YUV/JPEG to BGR, so allocate space */
   bgr = uvc_allocate_frame(frame->width * frame->height * 3);
   if (!bgr) {
-    printf("unable to allocate bgr frame!");
+    printf("unable to allocate bgr frame!\n");
     return;
   }
 
   /* Do the BGR conversion */
-  ret = uvc_any2bgr(frame, bgr);
-  if (ret) {
-    uvc_perror(ret, "uvc_any2bgr");
-    uvc_free_frame(bgr);
-    return;
-  }
+  /*
+   * ret = uvc_any2bgr(frame, bgr);
+   * if (ret) {
+   *   uvc_perror(ret, "uvc_any2bgr");
+   *   uvc_free_frame(bgr);
+   *   return;
+   * }
+   */
+
+  printf("custom_count = %d, width = %d, height = %d, frame_format = %s\n",
+          (*count_ptr)++, frame->width, frame->height, FORMAT_STRS[frame->frame_format]);
+
+  FILE *fp;
+  fp = fopen(H264_FILE, "a");
+  fwrite(frame->data, 1, frame->data_bytes, fp);
+  fclose(fp);
 
   /* Call a user function:
    *
@@ -61,6 +106,7 @@ int main(int argc, char **argv) {
   uvc_device_handle_t *devh;
   uvc_stream_ctrl_t ctrl;
   uvc_error_t res;
+  int custom_count = 0;
 
   /* Initialize a UVC service context. Libuvc will set up its own libusb
    * context. Replace NULL with a libusb_context pointer to run libuvc
@@ -96,11 +142,12 @@ int main(int argc, char **argv) {
        * knows about the device */
       uvc_print_diag(devh, stderr);
 
-      /* Try to negotiate a 640x480 30 fps YUYV stream profile */
+      /* Try to negotiate a 848x480 30 fps YUYV stream profile */
       res = uvc_get_stream_ctrl_format_size(
           devh, &ctrl, /* result stored in ctrl */
-          UVC_FRAME_FORMAT_YUYV, /* YUV 422, aka YUV 4:2:2. try _COMPRESSED */
-          640, 480, 30 /* width, height, fps */
+          /* UVC_FRAME_FORMAT_YUYV, YUV 422, aka YUV 4:2:2. try _COMPRESSED */
+          UVC_FRAME_FORMAT_H264, /* H264. try _COMPRESSED */
+          848, 480, 30 /* width, height, fps */
       );
 
       /* Print out the result */
@@ -110,9 +157,9 @@ int main(int argc, char **argv) {
         uvc_perror(res, "get_mode"); /* device doesn't provide a matching stream */
       } else {
         /* Start the video stream. The library will call user function cb:
-         *   cb(frame, (void*) 12345)
+         *   cb(frame, (void*) custom_count)
          */
-        res = uvc_start_streaming(devh, &ctrl, cb, 12345, 0);
+        res = uvc_start_streaming(devh, &ctrl, cb, &custom_count, 0);
 
         if (res < 0) {
           uvc_perror(res, "start_streaming"); /* unable to start stream */
@@ -142,6 +189,8 @@ int main(int argc, char **argv) {
    * and it closes the libusb context if one was not provided. */
   uvc_exit(ctx);
   puts("UVC exited");
+
+  printf("use `ffplay %s` to play\n", H264_FILE);
 
   return 0;
 }
