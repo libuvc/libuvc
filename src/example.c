@@ -12,9 +12,9 @@ void cb(uvc_frame_t *frame, void *ptr) {
   enum uvc_frame_format *frame_format = (enum uvc_frame_format *)ptr;
   FILE *fp;
   static int jpeg_count = 0;
-  static const char *H264_FILE = "iOSDevLog.h264";
-  static const char *MJPEG_FILE = ".jpeg";
-  char filename[16];
+  /* static const char *H264_FILE = "iOSDevLog.h264";
+   * static const char *MJPEG_FILE = ".jpeg";
+   * char filename[16]; */
 
   /* We'll convert the image from YUV/JPEG to BGR, so allocate space */
   bgr = uvc_allocate_frame(frame->width * frame->height * 3);
@@ -31,15 +31,13 @@ void cb(uvc_frame_t *frame, void *ptr) {
     /* use `ffplay H264_FILE` to play */
     /* fp = fopen(H264_FILE, "a");
      * fwrite(frame->data, 1, frame->data_bytes, fp);
-     * fclose(fp);
-     */
+     * fclose(fp); */
     break;
   case UVC_COLOR_FORMAT_MJPEG:
     /* sprintf(filename, "%d%s", jpeg_count++, MJPEG_FILE);
      * fp = fopen(filename, "w");
      * fwrite(frame->data, 1, frame->data_bytes, fp);
-     * fclose(fp);
-     */
+     * fclose(fp); */
     break;
   case UVC_COLOR_FORMAT_YUYV:
     /* Do the BGR conversion */
