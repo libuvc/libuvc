@@ -7,12 +7,11 @@
  * input queue. If this function takes too long, you'll start losing frames. */
 void cb(uvc_frame_t *frame, void *ptr) {
   uvc_frame_t *bgr;
-  uvc_frame_t *rgb;
   uvc_error_t ret;
   enum uvc_frame_format *frame_format = (enum uvc_frame_format *)ptr;
-  FILE *fp;
-  static int jpeg_count = 0;
-  /* static const char *H264_FILE = "iOSDevLog.h264";
+  /* FILE *fp;
+   * static int jpeg_count = 0;
+   * static const char *H264_FILE = "iOSDevLog.h264";
    * static const char *MJPEG_FILE = ".jpeg";
    * char filename[16]; */
 
