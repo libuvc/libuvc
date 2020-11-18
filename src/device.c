@@ -263,6 +263,49 @@ uint8_t uvc_get_device_address(uvc_device_t *dev) {
   return libusb_get_device_address(dev->usb_dev);
 }
 
+static uvc_error_t uvc_open_internal(uvc_device_t *dev, struct libusb_device_handle *usb_devh, uvc_device_handle_t **devh);
+
+#if LIBUSB_API_VERSION >= 0x01000107
+/** @brief Wrap a platform-specific system device handle and obtain a UVC device handle.
+ * The handle allows you to use libusb to perform I/O on the device in question.
+ *
+ * On Linux, the system device handle must be a valid file descriptor opened on the device node.
+ *
+ * The system device handle must remain open until uvc_close() is called. The system device handle will not be closed by uvc_close().
+ * @ingroup device
+ *
+ * @param sys_dev the platform-specific system device handle
+ * @param context UVC context to prepare the device
+ * @param[out] devh Handle on opened device
+ * @return Error opening device or SUCCESS
+ */
+uvc_error_t uvc_wrap(
+    int sys_dev,
+    uvc_context_t *context,
+    uvc_device_handle_t **devh) {
+  uvc_error_t ret;
+  struct libusb_device_handle *usb_devh;
+
+  UVC_ENTER();
+
+  uvc_device_t *dev = NULL;
+  ret = libusb_wrap_sys_device(context->usb_ctx, sys_dev, &usb_devh);
+  UVC_DEBUG("libusb_wrap_sys_device() = %d", ret);
+  if (ret != LIBUSB_SUCCESS) {
+    UVC_EXIT(ret);
+    return ret;
+  }
+
+  dev = calloc(1, sizeof(uvc_device_t));
+  dev->ctx = context;
+  dev->usb_dev = libusb_get_device(usb_devh);
+
+  ret = uvc_open_internal(dev, usb_devh, devh);
+  UVC_EXIT(ret);
+  return ret;
+}
+#endif
+
 /** @brief Open a UVC device
  * @ingroup device
  *
@@ -275,8 +318,6 @@ uvc_error_t uvc_open(
     uvc_device_handle_t **devh) {
   uvc_error_t ret;
   struct libusb_device_handle *usb_devh;
-  uvc_device_handle_t *internal_devh;
-  struct libusb_device_descriptor desc;
 
   UVC_ENTER();
 
@@ -287,6 +328,21 @@ uvc_error_t uvc_open(
     UVC_EXIT(ret);
     return ret;
   }
+
+  ret = uvc_open_internal(dev, usb_devh, devh);
+  UVC_EXIT(ret);
+  return ret;
+}
+
+static uvc_error_t uvc_open_internal(
+    uvc_device_t *dev,
+    struct libusb_device_handle *usb_devh,
+    uvc_device_handle_t **devh) {
+  uvc_error_t ret;
+  uvc_device_handle_t *internal_devh;
+  struct libusb_device_descriptor desc;
+
+  UVC_ENTER();
 
   uvc_ref_device(dev);
 
