@@ -554,6 +554,13 @@ uvc_error_t uvc_find_devices(
     uvc_device_t ***devs,
     int vid, int pid, const char *sn);
 
+#if LIBUSB_API_VERSION >= 0x01000107
+uvc_error_t uvc_wrap(
+    int sys_dev,
+    uvc_context_t *context,
+    uvc_device_handle_t **devh);
+#endif
+
 uvc_error_t uvc_open(
     uvc_device_t *dev,
     uvc_device_handle_t **devh);
