@@ -50,10 +50,18 @@
 
 #ifdef UVC_DEBUGGING
 #include <libgen.h>
+#ifdef __ANDROID__
+#include <android/log.h>
+#define UVC_DEBUG(format, ...) __android_log_print(ANDROID_LOG_DEBUG, "libuvc", "[%s:%d/%s] " format "\n", basename(__FILE__), __LINE__, __FUNCTION__, ##__VA_ARGS__)
+#define UVC_ENTER() __android_log_print(ANDROID_LOG_DEBUG, "libuvc", "[%s:%d] begin %s\n", basename(__FILE__), __LINE__, __FUNCTION__)
+#define UVC_EXIT(code) __android_log_print(ANDROID_LOG_DEBUG, "libuvc", "[%s:%d] end %s (%d)\n", basename(__FILE__), __LINE__, __FUNCTION__, code)
+#define UVC_EXIT_VOID() __android_log_print(ANDROID_LOG_DEBUG, "libuvc", "[%s:%d] end %s\n", basename(__FILE__), __LINE__, __FUNCTION__)
+#else
 #define UVC_DEBUG(format, ...) fprintf(stderr, "[%s:%d/%s] " format "\n", basename(__FILE__), __LINE__, __FUNCTION__, ##__VA_ARGS__)
 #define UVC_ENTER() fprintf(stderr, "[%s:%d] begin %s\n", basename(__FILE__), __LINE__, __FUNCTION__)
 #define UVC_EXIT(code) fprintf(stderr, "[%s:%d] end %s (%d)\n", basename(__FILE__), __LINE__, __FUNCTION__, code)
 #define UVC_EXIT_VOID() fprintf(stderr, "[%s:%d] end %s\n", basename(__FILE__), __LINE__, __FUNCTION__)
+#endif
 #else
 #define UVC_DEBUG(format, ...)
 #define UVC_ENTER()
