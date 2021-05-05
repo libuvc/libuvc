@@ -1237,8 +1237,7 @@ uvc_error_t uvc_stream_start(
   }
 
   if ( ret != UVC_SUCCESS && transfer_id >= 0 ) {
-    for ( ; transfer_id < LIBUVC_NUM_TRANSFER_BUFS;
-        transfer_id++) {
+    for ( ; transfer_id < LIBUVC_NUM_TRANSFER_BUFS; transfer_id++) {
       free ( strmh->transfers[transfer_id]->buffer );
       libusb_free_transfer ( strmh->transfers[transfer_id]);
       strmh->transfers[transfer_id] = 0;
