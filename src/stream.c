@@ -587,6 +587,14 @@ uvc_error_t uvc_get_still_ctrl_format_size(
     return uvc_probe_still_ctrl(devh, still_ctrl);
 }
 
+static int _uvc_stream_params_negotiated(
+  uvc_stream_ctrl_t *required,
+  uvc_stream_ctrl_t *actual) {
+    return required->bFormatIndex == actual->bFormatIndex &&
+    required->bFrameIndex == actual->bFrameIndex &&
+    required->dwMaxPayloadTransferSize == actual->dwMaxPayloadTransferSize;
+}
+
 /** @internal
  * Negotiate streaming parameters with the device
  *
@@ -596,16 +604,16 @@ uvc_error_t uvc_get_still_ctrl_format_size(
 uvc_error_t uvc_probe_stream_ctrl(
     uvc_device_handle_t *devh,
     uvc_stream_ctrl_t *ctrl) {
- 
-  uvc_query_stream_ctrl(
-      devh, ctrl, 1, UVC_SET_CUR
-  );
+  uvc_stream_ctrl_t required_ctrl = *ctrl;
 
-  uvc_query_stream_ctrl(
-      devh, ctrl, 1, UVC_GET_CUR
-  );
+  uvc_query_stream_ctrl( devh, ctrl, 1, UVC_SET_CUR );
+  uvc_query_stream_ctrl( devh, ctrl, 1, UVC_GET_CUR );
 
-  /** @todo make sure that worked */
+  if(!_uvc_stream_params_negotiated(&required_ctrl, ctrl)) {
+    UVC_DEBUG("Unable to negotiate streaming format");
+    return UVC_ERROR_INVALID_MODE;
+  }
+
   return UVC_SUCCESS;
 }
 
