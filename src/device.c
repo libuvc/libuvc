@@ -289,11 +289,11 @@ uvc_error_t uvc_wrap(
   UVC_ENTER();
 
   uvc_device_t *dev = NULL;
-  ret = libusb_wrap_sys_device(context->usb_ctx, sys_dev, &usb_devh);
-  UVC_DEBUG("libusb_wrap_sys_device() = %d", ret);
-  if (ret != LIBUSB_SUCCESS) {
-    UVC_EXIT(ret);
-    return ret;
+  int err = libusb_wrap_sys_device(context->usb_ctx, sys_dev, &usb_devh);
+  UVC_DEBUG("libusb_wrap_sys_device() = %d", err);
+  if (err != LIBUSB_SUCCESS) {
+    UVC_EXIT(err);
+    return err;
   }
 
   dev = calloc(1, sizeof(uvc_device_t));
@@ -1085,8 +1085,10 @@ uvc_error_t uvc_parse_vc_header(uvc_device_t *dev,
   switch (info->ctrl_if.bcdUVC) {
   case 0x0100:
     info->ctrl_if.dwClockFrequency = DW_TO_INT(block + 7);
+    break;
   case 0x010a:
     info->ctrl_if.dwClockFrequency = DW_TO_INT(block + 7);
+    break;
   case 0x0110:
     break;
   default:
