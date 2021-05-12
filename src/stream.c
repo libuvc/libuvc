@@ -1381,7 +1381,6 @@ uvc_error_t uvc_stream_get_frame(uvc_stream_handle_t *strmh,
   time_t add_secs;
   time_t add_nsecs;
   struct timespec ts;
-  struct timeval tv;
 
   if (!strmh->running)
     return UVC_ERROR_INVALID_PARAM;
@@ -1407,6 +1406,7 @@ uvc_error_t uvc_stream_get_frame(uvc_stream_handle_t *strmh,
 #if _POSIX_TIMERS > 0
       clock_gettime(CLOCK_REALTIME, &ts);
 #else
+      struct timeval tv;
       gettimeofday(&tv, NULL);
       ts.tv_sec = tv.tv_sec;
       ts.tv_nsec = tv.tv_usec * 1000;
