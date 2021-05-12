@@ -220,13 +220,13 @@ typedef struct uvc_device_info {
   avoids problems with scheduling delays on slow boards causing missed
   transfers. A better approach may be to make the transfer thread FIFO
   scheduled (if we have root).
-  We could/should change this to allow reduce it to, say, 5 by default
-  and then allow the user to change the number of buffers as required.
+  Default number of transfer buffers can be overwritten by defining
+  this macro.
  */
+#ifndef LIBUVC_NUM_TRANSFER_BUFS
 #define LIBUVC_NUM_TRANSFER_BUFS 100
+#endif
 
-#define LIBUVC_XFER_BUF_SIZE	( 16 * 1024 * 1024 )
-#define LIBUVC_XFER_META_BUF_SIZE ( 4 * 1024 )
 
 struct uvc_stream_handle {
   struct uvc_device_handle *devh;

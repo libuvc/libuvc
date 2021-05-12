@@ -1024,12 +1024,12 @@ uvc_error_t uvc_stream_open_ctrl(uvc_device_handle_t *devh, uvc_stream_handle_t 
 
   // Set up the streaming status and data space
   strmh->running = 0;
-  /** @todo take only what we need */
-  strmh->outbuf = malloc( LIBUVC_XFER_BUF_SIZE );
-  strmh->holdbuf = malloc( LIBUVC_XFER_BUF_SIZE );
 
-  strmh->meta_outbuf = malloc( LIBUVC_XFER_META_BUF_SIZE );
-  strmh->meta_holdbuf = malloc( LIBUVC_XFER_META_BUF_SIZE );
+  strmh->outbuf = malloc( ctrl->dwMaxVideoFrameSize );
+  strmh->holdbuf = malloc( ctrl->dwMaxVideoFrameSize );
+
+  strmh->meta_outbuf = malloc( ctrl->dwMaxVideoFrameSize );
+  strmh->meta_holdbuf = malloc( ctrl->dwMaxVideoFrameSize );
    
   pthread_mutex_init(&strmh->cb_mutex, NULL);
   pthread_cond_init(&strmh->cb_cond, NULL);
