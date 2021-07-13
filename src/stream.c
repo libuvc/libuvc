@@ -734,6 +734,12 @@ void _uvc_process_payload(uvc_stream_handle_t *strmh, uint8_t *payload, size_t p
       data_len = payload_len - header_len;
   }
 
+    /* buffer overflow? */
+    if(strmh->got_bytes + data_len > strmh -> cur_ctrl.dwMaxVideoFrameSize) {
+      UVC_DEBUG("bogus packet: payload_len=%zd, header_len=%zd, got_bytes=%zd, dwMaxVideoFrameSize=%zd\n", payload_len, header_len, strmh->got_bytes, strmh -> cur_ctrl.dwMaxVideoFrameSize);
+      return;
+      }
+
   if (header_len < 2) {
     header_info = 0;
   } else {
@@ -1359,11 +1365,24 @@ void _uvc_populate_frame(uvc_stream_handle_t *strmh) {
   frame->capture_time_finished = strmh->capture_time_finished;
 
   /* copy the image data from the hold buffer to the frame (unnecessary extra buf?) */
-  if (frame->data_bytes < strmh->hold_bytes) {
-    frame->data = realloc(frame->data, strmh->hold_bytes);
-  }
-  frame->data_bytes = strmh->hold_bytes;
-  memcpy(frame->data, strmh->holdbuf, frame->data_bytes);
+  /* also: some cameras send a corrupt frame whose buffer size is smaller than what would be required to hold height*width  */
+  if (frame->data_bytes < strmh->hold_bytes ||
+      frame->data_bytes < frame->height * frame->step) {
+    if(strmh->hold_bytes >= frame->height * frame->step){
+        frame->data = realloc(frame->data, strmh->hold_bytes);
+        if(frame -> data == NULL) UVC_EXIT(UVC_ERROR_NO_MEM);
+        frame->data_bytes = strmh->hold_bytes;
+    } else {
+        frame->data = realloc(frame->data, frame->height * frame->step);
+        if(frame -> data == NULL) UVC_EXIT(UVC_ERROR_NO_MEM);
+        memset(frame->data + strmh->hold_bytes, 0, frame->height * frame->step - strmh->hold_bytes); /* buffer mustn't contain unknown memory content (cryptokeys...) */
+        frame->data_bytes = frame->height * frame->step; /* store the size of the buffer instead of the size of data to avoid reallocating this buffer over again. */
+    }
+  } else { /* buffer size was already correct */
+    frame->data_bytes = strmh->hold_bytes;
+   }
+
+  memcpy(frame->data, strmh->holdbuf, strmh->hold_bytes);
 
   if (strmh->meta_hold_bytes > 0)
   {
