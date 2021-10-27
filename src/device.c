@@ -42,10 +42,10 @@
 int uvc_already_open(uvc_context_t *ctx, struct libusb_device *usb_dev);
 void uvc_free_devh(uvc_device_handle_t *devh);
 
-uvc_error_t uvc_get_device_info(uvc_device_t *dev, uvc_device_info_t **info);
+uvc_error_t uvc_get_device_info(uvc_device_handle_t *devh, uvc_device_info_t **info);
 void uvc_free_device_info(uvc_device_info_t *info);
 
-uvc_error_t uvc_scan_control(uvc_device_t *dev, uvc_device_info_t *info);
+uvc_error_t uvc_scan_control(uvc_device_handle_t *devh, uvc_device_info_t *info);
 uvc_error_t uvc_parse_vc(uvc_device_t *dev,
 			 uvc_device_info_t *info,
 			 const unsigned char *block, size_t block_size);
@@ -350,7 +350,7 @@ static uvc_error_t uvc_open_internal(
   internal_devh->dev = dev;
   internal_devh->usb_devh = usb_devh;
 
-  ret = uvc_get_device_info(dev, &(internal_devh->info));
+  ret = uvc_get_device_info(internal_devh, &(internal_devh->info));
 
   if (ret != UVC_SUCCESS)
     goto fail;
@@ -422,7 +422,7 @@ static uvc_error_t uvc_open_internal(
  * @param dev Device to parse descriptor for
  * @param info Where to store a pointer to the new info struct
  */
-uvc_error_t uvc_get_device_info(uvc_device_t *dev,
+uvc_error_t uvc_get_device_info(uvc_device_handle_t *devh,
 				uvc_device_info_t **info) {
   uvc_error_t ret;
   uvc_device_info_t *internal_info;
@@ -435,7 +435,7 @@ uvc_error_t uvc_get_device_info(uvc_device_t *dev,
     return UVC_ERROR_NO_MEM;
   }
 
-  if (libusb_get_config_descriptor(dev->usb_dev,
+  if (libusb_get_config_descriptor(devh->dev->usb_dev,
 				   0,
 				   &(internal_info->config)) != 0) {
     free(internal_info);
@@ -443,7 +443,7 @@ uvc_error_t uvc_get_device_info(uvc_device_t *dev,
     return UVC_ERROR_IO;
   }
 
-  ret = uvc_scan_control(dev, internal_info);
+  ret = uvc_scan_control(devh, internal_info);
   if (ret != UVC_SUCCESS) {
     uvc_free_device_info(internal_info);
     UVC_EXIT(ret);
@@ -528,6 +528,53 @@ void uvc_free_device_info(uvc_device_info_t *info) {
   free(info);
 
   UVC_EXIT_VOID();
+}
+
+static uvc_error_t get_device_descriptor(
+        uvc_device_handle_t *devh,
+        uvc_device_descriptor_t **desc) {
+  uvc_device_descriptor_t *desc_internal;
+  struct libusb_device_descriptor usb_desc;
+  struct libusb_device_handle *usb_devh = devh->usb_devh;
+  uvc_error_t ret;
+
+  UVC_ENTER();
+
+  ret = libusb_get_device_descriptor(devh->dev->usb_dev, &usb_desc);
+
+  if (ret != UVC_SUCCESS) {
+    UVC_EXIT(ret);
+    return ret;
+  }
+
+  desc_internal = calloc(1, sizeof(*desc_internal));
+  desc_internal->idVendor = usb_desc.idVendor;
+  desc_internal->idProduct = usb_desc.idProduct;
+
+  unsigned char buf[64];
+
+  int bytes = libusb_get_string_descriptor_ascii(
+          usb_devh, usb_desc.iSerialNumber, buf, sizeof(buf));
+
+  if (bytes > 0)
+    desc_internal->serialNumber = strdup((const char*) buf);
+
+  bytes = libusb_get_string_descriptor_ascii(
+          usb_devh, usb_desc.iManufacturer, buf, sizeof(buf));
+
+  if (bytes > 0)
+    desc_internal->manufacturer = strdup((const char*) buf);
+
+  bytes = libusb_get_string_descriptor_ascii(
+          usb_devh, usb_desc.iProduct, buf, sizeof(buf));
+
+  if (bytes > 0)
+    desc_internal->product = strdup((const char*) buf);
+
+  *desc = desc_internal;
+
+  UVC_EXIT(ret);
+  return ret;
 }
 
 /**
@@ -999,7 +1046,7 @@ uvc_error_t uvc_release_if(uvc_device_handle_t *devh, int idx) {
  * Find a device's VideoControl interface and process its descriptor
  * @ingroup device
  */
-uvc_error_t uvc_scan_control(uvc_device_t *dev, uvc_device_info_t *info) {
+uvc_error_t uvc_scan_control(uvc_device_handle_t *devh, uvc_device_info_t *info) {
   const struct libusb_interface_descriptor *if_desc;
   uvc_error_t parse_ret, ret;
   int interface_idx;
@@ -1013,7 +1060,7 @@ uvc_error_t uvc_scan_control(uvc_device_t *dev, uvc_device_info_t *info) {
 
   uvc_device_descriptor_t* dev_desc;
   int haveTISCamera = 0;
-  uvc_get_device_descriptor ( dev, &dev_desc );
+  get_device_descriptor ( devh, &dev_desc );
   if ( 0x199e == dev_desc->idVendor && ( 0x8101 == dev_desc->idProduct ||
       0x8102 == dev_desc->idProduct )) {
     haveTISCamera = 1;
@@ -1047,7 +1094,7 @@ uvc_error_t uvc_scan_control(uvc_device_t *dev, uvc_device_info_t *info) {
 
   while (buffer_left >= 3) { // parseX needs to see buf[0,2] = length,type
     block_size = buffer[0];
-    parse_ret = uvc_parse_vc(dev, info, buffer, block_size);
+    parse_ret = uvc_parse_vc(devh->dev, info, buffer, block_size);
 
     if (parse_ret != UVC_SUCCESS) {
       ret = parse_ret;
