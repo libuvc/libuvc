@@ -1036,8 +1036,8 @@ uvc_error_t uvc_stream_open_ctrl(uvc_device_handle_t *devh, uvc_stream_handle_t 
   strmh->outbuf = malloc( ctrl->dwMaxVideoFrameSize );
   strmh->holdbuf = malloc( ctrl->dwMaxVideoFrameSize );
 
-  strmh->meta_outbuf = malloc( ctrl->dwMaxVideoFrameSize );
-  strmh->meta_holdbuf = malloc( ctrl->dwMaxVideoFrameSize );
+  strmh->meta_outbuf = malloc( LIBUVC_XFER_META_BUF_SIZE );
+  strmh->meta_holdbuf = malloc( LIBUVC_XFER_META_BUF_SIZE );
    
   pthread_mutex_init(&strmh->cb_mutex, NULL);
   pthread_cond_init(&strmh->cb_cond, NULL);
