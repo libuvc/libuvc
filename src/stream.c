@@ -352,7 +352,8 @@ uvc_error_t uvc_get_stream_ctrl_format_size(
     uvc_stream_ctrl_t *ctrl,
     enum uvc_frame_format cf,
     int width, int height,
-    int fps) {
+    int fps,
+    int should_detach_kernel_driver) {
   uvc_streaming_interface_t *stream_if;
 
   /* find a matching frame descriptor and interval */
@@ -373,7 +374,7 @@ uvc_error_t uvc_get_stream_ctrl_format_size(
 
         ctrl->bInterfaceNumber = stream_if->bInterfaceNumber;
         UVC_DEBUG("claiming streaming interface %d", stream_if->bInterfaceNumber );
-        uvc_claim_if(devh, ctrl->bInterfaceNumber);
+        uvc_claim_if(devh, ctrl->bInterfaceNumber, should_detach_kernel_driver);
         /* get the max values */
         uvc_query_stream_ctrl( devh, ctrl, 1, UVC_GET_MAX);
 
@@ -414,7 +415,7 @@ uvc_error_t uvc_get_stream_ctrl_format_size(
   return UVC_ERROR_INVALID_MODE;
 
 found:
-  return uvc_probe_stream_ctrl(devh, ctrl);
+  return uvc_probe_stream_ctrl(devh, ctrl, should_detach_kernel_driver);
 }
 
 /** @internal
@@ -425,8 +426,9 @@ found:
  */
 uvc_error_t uvc_probe_stream_ctrl(
     uvc_device_handle_t *devh,
-    uvc_stream_ctrl_t *ctrl) {
-  uvc_claim_if(devh, ctrl->bInterfaceNumber);
+    uvc_stream_ctrl_t *ctrl,
+    int should_detach_kernel_driver) {
+  uvc_claim_if(devh, ctrl->bInterfaceNumber, should_detach_kernel_driver);
 
   uvc_query_stream_ctrl(
       devh, ctrl, 1, UVC_SET_CUR
@@ -817,13 +819,14 @@ uvc_error_t uvc_start_streaming(
     uvc_stream_ctrl_t *ctrl,
     uvc_frame_callback_t *cb,
     void *user_ptr,
-    uint8_t flags
+    uint8_t flags,
+    int should_detach_kernel_driver
 ) {
   uvc_error_t ret;
   uvc_stream_handle_t *strmh;
 
 
-  ret = uvc_stream_open_ctrl(devh, &strmh, ctrl);
+  ret = uvc_stream_open_ctrl(devh, &strmh, ctrl, should_detach_kernel_driver);
   if (ret != UVC_SUCCESS)
     return ret;
   ret = uvc_stream_start(strmh, cb, user_ptr,2, flags);
@@ -853,9 +856,10 @@ uvc_error_t uvc_start_iso_streaming(
     uvc_device_handle_t *devh,
     uvc_stream_ctrl_t *ctrl,
     uvc_frame_callback_t *cb,
-    void *user_ptr
+    void *user_ptr,
+    int should_detach_kernel_driver
 ) {
-  return uvc_start_streaming(devh, ctrl, cb, user_ptr, 0);
+  return uvc_start_streaming(devh, ctrl, cb, user_ptr, 0, should_detach_kernel_driver);
 }
 
 static uvc_stream_handle_t *_uvc_get_stream_by_interface(uvc_device_handle_t *devh, int interface_idx) {
@@ -887,7 +891,11 @@ static uvc_streaming_interface_t *_uvc_get_stream_if(uvc_device_handle_t *devh, 
  * @param ctrl Control block, processed using {uvc_probe_stream_ctrl} or
  *             {uvc_get_stream_ctrl_format_size}
  */
-uvc_error_t uvc_stream_open_ctrl(uvc_device_handle_t *devh, uvc_stream_handle_t **strmhp, uvc_stream_ctrl_t *ctrl) {
+uvc_error_t uvc_stream_open_ctrl(
+  uvc_device_handle_t *devh,
+  uvc_stream_handle_t **strmhp,
+  uvc_stream_ctrl_t *ctrl,
+  int should_detach_kernel_driver) {
   /* Chosen frame and format descriptors */
   uvc_stream_handle_t *strmh = NULL;
   uvc_streaming_interface_t *stream_if;
@@ -915,7 +923,7 @@ uvc_error_t uvc_stream_open_ctrl(uvc_device_handle_t *devh, uvc_stream_handle_t 
   strmh->stream_if = stream_if;
   strmh->frame.library_owns_data = 1;
 
-  ret = uvc_claim_if(strmh->devh, strmh->stream_if->bInterfaceNumber);
+  ret = uvc_claim_if(strmh->devh, strmh->stream_if->bInterfaceNumber, should_detach_kernel_driver);
   if (ret != UVC_SUCCESS)
     goto fail;
 

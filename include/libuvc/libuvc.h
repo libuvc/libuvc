@@ -514,7 +514,8 @@ uvc_error_t uvc_find_devices(
 
 uvc_error_t uvc_open(
     uvc_device_t *dev,
-    uvc_device_handle_t **devh);
+    uvc_device_handle_t **devh,
+    int should_detach_kernel_driver);
 void uvc_close(uvc_device_handle_t *devh);
 
 uvc_device_t *uvc_get_device(uvc_device_handle_t *devh);
@@ -543,31 +544,34 @@ uvc_error_t uvc_get_stream_ctrl_format_size(
     uvc_stream_ctrl_t *ctrl,
     enum uvc_frame_format format,
     int width, int height,
-    int fps
+    int fps, int should_detach_kernel_driver
     );
 
 const uvc_format_desc_t *uvc_get_format_descs(uvc_device_handle_t* );
 
 uvc_error_t uvc_probe_stream_ctrl(
     uvc_device_handle_t *devh,
-    uvc_stream_ctrl_t *ctrl);
+    uvc_stream_ctrl_t *ctrl,
+    int should_detach_kernel_driver);
 
 uvc_error_t uvc_start_streaming(
     uvc_device_handle_t *devh,
     uvc_stream_ctrl_t *ctrl,
     uvc_frame_callback_t *cb,
     void *user_ptr,
-    uint8_t flags);
+    uint8_t flags,
+    int should_detach_kernel_driver);
 
 uvc_error_t uvc_start_iso_streaming(
     uvc_device_handle_t *devh,
     uvc_stream_ctrl_t *ctrl,
     uvc_frame_callback_t *cb,
-    void *user_ptr);
+    void *user_ptr,
+    int should_detach_kernel_driver);
 
 void uvc_stop_streaming(uvc_device_handle_t *devh);
 
-uvc_error_t uvc_stream_open_ctrl(uvc_device_handle_t *devh, uvc_stream_handle_t **strmh, uvc_stream_ctrl_t *ctrl);
+uvc_error_t uvc_stream_open_ctrl(uvc_device_handle_t *devh, uvc_stream_handle_t **strmh, uvc_stream_ctrl_t *ctrl, int should_detach_kernel_driver);
 uvc_error_t uvc_stream_ctrl(uvc_stream_handle_t *strmh, uvc_stream_ctrl_t *ctrl);
 uvc_error_t uvc_stream_start(uvc_stream_handle_t *strmh,
     uvc_frame_callback_t *cb,

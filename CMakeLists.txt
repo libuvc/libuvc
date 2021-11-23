@@ -13,8 +13,8 @@ if (NOT CMAKE_BUILD_TARGET)
 endif()
 
 set(libuvc_VERSION_MAJOR 0)
-set(libuvc_VERSION_MINOR 0)
-set(libuvc_VERSION_PATCH 9)
+set(libuvc_VERSION_MINOR 1)
+set(libuvc_VERSION_PATCH 0)
 set(libuvc_VERSION ${libuvc_VERSION_MAJOR}.${libuvc_VERSION_MINOR}.${libuvc_VERSION_PATCH})
 
 set(libuvc_DESCRIPTION "A cross-platform library for USB video devices")

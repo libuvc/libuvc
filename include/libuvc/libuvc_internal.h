@@ -322,7 +322,7 @@ uvc_error_t uvc_query_stream_ctrl(
     enum uvc_req_code req);
 
 void uvc_start_handler_thread(uvc_context_t *ctx);
-uvc_error_t uvc_claim_if(uvc_device_handle_t *devh, int idx);
+uvc_error_t uvc_claim_if(uvc_device_handle_t *devh, int idx, int should_detach_kernel_driver);
 uvc_error_t uvc_release_if(uvc_device_handle_t *devh, int idx);
 
 #endif // !def(LIBUVC_INTERNAL_H)

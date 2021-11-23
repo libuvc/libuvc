@@ -276,7 +276,8 @@ uint8_t uvc_get_device_address(uvc_device_t *dev) {
  */
 uvc_error_t uvc_open(
     uvc_device_t *dev,
-    uvc_device_handle_t **devh) {
+    uvc_device_handle_t **devh,
+    int should_detach_kernel_driver) {
   uvc_error_t ret;
   struct libusb_device_handle *usb_devh;
   uvc_device_handle_t *internal_devh;
@@ -304,7 +305,7 @@ uvc_error_t uvc_open(
     goto fail;
 
   UVC_DEBUG("claiming control interface %d", internal_devh->info->ctrl_if.bInterfaceNumber);
-  ret = uvc_claim_if(internal_devh, internal_devh->info->ctrl_if.bInterfaceNumber);
+  ret = uvc_claim_if(internal_devh, internal_devh->info->ctrl_if.bInterfaceNumber, should_detach_kernel_driver);
   if (ret != UVC_SUCCESS)
     goto fail;
 
@@ -856,7 +857,7 @@ void uvc_unref_device(uvc_device_t *dev) {
  * @param devh UVC device handle
  * @param idx UVC interface index
  */
-uvc_error_t uvc_claim_if(uvc_device_handle_t *devh, int idx) {
+uvc_error_t uvc_claim_if(uvc_device_handle_t *devh, int idx, int should_detach_kernel_driver) {
   int ret = UVC_SUCCESS;
 
   UVC_ENTER();
@@ -869,7 +870,7 @@ uvc_error_t uvc_claim_if(uvc_device_handle_t *devh, int idx) {
 
   /* Tell libusb to detach any active kernel drivers. libusb will keep track of whether
    * it found a kernel driver for this interface. */
-  ret = libusb_detach_kernel_driver(devh->usb_devh, idx);
+  ret = should_detach_kernel_driver ? libusb_detach_kernel_driver(devh->usb_devh, idx) : LIBUSB_ERROR_NOT_SUPPORTED;
 
   if (ret == UVC_SUCCESS || ret == LIBUSB_ERROR_NOT_FOUND || ret == LIBUSB_ERROR_NOT_SUPPORTED) {
     UVC_DEBUG("claiming interface %d", idx);
