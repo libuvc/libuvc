@@ -51,6 +51,13 @@ else()
   message(WARNING "JPEG not found. libuvc will not support JPEG decoding.")
 endif()
 
+if(UNIX AND NOT APPLE)
+  set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+  set(THREADS_PREFER_PTHREAD_FLAG TRUE)
+  find_package(Threads REQUIRED)
+  set(threads Threads::Threads)
+endif()
+
 if(${CMAKE_BUILD_TARGET} MATCHES "Shared")
   set(BUILD_UVC_SHARED TRUE)
 elseif(${CMAKE_BUILD_TARGET} MATCHES "Static")
@@ -109,7 +116,7 @@ foreach(target_name IN LISTS UVC_TARGETS)
   )
   target_link_libraries(${target_name}
     # libusb-1.0 used internally so we link to it privately.
-    PRIVATE LibUSB::LibUSB
+    PRIVATE LibUSB::LibUSB ${threads}
   )
   if(JPEG_FOUND)
     target_link_libraries(${target_name}
