@@ -767,19 +767,22 @@ void _uvc_process_payload(uvc_stream_handle_t *strmh, uint8_t *payload, size_t p
       variable_offset += 6;
     }
 
-    if (header_len > variable_offset)
-    {
+    if (header_len > variable_offset) {
         // Metadata is attached to header
-        memcpy(strmh->meta_outbuf + strmh->meta_got_bytes, payload + variable_offset, header_len - variable_offset);
-        strmh->meta_got_bytes += header_len - variable_offset;
+        size_t meta_len = header_len - variable_offset;
+        if (strmh->meta_got_bytes + meta_len > LIBUVC_XFER_META_BUF_SIZE)
+          meta_len = LIBUVC_XFER_META_BUF_SIZE - strmh->meta_got_bytes; /* Avoid overflow. */
+        memcpy(strmh->meta_outbuf + strmh->meta_got_bytes, payload + variable_offset, meta_len);
+        strmh->meta_got_bytes += meta_len;
     }
   }
 
   if (data_len > 0) {
+    if (strmh->got_bytes + data_len > strmh->cur_ctrl.dwMaxVideoFrameSize)
+      data_len = strmh->cur_ctrl.dwMaxVideoFrameSize - strmh->got_bytes; /* Avoid overflow. */
     memcpy(strmh->outbuf + strmh->got_bytes, payload + header_len, data_len);
     strmh->got_bytes += data_len;
-
-    if (header_info & (1 << 1)) {
+    if (header_info & (1 << 1) || strmh->got_bytes == strmh->cur_ctrl.dwMaxVideoFrameSize) {
       /* The EOF bit is set, so publish the complete frame */
       _uvc_swap_buffers(strmh);
     }
