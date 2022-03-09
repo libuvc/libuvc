@@ -671,7 +671,9 @@ void _uvc_swap_buffers(uvc_stream_handle_t *strmh) {
   strmh->meta_outbuf = tmp_buf;
   strmh->meta_hold_bytes = strmh->meta_got_bytes;
 
-  pthread_cond_broadcast(&strmh->cb_cond);
+  if (!strmh->frame_had_errors)
+    pthread_cond_broadcast(&strmh->cb_cond);
+  strmh->frame_had_errors=0;
   pthread_mutex_unlock(&strmh->cb_mutex);
 
   strmh->seq++;
@@ -819,6 +821,7 @@ void LIBUSB_CALL _uvc_stream_callback(struct libusb_transfer *transfer) {
 
         if (pkt->status != 0) {
           UVC_DEBUG("bad packet (isochronous transfer); status: %d", pkt->status);
+          strmh->frame_had_errors=1;
           continue;
         }
 
