@@ -175,6 +175,9 @@ uvc_error_t uvc_yuyv2rgb(uvc_frame_t *in, uvc_frame_t *out) {
   if (in->frame_format != UVC_FRAME_FORMAT_YUYV)
     return UVC_ERROR_INVALID_PARAM;
 
+  if (in->data_bytes < in->width * in->height * 2)
+    return UVC_ERROR_INVALID_PARAM;
+
   if (uvc_ensure_frame_size(out, in->width * in->height * 3) < 0)
     return UVC_ERROR_NO_MEM;
 
@@ -189,9 +192,10 @@ uvc_error_t uvc_yuyv2rgb(uvc_frame_t *in, uvc_frame_t *out) {
 
   uint8_t *pyuv = in->data;
   uint8_t *prgb = out->data;
-  uint8_t *prgb_end = prgb + out->data_bytes;
+  uint8_t *prgb_end = prgb + out->data_bytes - 3 * 8 + 1;
+  uint8_t *pyuv_end = in->data + in->data_bytes - 2 * 8 + 1;
 
-  while (prgb < prgb_end) {
+  while (prgb < prgb_end && pyuv < pyuv_end) {
     IYUYV2RGB_8(pyuv, prgb);
 
     prgb += 3 * 8;
@@ -226,6 +230,9 @@ uvc_error_t uvc_yuyv2bgr(uvc_frame_t *in, uvc_frame_t *out) {
   if (in->frame_format != UVC_FRAME_FORMAT_YUYV)
     return UVC_ERROR_INVALID_PARAM;
 
+  if (in->data_bytes < in->width * in->height * 2)
+    return UVC_ERROR_INVALID_PARAM;
+
   if (uvc_ensure_frame_size(out, in->width * in->height * 3) < 0)
     return UVC_ERROR_NO_MEM;
 
@@ -240,9 +247,10 @@ uvc_error_t uvc_yuyv2bgr(uvc_frame_t *in, uvc_frame_t *out) {
 
   uint8_t *pyuv = in->data;
   uint8_t *pbgr = out->data;
-  uint8_t *pbgr_end = pbgr + out->data_bytes;
+  uint8_t *pyuv_end = in->data + in->data_bytes;
+  uint8_t *pbgr_end = out->data + out->data_bytes;
 
-  while (pbgr < pbgr_end) {
+  while (pyuv < pyuv_end && pbgr < pbgr_end) {
     IYUYV2BGR_8(pyuv, pbgr);
 
     pbgr += 3 * 8;
