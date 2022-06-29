@@ -1,2 +1,3 @@
 # Build directory (recommended location)
 build/
+include/libuvc/libuvc_config.h

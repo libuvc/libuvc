@@ -485,6 +485,8 @@ typedef struct uvc_frame {
   void *metadata;
   /** Size of metadata buffer */
   size_t metadata_bytes;
+  /** Presentation Time Stamp, add by weller */
+  uint32_t pts;
 } uvc_frame_t;
 
 /** A callback function to handle incoming assembled UVC frames

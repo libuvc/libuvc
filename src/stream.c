@@ -1366,6 +1366,7 @@ void _uvc_populate_frame(uvc_stream_handle_t *strmh) {
     break;
   }
 
+  frame->pts = strmh->hold_pts; // add pts to frame by weller
   frame->sequence = strmh->hold_seq;
   frame->capture_time_finished = strmh->capture_time_finished;
 
