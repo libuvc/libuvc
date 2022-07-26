@@ -135,11 +135,13 @@ foreach(target_name IN LISTS UVC_TARGETS)
             log-lib
             log
     )
-    target_link_libraries(
-            ${target_name}
-            PRIVATE
-            ${log-lib}
-    )
+    if(NOT ${log-lib} STREQUAL "log-lib-NOTFOUND")
+      target_link_libraries(
+              ${target_name}
+              PRIVATE
+              ${log-lib}
+      )
+    endif()
   endif()
 endforeach()
 
