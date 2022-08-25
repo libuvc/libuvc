@@ -75,8 +75,9 @@ else()
 endif()
 
 if(BUILD_UVC_SHARED)
-  add_library(uvc SHARED ${SOURCES})
-  list(APPEND UVC_TARGETS uvc)
+  add_library(uvc_dynamic SHARED ${SOURCES})
+  set_target_properties(uvc_dynamic PROPERTIES OUTPUT_NAME uvc)
+  list(APPEND UVC_TARGETS uvc_dynamic)
 endif()
 
 if(BUILD_UVC_STATIC)
@@ -85,19 +86,28 @@ if(BUILD_UVC_STATIC)
   list(APPEND UVC_TARGETS uvc_static)
 endif()
 
-configure_file(include/libuvc/libuvc_config.h.in
-  ${PROJECT_BINARY_DIR}/include/libuvc/libuvc_config.h @ONLY)
+configure_file(
+  include/libuvc/libuvc_config.h.in
+  ${PROJECT_BINARY_DIR}/include/libuvc/libuvc_config.h @ONLY
+)
+configure_file(
+  include/libuvc/libuvc.h
+  ${PROJECT_BINARY_DIR}/include/libuvc/libuvc.h @ONLY
+)
 
 foreach(target_name ${UVC_TARGETS})
-  set_target_properties(${target_name} PROPERTIES
-    PUBLIC_HEADER "include/libuvc/libuvc.h;${libuvc_BINARY_DIR}/include/libuvc/libuvc_config.h" WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
-  set_target_properties(${target_name} PROPERTIES
+  set_target_properties(
+    ${target_name} PROPERTIES
+    PUBLIC_HEADER ${libuvc_BINARY_DIR}/include/libuvc/libuvc.h
+    PUBLIC_HEADER ${libuvc_BINARY_DIR}/include/libuvc/libuvc_config.h
+    WINDOWS_EXPORT_ALL_SYMBOLS TRUE
     VERSION ${libuvc_VERSION}
-    SOVERSION ${libuvc_VERSION_MAJOR})
+    SOVERSION ${libuvc_VERSION_MAJOR}
+  )
 endforeach()
 
 if(BUILD_UVC_SHARED)
-  target_link_libraries(uvc "-L${LIBUSB_LIBRARY_DIRS}" ${LIBUSB_LIBRARIES} ${PTHREAD_LIBRARIES})
+  target_link_libraries(uvc_dynamic ${LIBUSB_LIBRARIES} ${PTHREAD_LIBRARIES})
 
   # add_executable(test src/test.c)
   # target_link_libraries(test uvc ${LIBUSB_LIBRARIES} opencv_highgui
