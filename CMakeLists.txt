@@ -2,12 +2,12 @@ cmake_minimum_required(VERSION 2.8)
 cmake_policy(SET CMP0042 NEW)
 project(libuvc)
 
-if (NOT CMAKE_BUILD_TYPE)
+if(NOT CMAKE_BUILD_TYPE)
   message(STATUS "No build type selected, default to Release")
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
-endif ()
+endif()
 
-if (NOT CMAKE_BUILD_TARGET)
+if(NOT CMAKE_BUILD_TARGET)
   message(STATUS "No target type selected, default to shared  library")
   set(CMAKE_BUILD_TARGET "Shared" CACHE STRING "" FORCE)
 endif()
@@ -21,23 +21,21 @@ set(libuvc_DESCRIPTION "A cross-platform library for USB video devices")
 set(libuvc_URL "https://github.com/ktossell/libuvc")
 
 if(WIN32)
-
   find_library(LIBUSB_LIBRARIES usb-1.0
-  PATHS /opt/local/lib)
+    PATHS /opt/local/lib)
 
-  find_path(LIBUSB_INCLUDE_DIR libusb-1.0/libusb.h
-  PATHS /opt/local/include)
+  find_path(LIBUSB_INCLUDE_DIRS libusb-1.0/libusb.h
+    PATHS /opt/local/include)
 else()
   find_package(PkgConfig)
-  pkg_check_modules(LIBUSB libusb-1.0)
+  pkg_check_modules(LIBUSB REQUIRED libusb-1.0)
 endif()
-
 
 if(WIN32)
   find_library(PTHREAD_LIBRARIES pthreadVC2
-        PATHS D:/install/pthreads-w32-2-9-1-release/lib/x64)
-  find_path(PTHREAD_INCLUDE_DIR pthread.h
-        PATHS D:/install/pthreads-w32-2-9-1-release/include)
+    PATHS D:/install/pthreads-w32-2-9-1-release/lib/x64)
+  find_path(PTHREAD_INCLUDE_DIRS pthread.h
+    PATHS D:/install/pthreads-w32-2-9-1-release/include)
   SET(EXTRA_DEFS "-D_TIMESPEC_DEFINED")
   add_definitions(${EXTRA_DEFS})
 else()
@@ -48,15 +46,21 @@ endif()
 SET(INSTALL_CMAKE_DIR "${CMAKE_INSTALL_PREFIX}/lib/cmake/libuvc" CACHE PATH
   "Installation directory for CMake files")
 
-SET(SOURCES src/ctrl.c src/ctrl-gen.c src/device.c src/diag.c
-           src/frame.c src/init.c src/stream.c
-           src/misc.c)
+SET(SOURCES
+  src/ctrl.c src/ctrl-gen.c src/device.c src/diag.c
+  src/frame.c src/init.c src/stream.c
+  src/misc.c)
 
 include_directories(
   ${libuvc_SOURCE_DIR}/include
   ${libuvc_BINARY_DIR}/include
-  ${LIBUSB_INCLUDE_DIR}
-  ${PTHREAD_INCLUDE_DIR}
+  ${LIBUSB_INCLUDE_DIRS}
+  ${PTHREAD_INCLUDE_DIRS}
+)
+
+link_directories(
+  ${LIBUSB_LIBRARY_DIRS}
+  ${PTHREAD_LIBRARY_DIRS}
 )
 
 if(${CMAKE_BUILD_TARGET} MATCHES "Shared")
@@ -67,7 +71,7 @@ elseif(${CMAKE_BUILD_TARGET} MATCHES "Both")
   set(BUILD_UVC_SHARED TRUE)
   set(BUILD_UVC_STATIC TRUE)
 else()
-  message( FATAL_ERROR "Invalid build type ${CMAKE_BUILD_TARGET}" )
+  message(FATAL_ERROR "Invalid build type ${CMAKE_BUILD_TARGET}")
 endif()
 
 if(BUILD_UVC_SHARED)
@@ -86,18 +90,18 @@ configure_file(include/libuvc/libuvc_config.h.in
 
 foreach(target_name ${UVC_TARGETS})
   set_target_properties(${target_name} PROPERTIES
-    PUBLIC_HEADER "include/libuvc/libuvc.h;${libuvc_BINARY_DIR}/include/libuvc/libuvc_config.h"  WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
+    PUBLIC_HEADER "include/libuvc/libuvc.h;${libuvc_BINARY_DIR}/include/libuvc/libuvc_config.h" WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
   set_target_properties(${target_name} PROPERTIES
-                        VERSION ${libuvc_VERSION}
-                        SOVERSION ${libuvc_VERSION_MAJOR})
+    VERSION ${libuvc_VERSION}
+    SOVERSION ${libuvc_VERSION_MAJOR})
 endforeach()
 
 if(BUILD_UVC_SHARED)
   target_link_libraries(uvc ${LIBUSB_LIBRARIES} ${PTHREAD_LIBRARIES})
 
-  #add_executable(test src/test.c)
-  #target_link_libraries(test uvc ${LIBUSB_LIBRARIES} opencv_highgui
-  #  opencv_core)
+  # add_executable(test src/test.c)
+  # target_link_libraries(test uvc ${LIBUSB_LIBRARIES} opencv_highgui
+  # opencv_core)
 endif()
 
 install(TARGETS ${UVC_TARGETS}

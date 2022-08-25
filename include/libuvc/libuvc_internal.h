@@ -11,11 +11,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <signal.h>
-#ifndef WIN32
-#include <libusb-1.0/libusb.h>
-#else
 #include <libusb.h>
-#endif
 #include "utlist.h"
 
 #define DEBUG_PTS_LEN (60 * 200)
