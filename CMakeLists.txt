@@ -13,8 +13,8 @@ if(NOT CMAKE_BUILD_TARGET)
 endif()
 
 set(libuvc_VERSION_MAJOR 0)
-set(libuvc_VERSION_MINOR 0)
-set(libuvc_VERSION_PATCH 9)
+set(libuvc_VERSION_MINOR 1)
+set(libuvc_VERSION_PATCH 0)
 set(libuvc_VERSION ${libuvc_VERSION_MAJOR}.${libuvc_VERSION_MINOR}.${libuvc_VERSION_PATCH})
 
 set(libuvc_DESCRIPTION "A cross-platform library for USB video devices")
@@ -97,7 +97,7 @@ foreach(target_name ${UVC_TARGETS})
 endforeach()
 
 if(BUILD_UVC_SHARED)
-  target_link_libraries(uvc ${LIBUSB_LIBRARIES} ${PTHREAD_LIBRARIES})
+  target_link_libraries(uvc "-L${LIBUSB_LIBRARY_DIRS}" ${LIBUSB_LIBRARIES} ${PTHREAD_LIBRARIES})
 
   # add_executable(test src/test.c)
   # target_link_libraries(test uvc ${LIBUSB_LIBRARIES} opencv_highgui
