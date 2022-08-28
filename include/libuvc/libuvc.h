@@ -12,7 +12,6 @@ extern "C" {
 #else
 #include <winsock.h>
 #endif
-#include <libuvc/libuvc_config.h>
 
 struct libusb_context;
 struct libusb_device_handle;
