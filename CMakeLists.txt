@@ -35,9 +35,6 @@ else()
   SET(CMAKE_C_FLAGS_DEBUG "-g  -DUVC_DEBUGGING")
 endif()
 
-# SET(INSTALL_CMAKE_DIR "${CMAKE_INSTALL_PREFIX}/lib/cmake/libuvc" CACHE PATH
-set(CMAKE_INSTALL_NAME_DIR $<INSTALL_PREFIX>/${CMAKE_INSTALL_LIBDIR})
-
 # "Installation directory for CMake files")
 add_library(uvc SHARED)
 add_library(PLLibUVC::uvc ALIAS uvc)
