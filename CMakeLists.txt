@@ -81,7 +81,7 @@ set_target_properties(
   VERSION ${libuvc_VERSION}
   SOVERSION ${libuvc_VERSION}
 )
-target_link_libraries(uvc PRIVATE ${LIBUSB_LIBRARIES} ${PTHREAD_LIBRARIES})
+target_link_libraries(uvc PUBLIC ${LIBUSB_LIBRARIES} ${PTHREAD_LIBRARIES})
 
 install(TARGETS uvc
   EXPORT libuvcTargets
