@@ -40,14 +40,14 @@ add_library(uvc SHARED)
 add_library(PLLibUVC::uvc ALIAS uvc)
 
 target_sources(uvc PUBLIC
-  src/ctrl.c
-  src/ctrl-gen.c
-  src/device.c
-  src/diag.c
-  src/frame.c
-  src/init.c
-  src/stream.c
-  src/misc.c
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src/ctrl.c>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src/ctrl-gen.c>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src/device.c>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src/diag.c>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src/frame.c>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src/init.c>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src/stream.c>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src/misc.c>
 )
 
 target_include_directories(
@@ -55,7 +55,6 @@ target_include_directories(
   PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-  PRIVATE
   ${LIBUSB_INCLUDE_DIRS}
   ${PTHREAD_INCLUDE_DIRS}
 )
@@ -125,3 +124,11 @@ write_basic_package_version_file(
   VERSION ${libuvc_VERSION}
   COMPATIBILITY SameMajorVersion
 )
+
+enable_testing()
+
+add_executable(test_enumerating_devices)
+target_sources(test_enumerating_devices PRIVATE tests/test-enumerating-devices.c)
+target_link_libraries(test_enumerating_devices uvc)
+
+add_test(NAME test_enumerating_devices COMMAND test_enumerating_devices)
