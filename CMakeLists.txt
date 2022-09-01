@@ -70,7 +70,7 @@ target_sources(uvc
 
 target_link_directories(
   uvc
-  PRIVATE
+  PUBLIC
   ${LIBUSB_LIBRARY_DIRS}
   ${PTHREAD_LIBRARY_DIRS}
 )
