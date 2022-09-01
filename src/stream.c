@@ -469,7 +469,7 @@ void _uvc_swap_buffers(uvc_stream_handle_t *strmh) {
   strmh->pts = 0;
 }
 
-int64_t get_precise_timestamp_freq(int64_t *perf_freq)
+void get_precise_timestamp_freq(int64_t *perf_freq)
 {
 #ifdef WIN32
   LARGE_INTEGER li;
@@ -480,14 +480,14 @@ int64_t get_precise_timestamp_freq(int64_t *perf_freq)
 #endif
 }
 
-inline int64_t get_dev_time_us(uvc_stream_handle_t *strmh, int64_t dev_ticks)
+extern inline int64_t get_dev_time_us(uvc_stream_handle_t *strmh, int64_t dev_ticks)
 {
   int64_t time_us = ((int64_t)dev_ticks * MILLION + (strmh->corrected_clock_freq >> 1)) / strmh->corrected_clock_freq;
 
   return time_us;
 }
 
-inline int64_t get_host_time_us(int64_t ts)
+extern inline int64_t get_host_time_us(int64_t ts)
 {
 #ifndef __APPLE__
   int64_t freq;
@@ -569,7 +569,7 @@ void _uvc_populate_frame_ts_us(uvc_stream_handle_t *strmh, int packet_id) {
 				if (strmh->diff_measures > 10 && fabs(slope) > 0.0000005/* 0.000005*/ ) {
 					strmh->corrected_clock_freq *= 1.0 - slope;
 					strmh->initial_avg_diff = -1;
-					printf("*** Correcting clock frequency to %lu\n", strmh->corrected_clock_freq );
+					printf("*** Correcting clock frequency to %llu\n", strmh->corrected_clock_freq );
 				}
 			}
 			strmh->avg_diff = 0;
