@@ -21,6 +21,7 @@ if(WIN32)
 else()
   find_package(PkgConfig)
   pkg_check_modules(LIBUSB REQUIRED libusb-1.0)
+  message(STATUS "    " ${LIBUSB_LIBRARY_DIRS})
 endif()
 
 if(WIN32)
@@ -126,9 +127,4 @@ write_basic_package_version_file(
 )
 
 enable_testing()
-
-add_executable(test_enumerating_devices)
-target_sources(test_enumerating_devices PRIVATE tests/test-enumerating-devices.c)
-target_link_libraries(test_enumerating_devices uvc)
-
-add_test(NAME test_enumerating_devices COMMAND test_enumerating_devices)
+add_subdirectory(tests)

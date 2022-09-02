@@ -1,0 +1,5 @@
+add_executable(test_enumerating_devices)
+target_sources(test_enumerating_devices PRIVATE test-enumerating-devices.c)
+target_link_libraries(test_enumerating_devices uvc)
+
+add_test(NAME test_enumerating_devices COMMAND test_enumerating_devices)
