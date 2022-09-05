@@ -2,17 +2,33 @@
 #include <stdio.h>
 #include <stdlib.h> // putenv
 
+int get_product_name(uvc_device_t *dev)
+{
+  uvc_error_t res;
+  uvc_device_descriptor_t *desc;
+  if ((res = uvc_get_device_descriptor(dev, &desc)) == UVC_SUCCESS)
+  {
 
-int open_close_device(uvc_device_t *dev)
+    fprintf(stderr, ">>>> %s\n", desc->product);
+    uvc_free_device_descriptor(desc);
+    return 0;
+  }
+  uvc_perror(res, "get_product_name");
+  return -10001;
+}
+
+int load_device_config(uvc_device_t *dev)
 {
   uvc_error_t res;
   uvc_device_handle_t *devh;
   res = uvc_open(dev, &devh, 1);
   if (res != UVC_SUCCESS)
   {
-    uvc_perror(res, "open_close_device");
+    uvc_perror(res, "load_device_config");
     return -10002;
   }
+
+  const uvc_format_desc_t *format_desc = uvc_get_format_descs(devh);
 
   uvc_close(devh);
   return 0;
@@ -50,12 +66,14 @@ int enumerate_devices()
   int subtest_result;
   while ((dev = dev_list[++idx]) != NULL)
   {
-    if ((subtest_result = open_close_device(dev)) < 0)
+    if ((subtest_result = get_product_name(dev)) < 0)
     {
       return subtest_result;
     }
-    if (idx > 1) // issue only reproduces with at least 2 devices
-      break;
+    if ((subtest_result = load_device_config(dev)) < 0)
+    {
+      return subtest_result;
+    }
   }
 
   uvc_free_device_list(dev_list, 1);
