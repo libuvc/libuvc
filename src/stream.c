@@ -269,18 +269,16 @@ uvc_error_t uvc_query_stream_ctrl(
     }
     else
       ctrl->dwClockFrequency = devh->info->ctrl_if.dwClockFrequency;
-  }
-  else
-    ctrl->dwClockFrequency = devh->info->ctrl_if.dwClockFrequency;
 
-  /* fix up block for cameras that fail to set dwMax* */
-  if (ctrl->dwMaxVideoFrameSize == 0)
-  {
-    uvc_frame_desc_t *frame = uvc_find_frame_desc(devh, ctrl->bFormatIndex, ctrl->bFrameIndex);
-
-    if (frame)
+    /* fix up block for cameras that fail to set dwMax* */
+    if (ctrl->dwMaxVideoFrameSize == 0)
     {
-      ctrl->dwMaxVideoFrameSize = frame->dwMaxVideoFrameBufferSize;
+      uvc_frame_desc_t *frame = uvc_find_frame_desc(devh, ctrl->bFormatIndex, ctrl->bFrameIndex);
+
+      if (frame)
+      {
+        ctrl->dwMaxVideoFrameSize = frame->dwMaxVideoFrameBufferSize;
+      }
     }
   }
 
