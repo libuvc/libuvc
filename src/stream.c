@@ -244,7 +244,7 @@ uvc_error_t uvc_query_stream_ctrl(
 
     if (len == 34) {
       ctrl->dwClockFrequency = DW_TO_INT ( buf + 26 );
-      printf("\nctrl->dwClockFrequency = %d\n", ctrl->dwClockFrequency);
+      UVC_DEBUG("ctrl->dwClockFrequency = %d\n", ctrl->dwClockFrequency);
       ctrl->bmFramingInfo = buf[30];
       ctrl->bPreferredVersion = buf[31];
       ctrl->bMinVersion = buf[32];
