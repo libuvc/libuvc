@@ -870,6 +870,7 @@ uvc_error_t uvc_claim_if(uvc_device_handle_t *devh, int idx, int should_detach_k
 
   /* Tell libusb to detach any active kernel drivers. libusb will keep track of whether
    * it found a kernel driver for this interface. */
+  UVC_DEBUG("attempting kernel driver detach: %i", should_detach_kernel_driver);
   ret = should_detach_kernel_driver ? libusb_detach_kernel_driver(devh->usb_devh, idx) : LIBUSB_ERROR_NOT_SUPPORTED;
 
   if (ret == UVC_SUCCESS || ret == LIBUSB_ERROR_NOT_FOUND || ret == LIBUSB_ERROR_NOT_SUPPORTED) {
@@ -899,7 +900,7 @@ uvc_error_t uvc_release_if(uvc_device_handle_t *devh, int idx) {
   UVC_ENTER();
   UVC_DEBUG("releasing interface %d", idx);
   if (!( devh->claimed & ( 1 << idx ))) {
-    fprintf ( stderr, "attempt to release unclaimed interface %d\n", idx );
+    UVC_DEBUG("attempt to release unclaimed interface %d\n", idx );
     UVC_EXIT(ret);
     return ret;
   }
