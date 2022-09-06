@@ -4,20 +4,23 @@
 /* This callback function runs once per frame. Use it to perform any
  * quick processing you need, or have it put the frame into your application's
  * input queue. If this function takes too long, you'll start losing frames. */
-void cb(uvc_frame_t *frame, void *ptr) {
+void cb(uvc_frame_t *frame, void *ptr)
+{
   uvc_frame_t *bgr;
   uvc_error_t ret;
 
   /* We'll convert the image from YUV/JPEG to BGR, so allocate space */
   bgr = uvc_allocate_frame(frame->width * frame->height * 3);
-  if (!bgr) {
+  if (!bgr)
+  {
     printf("unable to allocate bgr frame!");
     return;
   }
 
   /* Do the BGR conversion */
   ret = uvc_any2bgr(frame, bgr);
-  if (ret) {
+  if (ret)
+  {
     uvc_perror(ret, "uvc_any2bgr");
     uvc_free_frame(bgr);
     return;
@@ -37,13 +40,13 @@ void cb(uvc_frame_t *frame, void *ptr) {
    */
 
   /* Use opencv.highgui to display the image:
-   * 
+   *
    * cvImg = cvCreateImageHeader(
    *     cvSize(bgr->width, bgr->height),
    *     IPL_DEPTH_8U,
    *     3);
    *
-   * cvSetData(cvImg, bgr->data, bgr->width * 3); 
+   * cvSetData(cvImg, bgr->data, bgr->width * 3);
    *
    * cvNamedWindow("Test", CV_WINDOW_AUTOSIZE);
    * cvShowImage("Test", cvImg);
@@ -55,7 +58,8 @@ void cb(uvc_frame_t *frame, void *ptr) {
   uvc_free_frame(bgr);
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
   uvc_context_t *ctx;
   uvc_device_t *dev;
   uvc_device_handle_t *devh;
@@ -67,7 +71,8 @@ int main(int argc, char **argv) {
    * from an existing libusb context. */
   res = uvc_init(&ctx, NULL);
 
-  if (res < 0) {
+  if (res < 0)
+  {
     uvc_perror(res, "uvc_init");
     return res;
   }
@@ -79,17 +84,23 @@ int main(int argc, char **argv) {
       ctx, &dev,
       0, 0, NULL); /* filter devices: vendor_id, product_id, "serial_num" */
 
-  if (res < 0) {
+  if (res < 0)
+  {
     uvc_perror(res, "uvc_find_device"); /* no devices found */
-  } else {
+  }
+  else
+  {
     puts("Device found");
 
     /* Try to open the device: requires exclusive access */
     res = uvc_open(dev, &devh);
 
-    if (res < 0) {
+    if (res < 0)
+    {
       uvc_perror(res, "uvc_open"); /* unable to open device */
-    } else {
+    }
+    else
+    {
       puts("Device opened");
 
       /* Print out a message containing all the information that libuvc
@@ -98,25 +109,31 @@ int main(int argc, char **argv) {
 
       /* Try to negotiate a 640x480 30 fps YUYV stream profile */
       res = uvc_get_stream_ctrl_format_size(
-          devh, &ctrl, /* result stored in ctrl */
+          devh, &ctrl,           /* result stored in ctrl */
           UVC_FRAME_FORMAT_YUYV, /* YUV 422, aka YUV 4:2:2. try _COMPRESSED */
-          640, 480, 30 /* width, height, fps */
+          640, 480, 30           /* width, height, fps */
       );
 
       /* Print out the result */
       uvc_print_stream_ctrl(&ctrl, stderr);
 
-      if (res < 0) {
+      if (res < 0)
+      {
         uvc_perror(res, "get_mode"); /* device doesn't provide a matching stream */
-      } else {
+      }
+      else
+      {
         /* Start the video stream. The library will call user function cb:
          *   cb(frame, (void*) 12345)
          */
         res = uvc_start_streaming(devh, &ctrl, cb, 12345, 0);
 
-        if (res < 0) {
+        if (res < 0)
+        {
           uvc_perror(res, "start_streaming"); /* unable to start stream */
-        } else {
+        }
+        else
+        {
           puts("Streaming...");
 
           uvc_set_ae_mode(devh, 1); /* e.g., turn on auto exposure */
@@ -145,4 +162,3 @@ int main(int argc, char **argv) {
 
   return 0;
 }
-
