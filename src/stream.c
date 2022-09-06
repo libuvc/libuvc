@@ -152,7 +152,7 @@ static uint8_t _uvc_frame_format_matches_guid(enum uvc_frame_format fmt, uint8_t
   return 0;
 }
 
-static enum uvc_frame_format uvc_frame_format_for_guid(uint8_t guid[16]) {
+enum uvc_frame_format uvc_frame_format_for_guid(uint8_t guid[16]) {
   struct format_table_entry *format;
   enum uvc_frame_format fmt;
 
