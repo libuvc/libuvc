@@ -1088,7 +1088,7 @@ uvc_error_t uvc_stream_start(
 
 
       if (endpoint_bytes_per_packet >= config_bytes_per_packet) {
-        printf("Estimated / selected altsetting bandwith : %zu / %zu. \n",config_bytes_per_packet,endpoint_bytes_per_packet);
+        UVC_DEBUG("Estimated / selected altsetting bandwith : %zu / %zu. \n",config_bytes_per_packet,endpoint_bytes_per_packet);
 
         /* Transfers will be at most one frame long: Divide the maximum frame size
          * by the size of the endpoint and round up */
@@ -1122,7 +1122,7 @@ uvc_error_t uvc_stream_start(
       goto fail;
     }
 
-    printf("!!!!Packets per transfer = %lu frameInterval = %u\n", packets_per_transfer, strmh->cur_ctrl.dwFrameInterval);
+    UVC_DEBUG("!!!!Packets per transfer = %lu frameInterval = %u\n", packets_per_transfer, strmh->cur_ctrl.dwFrameInterval);
 
     strmh->corrected_clock_freq = strmh->cur_ctrl.dwClockFrequency;
     /* Set up the transfers */
