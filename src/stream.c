@@ -1126,17 +1126,30 @@ uvc_error_t uvc_stream_start(
     /* Index of the altsetting */
     int alt_idx, ep_idx;
 
+    uvc_device_descriptor_t *desc = NULL;
+    char *name;
+    if (uvc_get_device_descriptor(strmh->devh->dev, &desc) == UVC_SUCCESS)
+    {
+      const size_t len_product_name = strlen(desc->product) + 1;
+      name = malloc(len_product_name);
+      strncpy(name, desc->product, len_product_name);
+      uvc_free_device_descriptor(desc);
+    }
+    else
+      name = "unknown";
+
     // the proper way: ask the cmaera
     config_bytes_per_packet = strmh->cur_ctrl.dwMaxPayloadTransferSize;
 
     // our way: estimate it:
-    if (strmh->frame_format == UVC_FRAME_FORMAT_MJPEG)
+    if (strmh->frame_format == UVC_FRAME_FORMAT_MJPEG && bandwidth_factor > 0)
     {
       size_t bandwidth = frame_desc->wWidth * frame_desc->wHeight / 8 * bandwidth_factor; // the last one is bpp default 4 but we use if for compression, 2 is save, 1.5 is needed to run 3 high speed cameras. on one bus.
       bandwidth *= 10000000 / strmh->cur_ctrl.dwFrameInterval + 1;
       bandwidth /= 1000; // unit
       bandwidth /= 8;    // 8 high speed usb microframes per ms
       bandwidth += 12;   // header size
+      fprintf(stderr, "\n%%%%%%%% overwriting %li config_bytes_per_packet with %li (%s)\n\n", config_bytes_per_packet, bandwidth, name);
       config_bytes_per_packet = bandwidth;
       // config_bytes_per_packet *= 2;
       //  config_bytes_per_packet /= 2;
@@ -1145,6 +1158,7 @@ uvc_error_t uvc_stream_start(
     /* Go through the altsettings and find one whose packets are at least
      * as big as our format's maximum per-packet usage. Assume that the
      * packet sizes are increasing. */
+    fprintf(stderr, "Num altsettings %i %s\n", interface->num_altsetting, name);
     for (alt_idx = 0; alt_idx < interface->num_altsetting; alt_idx++)
     {
       altsetting = interface->altsetting + alt_idx;
@@ -1167,7 +1181,7 @@ uvc_error_t uvc_stream_start(
 
       if (endpoint_bytes_per_packet >= config_bytes_per_packet)
       {
-        UVC_DEBUG("Estimated / selected altsetting bandwith : %zu / %zu. \n", config_bytes_per_packet, endpoint_bytes_per_packet);
+        UVC_DEBUG("Estimated / selected altsetting bandwith : %zu / %zu.", config_bytes_per_packet, endpoint_bytes_per_packet);
 
         /* Transfers will be at most one frame long: Divide the maximum frame size
          * by the size of the endpoint and round up */
@@ -1177,6 +1191,14 @@ uvc_error_t uvc_stream_start(
 
         // frame_desc
         /* But keep a reasonable limit: Otherwise we start dropping data */
+        fprintf(
+            stderr,
+            "Estimated / selected altsetting bandwith : %zu / %zu x ~%zu / %zu (%s)\n",
+            config_bytes_per_packet,
+            endpoint_bytes_per_packet,
+            packets_per_transfer,
+            strmh->packets_per_iso_xfer,
+            name);
         if (packets_per_transfer > 32)
           packets_per_transfer = 32;
 
@@ -1185,6 +1207,8 @@ uvc_error_t uvc_stream_start(
         total_transfer_size = packets_per_transfer * endpoint_bytes_per_packet;
         break;
       }
+      else
+        fprintf(stderr, "Estimated / NOT selected altsetting bandwith : %zu / %zu (%s)\n", config_bytes_per_packet, endpoint_bytes_per_packet, name);
     }
 
     /* If we searched through all the altsettings and found nothing usable */
@@ -1195,11 +1219,13 @@ uvc_error_t uvc_stream_start(
     }
 
     /* Select the altsetting */
+    fprintf(stderr, "libusb_set_interface_alt_setting('%s', %hu, %hu)\n", name, altsetting->bInterfaceNumber, altsetting->bAlternateSetting);
     ret = libusb_set_interface_alt_setting(strmh->devh->usb_devh,
                                            altsetting->bInterfaceNumber,
                                            altsetting->bAlternateSetting);
     if (ret != UVC_SUCCESS)
     {
+      fprintf(stderr, "libusb_set_interface_alt_setting failed: %s\n", libusb_error_name(ret));
       UVC_DEBUG("libusb_set_interface_alt_setting failed");
       goto fail;
     }

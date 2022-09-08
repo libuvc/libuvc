@@ -2,6 +2,14 @@
 #include <stdio.h>
 #include <stdlib.h> // putenv
 
+#define DL_FOREACH(head, el) \
+  for (el = head; el; el = el->next)
+
+int interval_to_fps(int interval)
+{
+  return (int)(10000000. / interval);
+}
+
 int get_product_name(uvc_device_t *dev)
 {
   uvc_error_t res;
@@ -9,7 +17,7 @@ int get_product_name(uvc_device_t *dev)
   if ((res = uvc_get_device_descriptor(dev, &desc)) == UVC_SUCCESS)
   {
 
-    fprintf(stderr, ">>>> %s\n", desc->product);
+    fprintf(stderr, "\n>>>> %s\n", desc->product);
     uvc_free_device_descriptor(desc);
     return 0;
   }
@@ -19,8 +27,10 @@ int get_product_name(uvc_device_t *dev)
 
 int load_device_config(uvc_device_t *dev)
 {
+  int should_detach_kernel_driver = 0;
   uvc_error_t res;
   uvc_device_handle_t *devh;
+
   res = uvc_open(dev, &devh, 1);
   if (res != UVC_SUCCESS)
   {
@@ -28,8 +38,70 @@ int load_device_config(uvc_device_t *dev)
     return -10002;
   }
 
-  const uvc_format_desc_t *format_desc = uvc_get_format_descs(devh);
+  uvc_stream_ctrl_t ctrl;
+  const uvc_format_desc_t *format;
+  const uvc_frame_desc_t *frame;
 
+  DL_FOREACH(uvc_get_format_descs(devh), format)
+  {
+    DL_FOREACH(format->frame_descs, frame)
+    {
+      fprintf(
+          stderr,
+          ">>> Frame format w=%hu h=%hu fps=%hu\n",
+          frame->wWidth,
+          frame->wHeight,
+          interval_to_fps(frame->intervals[0]));
+
+      res = uvc_get_stream_ctrl_format_size(
+          devh,
+          &ctrl,
+          UVC_FRAME_FORMAT_ANY,
+          frame->wWidth,
+          frame->wHeight,
+          interval_to_fps(frame->intervals[0]),
+          should_detach_kernel_driver);
+      break;
+    }
+    break;
+  }
+
+  uvc_stream_handle_t *strmh;
+
+  uvc_print_stream_ctrl(&ctrl, stderr);
+
+  res = uvc_stream_open_ctrl(devh, &strmh, &ctrl, should_detach_kernel_driver);
+  if (res != UVC_SUCCESS)
+    return res;
+
+  res = uvc_stream_start(strmh, NULL, NULL, 2, 0);
+  if (res != UVC_SUCCESS)
+  {
+    uvc_stream_close(strmh);
+    return res;
+  }
+
+  uvc_frame_t *uvc_frame = NULL;
+  int num_frames_total = 0;
+  int num_frames_broken = 0;
+
+  for (; num_frames_total < 1000; num_frames_total++)
+  {
+    res = uvc_stream_get_frame(strmh, &uvc_frame, 10000);
+    if (res != UVC_SUCCESS)
+    {
+      uvc_perror(res, "uvc_stream_get_frame");
+    }
+    else if (uvc_frame->width * uvc_frame->height > uvc_frame->data_bytes)
+    {
+      num_frames_broken++;
+    }
+  }
+  fprintf(stderr, "++++++++++++++++++++++\n");
+  fprintf(stderr, "%i / %i (%f %%) broken\n", num_frames_broken, num_frames_total, 100 * num_frames_broken / num_frames_total);
+
+  uvc_stream_stop(strmh);
+  uvc_stream_close(strmh);
   uvc_close(devh);
   return 0;
 }
@@ -74,6 +146,7 @@ int enumerate_devices()
     {
       return subtest_result;
     }
+    break;
   }
 
   uvc_free_device_list(dev_list, 1);
@@ -87,6 +160,6 @@ int enumerate_devices()
 
 int main(int argc, char **argv)
 {
-  putenv("LIBUSB_DEBUG=4");
+  // putenv("LIBUSB_DEBUG=4");
   return enumerate_devices();
 }
