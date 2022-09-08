@@ -1191,24 +1191,25 @@ uvc_error_t uvc_stream_start(
 
         // frame_desc
         /* But keep a reasonable limit: Otherwise we start dropping data */
-        fprintf(
-            stderr,
-            "Estimated / selected altsetting bandwith : %zu / %zu x ~%zu / %zu (%s)\n",
-            config_bytes_per_packet,
-            endpoint_bytes_per_packet,
-            packets_per_transfer,
-            strmh->packets_per_iso_xfer,
-            name);
         if (packets_per_transfer > 32)
           packets_per_transfer = 32;
 
         strmh->packets_per_iso_xfer = packets_per_transfer;
 
         total_transfer_size = packets_per_transfer * endpoint_bytes_per_packet;
+
+        fprintf(
+            stderr,
+            "altsettings:\n\tctrl->dwMaxVideoFrameSize=%zu\n\tendpoint_bytes_per_packet=%zu\n\tpackets_per_transfer=%zu\n\ttotal_transfer_size=%zu\n\tname=%s\n",
+            ctrl->dwMaxVideoFrameSize,
+            endpoint_bytes_per_packet,
+            packets_per_transfer,
+            total_transfer_size,
+            name);
         break;
       }
-      else
-        fprintf(stderr, "Estimated / NOT selected altsetting bandwith : %zu / %zu (%s)\n", config_bytes_per_packet, endpoint_bytes_per_packet, name);
+      // else
+      //   fprintf(stderr, "Estimated / NOT selected altsetting bandwith : %zu / %zu (%s)\n", config_bytes_per_packet, endpoint_bytes_per_packet, name);
     }
 
     /* If we searched through all the altsettings and found nothing usable */

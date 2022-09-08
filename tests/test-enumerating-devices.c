@@ -146,7 +146,6 @@ int enumerate_devices()
     {
       return subtest_result;
     }
-    break;
   }
 
   uvc_free_device_list(dev_list, 1);
