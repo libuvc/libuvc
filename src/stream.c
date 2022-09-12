@@ -1149,7 +1149,6 @@ uvc_error_t uvc_stream_start(
       bandwidth /= 1000; // unit
       bandwidth /= 8;    // 8 high speed usb microframes per ms
       bandwidth += 12;   // header size
-      fprintf(stderr, "\n%%%%%%%% overwriting %li config_bytes_per_packet with %li (%s)\n\n", config_bytes_per_packet, bandwidth, name);
       config_bytes_per_packet = bandwidth;
       // config_bytes_per_packet *= 2;
       //  config_bytes_per_packet /= 2;
@@ -1158,7 +1157,6 @@ uvc_error_t uvc_stream_start(
     /* Go through the altsettings and find one whose packets are at least
      * as big as our format's maximum per-packet usage. Assume that the
      * packet sizes are increasing. */
-    fprintf(stderr, "Num altsettings %i %s\n", interface->num_altsetting, name);
     for (alt_idx = 0; alt_idx < interface->num_altsetting; alt_idx++)
     {
       altsetting = interface->altsetting + alt_idx;
@@ -1198,8 +1196,7 @@ uvc_error_t uvc_stream_start(
 
         total_transfer_size = packets_per_transfer * endpoint_bytes_per_packet;
 
-        fprintf(
-            stderr,
+        UVC_DEBUG(
             "altsettings:\n\tctrl->dwMaxVideoFrameSize=%zu\n\tendpoint_bytes_per_packet=%zu\n\tpackets_per_transfer=%zu\n\ttotal_transfer_size=%zu\n\tname=%s\n",
             ctrl->dwMaxVideoFrameSize,
             endpoint_bytes_per_packet,
@@ -1220,7 +1217,6 @@ uvc_error_t uvc_stream_start(
     }
 
     /* Select the altsetting */
-    fprintf(stderr, "libusb_set_interface_alt_setting('%s', %hu, %hu)\n", name, altsetting->bInterfaceNumber, altsetting->bAlternateSetting);
     ret = libusb_set_interface_alt_setting(strmh->devh->usb_devh,
                                            altsetting->bInterfaceNumber,
                                            altsetting->bAlternateSetting);
