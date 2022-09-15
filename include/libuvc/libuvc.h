@@ -800,6 +800,7 @@ uvc_error_t uvc_yuyv2y(uvc_frame_t *in, uvc_frame_t *out);
 uvc_error_t uvc_yuyv2uv(uvc_frame_t *in, uvc_frame_t *out);
 
 #ifdef LIBUVC_HAS_JPEG
+uvc_error_t uvc_mjpeg2bgr(uvc_frame_t *in, uvc_frame_t *out);
 uvc_error_t uvc_mjpeg2rgb(uvc_frame_t *in, uvc_frame_t *out);
 uvc_error_t uvc_mjpeg2gray(uvc_frame_t *in, uvc_frame_t *out);
 #endif
