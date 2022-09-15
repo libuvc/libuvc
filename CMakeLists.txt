@@ -81,6 +81,12 @@ set_target_properties(
   VERSION ${libuvc_VERSION}
   SOVERSION ${libuvc_VERSION}
 )
+
+if(UNIX AND NOT APPLE)
+  message(STATUS "Adding extra -pthread c flag")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
+endif()
+
 target_link_libraries(uvc PUBLIC ${LIBUSB_LIBRARIES} ${PTHREAD_LIBRARIES})
 
 install(TARGETS uvc
