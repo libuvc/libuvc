@@ -13,25 +13,38 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 if(WIN32)
-  find_library(LIBUSB_LIBRARIES usb-1.0
-    PATHS /opt/local/lib)
+  set(LIBUSB_WIN_INCLUDE_DIR "NOTSET" CACHE PATH "Path to the libusb include dir")
+  set(LIBUSB_WIN_IMPORT_LIB_PATH "NOTSET" CACHE FILEPATH "Path to the libusb import library")
 
-  find_path(LIBUSB_INCLUDE_DIRS libusb-1.0/libusb.h
-    PATHS /opt/local/include)
+  # FindThreads will not find pthread.h with MSVC so we use pthreads-win
+  set(PTHREADS_WIN_INCLUDE_DIR "NOTSET" CACHE PATH "Path to the pthreads-win include dir")
+  set(PTHREADS_WIN_IMPORT_LIB_PATH "NOTSET" CACHE FILEPATH "Path to the pthreads-win import library")
+
+  list(APPEND required_variables
+    PTHREADS_WIN_INCLUDE_DIR
+    PTHREADS_WIN_IMPORT_LIB_PATH
+    LIBUSB_WIN_INCLUDE_DIR
+    LIBUSB_WIN_IMPORT_LIB_PATH
+  )
+  message(STATUS "Validating config:")
+
+  foreach(VAR IN LISTS required_variables)
+    if(${VAR} STREQUAL "NOTSET")
+      message(FATAL_ERROR "Required variable ${VAR} is not set!")
+    endif()
+  endforeach()
+
+  foreach(VAR IN LISTS required_variables)
+    message(STATUS "  ${VAR}: ${${VAR}}")
+  endforeach()
+
+  # winmm is necessary for __imp_timeGetTime
+  add_definitions("-D_TIMESPEC_DEFINED")
 else()
   find_package(PkgConfig)
   pkg_check_modules(LIBUSB REQUIRED libusb-1.0)
   message(STATUS "    " ${LIBUSB_LIBRARY_DIRS})
-endif()
 
-if(WIN32)
-  find_library(PTHREAD_LIBRARIES pthreadVC2
-    PATHS D:/install/pthreads-w32-2-9-1-release/lib/x64)
-  find_path(PTHREAD_INCLUDE_DIRS pthread.h
-    PATHS D:/install/pthreads-w32-2-9-1-release/include)
-  SET(EXTRA_DEFS "-D_TIMESPEC_DEFINED")
-  add_definitions(${EXTRA_DEFS})
-else()
   include(GNUInstallDirs)
   SET(CMAKE_C_FLAGS_DEBUG "-g  -DUVC_DEBUGGING")
 endif()
@@ -56,8 +69,14 @@ target_include_directories(
   PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+
+  # Unix vars
   ${LIBUSB_INCLUDE_DIRS}
   ${PTHREAD_INCLUDE_DIRS}
+
+  # Windows vars
+  ${PTHREADS_WIN_INCLUDE_DIR}
+  ${LIBUSB_WIN_INCLUDE_DIR}
 )
 
 target_sources(uvc
@@ -87,7 +106,18 @@ if(UNIX AND NOT APPLE)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
 endif()
 
-target_link_libraries(uvc PUBLIC ${LIBUSB_LIBRARIES} ${PTHREAD_LIBRARIES})
+target_link_libraries(
+  uvc
+  PUBLIC
+
+  # Unix vars
+  ${LIBUSB_LIBRARIES}
+  ${PTHREAD_LIBRARIES}
+
+  # Windows vars
+  ${PTHREADS_WIN_IMPORT_LIB_PATH}
+  ${LIBUSB_WIN_IMPORT_LIB_PATH}
+)
 
 install(TARGETS uvc
   EXPORT libuvcTargets
