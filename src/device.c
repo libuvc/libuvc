@@ -382,8 +382,7 @@ static uvc_error_t uvc_open_internal(
     UVC_DEBUG("libusb_submit_transfer() = %d", ret);
 
     if (ret) {
-      fprintf(stderr,
-              "uvc: device has a status interrupt endpoint, but unable to read from it\n");
+      UVC_DEBUG("uvc: device has a status interrupt endpoint, but unable to read from it\n");
       goto fail;
     }
   }
