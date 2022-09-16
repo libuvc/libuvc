@@ -138,7 +138,7 @@ install(EXPORT libuvcTargets
 install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/libuvcConfig.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/libuvcConfigVersion.cmake
-  DESTINATION lib/cmake/libuvc
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/libuvc
 )
 
 export(EXPORT libuvcTargets
@@ -151,7 +151,7 @@ include(CMakePackageConfigHelpers)
 # generate the config file that is includes the exports
 configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/Config.cmake.in
   "${CMAKE_CURRENT_BINARY_DIR}/libuvcConfig.cmake"
-  INSTALL_DESTINATION lib/cmake/libuvc
+  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/libuvc
   NO_SET_AND_CHECK_MACRO
   NO_CHECK_REQUIRED_COMPONENTS_MACRO
 )
