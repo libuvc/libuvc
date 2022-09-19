@@ -6,6 +6,7 @@ project(libuvc
   DESCRIPTION "A cross-platform library for USB video devices"
   HOMEPAGE_URL "https://github.com/pupil-labs/libuvc"
 )
+cmake_policy(SET CMP0054 NEW)
 
 if(NOT CMAKE_BUILD_TYPE)
   message(STATUS "No build type selected, default to Release")
@@ -44,10 +45,10 @@ else()
   find_package(PkgConfig)
   pkg_check_modules(LIBUSB REQUIRED libusb-1.0)
   message(STATUS "    " ${LIBUSB_LIBRARY_DIRS})
-
-  include(GNUInstallDirs)
-  SET(CMAKE_C_FLAGS_DEBUG "-g  -DUVC_DEBUGGING")
 endif()
+
+include(GNUInstallDirs)
+SET(CMAKE_C_FLAGS_DEBUG "-g  -DUVC_DEBUGGING")
 
 # "Installation directory for CMake files")
 add_library(uvc SHARED)
