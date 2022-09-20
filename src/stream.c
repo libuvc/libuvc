@@ -1519,29 +1519,18 @@ uvc_error_t uvc_stream_stop(uvc_stream_handle_t *strmh)
   if (!strmh->running)
     return UVC_ERROR_INVALID_PARAM;
 
-  pthread_mutex_lock(&strmh->cb_mutex);
+  strmh->running = 0;
 
+  pthread_mutex_lock(&strmh->cb_mutex);
   UVC_DEBUG("Locked, stopping stream\n");
 
-  strmh->running = 0;
+  /* Attempt to cancel any running transfers, we can't free them just yet because they aren't
+   *   necessarily completed but they will be free'd in _uvc_stream_callback().
+   */
   for (i = 0; i < LIBUVC_NUM_TRANSFER_BUFS; i++)
   {
     if (strmh->transfers[i] != NULL)
-    {
-      int res = libusb_cancel_transfer(strmh->transfers[i]);
-      if (res < 0 && res == LIBUSB_ERROR_NOT_FOUND)
-      {
-        UVC_DEBUG("[stream_stop] Freeing transfer %d (%p)", i, strmh->transfers[i]);
-        free(strmh->transfers[i]->buffer);
-        libusb_free_transfer(strmh->transfers[i]);
-        strmh->transfers[i] = NULL;
-        strmh->flying_xfers--;
-      }
-      else
-      {
-        UVC_DEBUG("cancel_res = %d\n", res);
-      }
-    }
+        libusb_cancel_transfer(strmh->transfers[i]);
   }
 
   UVC_DEBUG("Waiting for %d transfers..\n", strmh->flying_xfers);
