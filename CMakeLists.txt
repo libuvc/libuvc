@@ -45,10 +45,10 @@ else()
   find_package(PkgConfig)
   pkg_check_modules(LIBUSB REQUIRED libusb-1.0)
   message(STATUS "    " ${LIBUSB_LIBRARY_DIRS})
+  SET(CMAKE_C_FLAGS_DEBUG "-g  -DUVC_DEBUGGING")
 endif()
 
 include(GNUInstallDirs)
-SET(CMAKE_C_FLAGS_DEBUG "-g  -DUVC_DEBUGGING")
 
 # "Installation directory for CMake files")
 add_library(uvc SHARED)
