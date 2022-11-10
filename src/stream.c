@@ -596,12 +596,78 @@ uvc_error_t uvc_get_still_ctrl_format_size(
     return uvc_probe_still_ctrl(devh, still_ctrl);
 }
 
+
+static uvc_error_t uvc_stream_get_max_payload_transfer_size(
+        uvc_device_handle_t *devh,
+        uvc_stream_ctrl_t *ctrl,
+        const uvc_stream_ctrl_t *max_ctrl,
+        uint32_t* max_payload_transfer_size) {
+
+  uvc_streaming_interface_t * stream_if = _uvc_get_stream_if(devh, ctrl->bInterfaceNumber);
+  if (!stream_if) {
+     return UVC_ERROR_INVALID_PARAM;
+  }
+  const struct libusb_interface *interface = &devh->info->config->interface[ctrl->bInterfaceNumber];
+
+  char isochronous = interface->num_altsetting > 1;
+  if (!isochronous) {
+    *max_payload_transfer_size = max_ctrl->dwMaxPayloadTransferSize;
+    return UVC_SUCCESS;
+  }
+
+
+  uvc_frame_desc_t *frame_desc;
+  uvc_format_desc_t *format_desc;
+  frame_desc = _uvc_find_frame_desc_stream_if(stream_if, ctrl->bFormatIndex, ctrl->bFrameIndex);
+  if (!frame_desc) {
+    return UVC_ERROR_INVALID_PARAM;
+  }
+  format_desc = frame_desc->parent;
+
+  /* scan altsettings and find the greatest number of bytes per packet which can be provided by a certain endpoint */
+
+  size_t max_packet_size = 0;
+  for (int alt_idx = 0; alt_idx < interface->num_altsetting; alt_idx++) {
+    const struct libusb_interface_descriptor *altsetting = interface->altsetting + alt_idx;
+    size_t endpoint_bytes_per_packet = 0;
+    /* Find the endpoint with the number specified in the VS header */
+    for (int ep_idx = 0; ep_idx < altsetting->bNumEndpoints; ep_idx++) {
+      const struct libusb_endpoint_descriptor *endpoint = altsetting->endpoint + ep_idx;
+
+      struct libusb_ss_endpoint_companion_descriptor *ep_comp = 0;
+      libusb_get_ss_endpoint_companion_descriptor(NULL, endpoint, &ep_comp);
+      if (ep_comp)
+      {
+        endpoint_bytes_per_packet = ep_comp->wBytesPerInterval;
+        libusb_free_ss_endpoint_companion_descriptor(ep_comp);
+        break;
+      }
+      else
+      {
+        if (endpoint->bEndpointAddress == format_desc->parent->bEndpointAddress) {
+            endpoint_bytes_per_packet = endpoint->wMaxPacketSize;
+          /* wMaxPacketSize: [unused:2 (multiplier-1):3 size:11] */
+          endpoint_bytes_per_packet = (endpoint_bytes_per_packet & 0x07ff) *
+            (((endpoint_bytes_per_packet >> 11) & 3) + 1);
+
+        }
+      }
+      if (endpoint_bytes_per_packet > max_packet_size) {
+          max_packet_size = endpoint_bytes_per_packet;
+      }
+    }
+  }
+  *max_payload_transfer_size = max_packet_size;
+  return UVC_SUCCESS;
+
+}
+
 static int _uvc_stream_params_negotiated(
   uvc_stream_ctrl_t *required,
   uvc_stream_ctrl_t *actual) {
     return required->bFormatIndex == actual->bFormatIndex &&
     required->bFrameIndex == actual->bFrameIndex &&
-    required->dwMaxPayloadTransferSize == actual->dwMaxPayloadTransferSize;
+    required->dwMaxPayloadTransferSize >= actual->dwMaxPayloadTransferSize;
 }
 
 /** @internal
@@ -614,16 +680,50 @@ uvc_error_t uvc_probe_stream_ctrl(
     uvc_device_handle_t *devh,
     uvc_stream_ctrl_t *ctrl) {
   uvc_stream_ctrl_t required_ctrl = *ctrl;
+  uvc_stream_ctrl_t min_ctrl = *ctrl;
+  uvc_stream_ctrl_t max_ctrl = *ctrl;
 
-  uvc_query_stream_ctrl( devh, ctrl, 1, UVC_SET_CUR );
-  uvc_query_stream_ctrl( devh, ctrl, 1, UVC_GET_CUR );
-
-  if(!_uvc_stream_params_negotiated(&required_ctrl, ctrl)) {
-    UVC_DEBUG("Unable to negotiate streaming format");
-    return UVC_ERROR_INVALID_MODE;
+  uvc_error_t res = uvc_query_stream_ctrl( devh, ctrl, 1, UVC_SET_CUR );
+  if (res != UVC_SUCCESS) {
+    return res;
   }
 
-  return UVC_SUCCESS;
+  res = uvc_query_stream_ctrl( devh, &min_ctrl, 1, UVC_GET_MIN );
+  if (res != UVC_SUCCESS) {
+    return res;
+  }
+
+  res = uvc_query_stream_ctrl( devh, &max_ctrl, 1, UVC_GET_MAX );
+  if (res != UVC_SUCCESS) {
+    return res;
+  }
+
+  res = uvc_stream_get_max_payload_transfer_size(devh, ctrl, &max_ctrl, &required_ctrl.dwMaxPayloadTransferSize);
+  if (res != UVC_SUCCESS) {
+    return res;
+  }
+
+  ctrl->wCompQuality = max_ctrl.wCompQuality;
+
+  for (size_t i=0; i<2; i++) {
+    res = uvc_query_stream_ctrl( devh, ctrl, 1, UVC_SET_CUR );
+    if (res != UVC_SUCCESS) {
+      return res;
+    }
+    res = uvc_query_stream_ctrl( devh, ctrl, 1, UVC_GET_CUR );
+    if (res != UVC_SUCCESS) {
+      return res;
+    }
+    if(_uvc_stream_params_negotiated(&required_ctrl, ctrl)) {
+      return UVC_SUCCESS;
+    }
+    ctrl->wKeyFrameRate = min_ctrl.wKeyFrameRate;
+    ctrl->wPFrameRate = min_ctrl.wPFrameRate;
+    ctrl->wCompQuality = max_ctrl.wCompQuality;
+    ctrl->wCompWindowSize = min_ctrl.wCompWindowSize;
+  }
+  UVC_DEBUG("Unable to negotiate streaming format");
+  return UVC_ERROR_INVALID_MODE;
 }
 
 /** @internal
