@@ -52,7 +52,7 @@ for USB Video Class (UVC) devices, such as consumer webcams.
 
 \section misc Misc.
 \p The source code can be found at https://libuvc.github.io/. To build
-the library, install <a href="http://libusb.org/">libusb</a> 1.0+ and run:
+the library, install <a href="https://libusb.info/">libusb</a> 1.0+ and run:
 
 \code
 $ git clone https://github.com/libuvc/libuvc.git
