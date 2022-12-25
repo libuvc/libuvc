@@ -51,11 +51,11 @@ for USB Video Class (UVC) devices, such as consumer webcams.
 \li Support for "extended" (vendor-defined) settings
 
 \section misc Misc.
-\p The source code can be found at https://github.com/ktossell/libuvc. To build
+\p The source code can be found at https://libuvc.github.io/. To build
 the library, install <a href="http://libusb.org/">libusb</a> 1.0+ and run:
 
 \code
-$ git clone https://github.com/ktossell/libuvc.git
+$ git clone https://github.com/libuvc/libuvc.git
 $ cd libuvc
 $ mkdir build
 $ cd build
