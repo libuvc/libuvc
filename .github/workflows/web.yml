@@ -1,0 +1,55 @@
+name: Build and deploy website
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install doxygen
+        run: sudo apt-get install -y doxygen
+
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v2
+
+      - name: Build doxygen documentation
+        run: doxygen doxygen.conf
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: doc
+
+  deploy:
+    needs: build
+
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+
+    concurrency:
+      group: "pages"
+      cancel-in-progress: true
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v1
