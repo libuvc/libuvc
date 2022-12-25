@@ -26,4 +26,9 @@ Then you can start them with `./example` and `./uvc_test` respectively. Note tha
 
 The documentation for `libuvc` can currently be found at https://libuvc.github.io/.
 
-Happy hacking!
+## Sample code
+
+In this example, libuvc is used to acquire images in a 30 fps, 640x480
+YUV stream from a UVC device such as a standard webcam.
+
+https://github.com/libuvc/libuvc/blob/92621946160855f8154c35ca4f0299f5392f6c93/src/example.c#L1-L225
