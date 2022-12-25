@@ -24,6 +24,6 @@ Then you can start them with `./example` and `./uvc_test` respectively. Note tha
 
 ## Developing with libuvc
 
-The documentation for `libuvc` can currently be found at https://int80k.com/libuvc/doc/.
+The documentation for `libuvc` can currently be found at https://libuvc.github.io/.
 
 Happy hacking!
