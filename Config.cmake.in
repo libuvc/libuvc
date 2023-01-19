@@ -1,0 +1,5 @@
+
+@PACKAGE_INIT@
+include("${CMAKE_CURRENT_LIST_DIR}/libuvcTargets.cmake")
+set_and_check(libuvc_LIBRARY_DIRS "@PACKAGE_LIBRARY_DIRS@")
+check_required_components(libuvc)

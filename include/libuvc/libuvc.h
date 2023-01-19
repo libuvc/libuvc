@@ -12,7 +12,6 @@ extern "C" {
 #else
 #include <winsock.h>
 #endif
-#include <libuvc/libuvc_config.h>
 
 struct libusb_context;
 struct libusb_device_handle;
@@ -77,6 +76,7 @@ enum uvc_frame_format {
   UVC_FRAME_FORMAT_BGR,
   /** Motion-JPEG (or JPEG) encoded images */
   UVC_FRAME_FORMAT_MJPEG,
+  UVC_FRAME_FORMAT_H264,
   /** Greyscale images */
   UVC_FRAME_FORMAT_GRAY8,
   UVC_FRAME_FORMAT_GRAY16,
@@ -87,6 +87,10 @@ enum uvc_frame_format {
   UVC_FRAME_FORMAT_SGBRG8,
   UVC_FRAME_FORMAT_SRGGB8,
   UVC_FRAME_FORMAT_SBGGR8,
+  /** YUV420: NV12 */
+  UVC_FRAME_FORMAT_NV12,
+  /** YUV: P010 */
+  UVC_FRAME_FORMAT_P010,
   /** Number of formats understood */
   UVC_FRAME_FORMAT_COUNT,
 };
@@ -514,7 +518,8 @@ uvc_error_t uvc_find_devices(
 
 uvc_error_t uvc_open(
     uvc_device_t *dev,
-    uvc_device_handle_t **devh);
+    uvc_device_handle_t **devh,
+    int should_detach_kernel_driver);
 void uvc_close(uvc_device_handle_t *devh);
 
 uvc_device_t *uvc_get_device(uvc_device_handle_t *devh);
@@ -538,36 +543,40 @@ const uvc_selector_unit_t *uvc_get_selector_units(uvc_device_handle_t *devh);
 const uvc_processing_unit_t *uvc_get_processing_units(uvc_device_handle_t *devh);
 const uvc_extension_unit_t *uvc_get_extension_units(uvc_device_handle_t *devh);
 
+enum uvc_frame_format uvc_frame_format_for_guid(uint8_t guid[16]);
 uvc_error_t uvc_get_stream_ctrl_format_size(
     uvc_device_handle_t *devh,
     uvc_stream_ctrl_t *ctrl,
     enum uvc_frame_format format,
     int width, int height,
-    int fps
+    int fps, int should_detach_kernel_driver
     );
 
 const uvc_format_desc_t *uvc_get_format_descs(uvc_device_handle_t* );
 
 uvc_error_t uvc_probe_stream_ctrl(
     uvc_device_handle_t *devh,
-    uvc_stream_ctrl_t *ctrl);
+    uvc_stream_ctrl_t *ctrl,
+    int should_detach_kernel_driver);
 
 uvc_error_t uvc_start_streaming(
     uvc_device_handle_t *devh,
     uvc_stream_ctrl_t *ctrl,
     uvc_frame_callback_t *cb,
     void *user_ptr,
-    uint8_t flags);
+    uint8_t flags,
+    int should_detach_kernel_driver);
 
 uvc_error_t uvc_start_iso_streaming(
     uvc_device_handle_t *devh,
     uvc_stream_ctrl_t *ctrl,
     uvc_frame_callback_t *cb,
-    void *user_ptr);
+    void *user_ptr,
+    int should_detach_kernel_driver);
 
 void uvc_stop_streaming(uvc_device_handle_t *devh);
 
-uvc_error_t uvc_stream_open_ctrl(uvc_device_handle_t *devh, uvc_stream_handle_t **strmh, uvc_stream_ctrl_t *ctrl);
+uvc_error_t uvc_stream_open_ctrl(uvc_device_handle_t *devh, uvc_stream_handle_t **strmh, uvc_stream_ctrl_t *ctrl, int should_detach_kernel_driver);
 uvc_error_t uvc_stream_ctrl(uvc_stream_handle_t *strmh, uvc_stream_ctrl_t *ctrl);
 uvc_error_t uvc_stream_start(uvc_stream_handle_t *strmh,
     uvc_frame_callback_t *cb,

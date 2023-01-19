@@ -1,135 +1,168 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.23)
 cmake_policy(SET CMP0042 NEW)
-project(libuvc)
+project(libuvc
+  VERSION 0.1.0
+  LANGUAGES C
+  DESCRIPTION "A cross-platform library for USB video devices"
+  HOMEPAGE_URL "https://github.com/pupil-labs/libuvc"
+)
+cmake_policy(SET CMP0054 NEW)
 
-if (NOT CMAKE_BUILD_TYPE)
+if(NOT CMAKE_BUILD_TYPE)
   message(STATUS "No build type selected, default to Release")
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
-endif ()
-
-if (NOT CMAKE_BUILD_TARGET)
-  message(STATUS "No target type selected, default to shared  library")
-  set(CMAKE_BUILD_TARGET "Shared" CACHE STRING "" FORCE)
 endif()
 
-set(libuvc_VERSION_MAJOR 0)
-set(libuvc_VERSION_MINOR 0)
-set(libuvc_VERSION_PATCH 9)
-set(libuvc_VERSION ${libuvc_VERSION_MAJOR}.${libuvc_VERSION_MINOR}.${libuvc_VERSION_PATCH})
-
-set(libuvc_DESCRIPTION "A cross-platform library for USB video devices")
-set(libuvc_URL "https://github.com/ktossell/libuvc")
-
 if(WIN32)
+  set(LIBUSB_WIN_INCLUDE_DIR "NOTSET" CACHE PATH "Path to the libusb include dir")
+  set(LIBUSB_WIN_IMPORT_LIB_PATH "NOTSET" CACHE FILEPATH "Path to the libusb import library")
 
-  find_library(LIBUSB_LIBRARIES usb-1.0
-  PATHS /opt/local/lib)
+  # FindThreads will not find pthread.h with MSVC so we use pthreads-win
+  set(PTHREADS_WIN_INCLUDE_DIR "NOTSET" CACHE PATH "Path to the pthreads-win include dir")
+  set(PTHREADS_WIN_IMPORT_LIB_PATH "NOTSET" CACHE FILEPATH "Path to the pthreads-win import library")
 
-  find_path(LIBUSB_INCLUDE_DIR libusb-1.0/libusb.h
-  PATHS /opt/local/include)
+  list(APPEND required_variables
+    PTHREADS_WIN_INCLUDE_DIR
+    PTHREADS_WIN_IMPORT_LIB_PATH
+    LIBUSB_WIN_INCLUDE_DIR
+    LIBUSB_WIN_IMPORT_LIB_PATH
+  )
+  message(STATUS "Validating config:")
+
+  foreach(VAR IN LISTS required_variables)
+    if(${VAR} STREQUAL "NOTSET")
+      message(FATAL_ERROR "Required variable ${VAR} is not set!")
+    endif()
+  endforeach()
+
+  foreach(VAR IN LISTS required_variables)
+    message(STATUS "  ${VAR}: ${${VAR}}")
+  endforeach()
+
+  # winmm is necessary for __imp_timeGetTime
+  add_definitions("-D_TIMESPEC_DEFINED")
 else()
   find_package(PkgConfig)
-  pkg_check_modules(LIBUSB libusb-1.0)
-endif()
-
-
-if(WIN32)
-  find_library(PTHREAD_LIBRARIES pthreadVC2
-        PATHS D:/install/pthreads-w32-2-9-1-release/lib/x64)
-  find_path(PTHREAD_INCLUDE_DIR pthread.h
-        PATHS D:/install/pthreads-w32-2-9-1-release/include)
-  SET(EXTRA_DEFS "-D_TIMESPEC_DEFINED")
-  add_definitions(${EXTRA_DEFS})
-else()
-  include(GNUInstallDirs)
+  pkg_check_modules(LIBUSB REQUIRED libusb-1.0)
+  message(STATUS "    " ${LIBUSB_LIBRARY_DIRS})
   SET(CMAKE_C_FLAGS_DEBUG "-g  -DUVC_DEBUGGING")
 endif()
 
-SET(INSTALL_CMAKE_DIR "${CMAKE_INSTALL_PREFIX}/lib/cmake/libuvc" CACHE PATH
-  "Installation directory for CMake files")
+include(GNUInstallDirs)
 
-SET(SOURCES src/ctrl.c src/ctrl-gen.c src/device.c src/diag.c
-           src/frame.c src/init.c src/stream.c
-           src/misc.c)
+# "Installation directory for CMake files")
+add_library(uvc SHARED)
+add_library(PLLibUVC::uvc ALIAS uvc)
 
-include_directories(
-  ${libuvc_SOURCE_DIR}/include
-  ${libuvc_BINARY_DIR}/include
-  ${LIBUSB_INCLUDE_DIR}
-  ${PTHREAD_INCLUDE_DIR}
+target_sources(uvc PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src/ctrl.c>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src/ctrl-gen.c>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src/device.c>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src/diag.c>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src/frame.c>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src/init.c>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src/stream.c>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src/misc.c>
 )
 
-if(${CMAKE_BUILD_TARGET} MATCHES "Shared")
-  set(BUILD_UVC_SHARED TRUE)
-elseif(${CMAKE_BUILD_TARGET} MATCHES "Static")
-  set(BUILD_UVC_STATIC TRUE)
-elseif(${CMAKE_BUILD_TARGET} MATCHES "Both")
-  set(BUILD_UVC_SHARED TRUE)
-  set(BUILD_UVC_STATIC TRUE)
-else()
-  message( FATAL_ERROR "Invalid build type ${CMAKE_BUILD_TARGET}" )
+target_include_directories(
+  uvc
+  PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+
+  # Unix vars
+  ${LIBUSB_INCLUDE_DIRS}
+  ${PTHREAD_INCLUDE_DIRS}
+
+  # Windows vars
+  ${PTHREADS_WIN_INCLUDE_DIR}
+  ${LIBUSB_WIN_INCLUDE_DIR}
+)
+
+target_sources(uvc
+  PUBLIC
+  FILE_SET HEADERS
+  BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
+  FILES
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/libuvc/libuvc.h
+)
+
+target_link_directories(
+  uvc
+  PUBLIC
+  ${LIBUSB_LIBRARY_DIRS}
+  ${PTHREAD_LIBRARY_DIRS}
+)
+
+set_target_properties(
+  uvc PROPERTIES
+  WINDOWS_EXPORT_ALL_SYMBOLS TRUE
+  VERSION ${libuvc_VERSION}
+  SOVERSION ${libuvc_VERSION}
+)
+
+if(UNIX AND NOT APPLE)
+  message(STATUS "Adding extra -pthread c flag")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
 endif()
 
-if(BUILD_UVC_SHARED)
-  add_library(uvc SHARED ${SOURCES})
-  list(APPEND UVC_TARGETS uvc)
-endif()
+target_link_libraries(
+  uvc
+  PUBLIC
 
-if(BUILD_UVC_STATIC)
-  add_library(uvc_static STATIC ${SOURCES})
-  set_target_properties(uvc_static PROPERTIES OUTPUT_NAME uvc)
-  list(APPEND UVC_TARGETS uvc_static)
-endif()
+  # Unix vars
+  ${LIBUSB_LIBRARIES}
+  ${PTHREAD_LIBRARIES}
 
-configure_file(include/libuvc/libuvc_config.h.in
-  ${PROJECT_BINARY_DIR}/include/libuvc/libuvc_config.h @ONLY)
+  # Windows vars
+  ${PTHREADS_WIN_IMPORT_LIB_PATH}
+  ${LIBUSB_WIN_IMPORT_LIB_PATH}
+)
 
-foreach(target_name ${UVC_TARGETS})
-  set_target_properties(${target_name} PROPERTIES
-    PUBLIC_HEADER "include/libuvc/libuvc.h;${libuvc_BINARY_DIR}/include/libuvc/libuvc_config.h"  WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
-  set_target_properties(${target_name} PROPERTIES
-                        VERSION ${libuvc_VERSION}
-                        SOVERSION ${libuvc_VERSION_MAJOR})
-endforeach()
-
-if(BUILD_UVC_SHARED)
-  target_link_libraries(uvc ${LIBUSB_LIBRARIES} ${PTHREAD_LIBRARIES})
-
-  #add_executable(test src/test.c)
-  #target_link_libraries(test uvc ${LIBUSB_LIBRARIES} opencv_highgui
-  #  opencv_core)
-endif()
-
-install(TARGETS ${UVC_TARGETS}
+install(TARGETS uvc
   EXPORT libuvcTargets
-  LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
-  ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
-  PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_PREFIX}/include/libuvc"
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  FILE_SET HEADERS
 )
 
-export(TARGETS ${UVC_TARGETS}
-  FILE "${PROJECT_BINARY_DIR}/libuvcTargets.cmake")
-export(PACKAGE libuvc)
-
-set(CONF_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/include")
-set(CONF_LIBRARY_DIR "${CMAKE_INSTALL_PREFIX}/lib")
-set(CONF_LIBRARY "${CMAKE_INSTALL_PREFIX}/lib/${CMAKE_SHARED_LIBRARY_PREFIX}uvc${CMAKE_SHARED_LIBRARY_SUFFIX}")
-
-configure_file(libuvcConfig.cmake.in ${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/libuvcConfig.cmake)
-
-configure_file(libuvcConfigVersion.cmake.in ${PROJECT_BINARY_DIR}/libuvcConfigVersion.cmake @ONLY)
-
-configure_file(libuvc.pc.in ${PROJECT_BINARY_DIR}/libuvc.pc @ONLY)
-
-install(FILES
-  "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/libuvcConfig.cmake"
-  "${PROJECT_BINARY_DIR}/libuvcConfigVersion.cmake"
-  DESTINATION "${INSTALL_CMAKE_DIR}")
-
+# export(PACKAGE libuvc)
 install(EXPORT libuvcTargets
-  DESTINATION "${INSTALL_CMAKE_DIR}")
+  FILE libuvcTargets.cmake
+  NAMESPACE PLLibUVC::
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/libuvc
+)
 
 install(FILES
-  "${PROJECT_BINARY_DIR}/libuvc.pc"
-  DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
+  ${CMAKE_CURRENT_BINARY_DIR}/libuvcConfig.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/libuvcConfigVersion.cmake
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/libuvc
 )
+
+export(EXPORT libuvcTargets
+  FILE ${CMAKE_CURRENT_BINARY_DIR}/libuvcTargets.cmake
+  NAMESPACE PLLibUVC::
+)
+
+include(CMakePackageConfigHelpers)
+
+set(LIBRARY_DIRS ${CMAKE_INSTALL_LIBDIR})
+
+# generate the config file that is includes the exports
+configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/Config.cmake.in
+  "${CMAKE_CURRENT_BINARY_DIR}/libuvcConfig.cmake"
+  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/libuvc
+  PATH_VARS LIBRARY_DIRS
+)
+
+write_basic_package_version_file(
+  libuvcConfigVersion.cmake
+  VERSION ${libuvc_VERSION}
+  COMPATIBILITY SameMajorVersion
+)
+
+enable_testing()
+add_subdirectory(tests)

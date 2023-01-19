@@ -11,11 +11,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <signal.h>
-#ifndef WIN32
-#include <libusb-1.0/libusb.h>
-#else
 #include <libusb.h>
-#endif
 #include "utlist.h"
 
 #define DEBUG_PTS_LEN (60 * 200)
@@ -322,7 +318,7 @@ uvc_error_t uvc_query_stream_ctrl(
     enum uvc_req_code req);
 
 void uvc_start_handler_thread(uvc_context_t *ctx);
-uvc_error_t uvc_claim_if(uvc_device_handle_t *devh, int idx);
+uvc_error_t uvc_claim_if(uvc_device_handle_t *devh, int idx, int should_detach_kernel_driver);
 uvc_error_t uvc_release_if(uvc_device_handle_t *devh, int idx);
 
 #endif // !def(LIBUVC_INTERNAL_H)
