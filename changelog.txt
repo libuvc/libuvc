@@ -1,3 +1,10 @@
+Changes in 0.1.0 (2023-01-19)
+----------------
+
+- Cleaned up CMAKE build pipeline
+- Added support for GRAY8 video streams
+- Fix bugs
+
 Changes in 0.0.5 (2014-07-19)
 ----------------
 
