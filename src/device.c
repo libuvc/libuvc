@@ -283,6 +283,14 @@ uvc_error_t uvc_wrap(
     int sys_dev,
     uvc_context_t *context,
     uvc_device_handle_t **devh) {
+  return uvc_wrap_with_driver_mode(sys_dev, context, devh, UVC_KERNEL_DRIVER_MODE_DETACH_ON);
+}
+
+uvc_error_t uvc_wrap_with_driver_mode(
+    int sys_dev,
+    uvc_context_t *context,
+    uvc_device_handle_t **devh,
+    enum uvc_kernel_driver_mode kernel_driver_mode) {
   uvc_error_t ret;
   struct libusb_device_handle *usb_devh;
 
@@ -300,7 +308,7 @@ uvc_error_t uvc_wrap(
   dev->ctx = context;
   dev->usb_dev = libusb_get_device(usb_devh);
 
-  ret = uvc_open_internal(dev, usb_devh, devh, UVC_KERNEL_DRIVER_MODE_DETACH_ON);
+  ret = uvc_open_internal(dev, usb_devh, devh, kernel_driver_mode);
   UVC_EXIT(ret);
   return ret;
 }
@@ -374,6 +382,7 @@ static uvc_error_t uvc_open_internal(
   internal_devh = calloc(1, sizeof(*internal_devh));
   internal_devh->dev = dev;
   internal_devh->usb_devh = usb_devh;
+  internal_devh->should_detach = kernel_driver_mode;
 
   ret = uvc_get_device_info(internal_devh, &(internal_devh->info));
 
@@ -381,7 +390,7 @@ static uvc_error_t uvc_open_internal(
     goto fail;
 
   UVC_DEBUG("claiming control interface %d", internal_devh->info->ctrl_if.bInterfaceNumber);
-  ret = uvc_claim_if(internal_devh, internal_devh->info->ctrl_if.bInterfaceNumber, kernel_driver_mode);
+  ret = uvc_claim_if(internal_devh, internal_devh->info->ctrl_if.bInterfaceNumber);
   if (ret != UVC_SUCCESS)
     goto fail;
 
@@ -995,7 +1004,7 @@ void uvc_unref_device(uvc_device_t *dev) {
  * @param devh UVC device handle
  * @param idx UVC interface index
  */
-uvc_error_t uvc_claim_if(uvc_device_handle_t *devh, int idx, enum uvc_kernel_driver_mode kernel_driver_mode) {
+uvc_error_t uvc_claim_if(uvc_device_handle_t *devh, int idx) {
   int ret = UVC_SUCCESS;
 
   UVC_ENTER();
@@ -1006,7 +1015,7 @@ uvc_error_t uvc_claim_if(uvc_device_handle_t *devh, int idx, enum uvc_kernel_dri
     return ret;
   }
 
-  if (kernel_driver_mode == UVC_KERNEL_DRIVER_MODE_DETACH_ON) {
+  if (devh->should_detach) {
     /* Tell libusb to detach any active kernel drivers. libusb will keep track of whether
      * it found a kernel driver for this interface. */
     ret = libusb_detach_kernel_driver(devh->usb_devh, idx);
