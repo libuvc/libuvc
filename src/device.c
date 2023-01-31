@@ -382,7 +382,7 @@ static uvc_error_t uvc_open_internal(
   internal_devh = calloc(1, sizeof(*internal_devh));
   internal_devh->dev = dev;
   internal_devh->usb_devh = usb_devh;
-  internal_devh->should_detach = kernel_driver_mode;
+  internal_devh->should_detach = kernel_driver_mode == UVC_KERNEL_DRIVER_MODE_DETACH_ON;
 
   ret = uvc_get_device_info(internal_devh, &(internal_devh->info));
 
@@ -1020,7 +1020,7 @@ uvc_error_t uvc_claim_if(uvc_device_handle_t *devh, int idx) {
      * it found a kernel driver for this interface. */
     ret = libusb_detach_kernel_driver(devh->usb_devh, idx);
     if (ret == UVC_SUCCESS) {
-      devh->detached = 1;
+      devh->detached |= ( 1 << idx );
     }
   }
 
@@ -1064,10 +1064,10 @@ uvc_error_t uvc_release_if(uvc_device_handle_t *devh, int idx) {
 
   if (UVC_SUCCESS == ret) {
     devh->claimed &= ~( 1 << idx );
-    if (devh->detached) {
+    if (devh->detached & ( 1 << idx )) {
       /* Reattach any kernel drivers that were disabled when we claimed this interface */
       ret = libusb_attach_kernel_driver(devh->usb_devh, idx);
-      devh->detached = 0;
+      devh->detached &= ~( 1 << idx );
     }
 
     if (ret == UVC_SUCCESS) {
