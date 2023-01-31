@@ -493,7 +493,7 @@ uvc_error_t uvc_get_stream_ctrl_format_size(
 
         ctrl->bInterfaceNumber = stream_if->bInterfaceNumber;
         UVC_DEBUG("claiming streaming interface %d", stream_if->bInterfaceNumber );
-        uvc_claim_if(devh, ctrl->bInterfaceNumber);
+        uvc_claim_if(devh, ctrl->bInterfaceNumber, (devh->detached ? UVC_KERNEL_DRIVER_MODE_DETACH_ON : UVC_KERNEL_DRIVER_MODE_DETACH_OFF));
         /* get the max values */
         uvc_query_stream_ctrl( devh, ctrl, 1, UVC_GET_MAX);
 
@@ -1030,7 +1030,7 @@ uvc_error_t uvc_stream_open_ctrl(uvc_device_handle_t *devh, uvc_stream_handle_t 
   strmh->stream_if = stream_if;
   strmh->frame.library_owns_data = 1;
 
-  ret = uvc_claim_if(strmh->devh, strmh->stream_if->bInterfaceNumber);
+  ret = uvc_claim_if(strmh->devh, strmh->stream_if->bInterfaceNumber, (devh->detached ? UVC_KERNEL_DRIVER_MODE_DETACH_ON : UVC_KERNEL_DRIVER_MODE_DETACH_OFF));
   if (ret != UVC_SUCCESS)
     goto fail;
 
