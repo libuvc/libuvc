@@ -291,8 +291,8 @@ struct uvc_device_handle {
   /** Whether the camera is an iSight that sends one header per frame */
   uint8_t is_isight;
   uint32_t claimed;
-  uint8_t detached;
-  uint32_t should_detach;
+  uint32_t detached;
+  uint8_t should_detach;
 };
 
 /** Context within which we communicate with devices */
