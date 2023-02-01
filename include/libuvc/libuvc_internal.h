@@ -292,7 +292,7 @@ struct uvc_device_handle {
   uint8_t is_isight;
   uint32_t claimed;
   uint8_t detached;
-  uint8_t should_detach;
+  uint32_t should_detach;
 };
 
 /** Context within which we communicate with devices */
