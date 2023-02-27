@@ -72,6 +72,7 @@ YUV stream from a UVC device such as a standard webcam.
 */
 #include <stdarg.h>
 #include <libgen.h>
+#include <android/log.h>
 
 /**
  * @defgroup init Library initialization/deinitialization
