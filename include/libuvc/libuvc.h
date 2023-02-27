@@ -804,9 +804,13 @@ uvc_error_t uvc_mjpeg2rgb(uvc_frame_t *in, uvc_frame_t *out);
 uvc_error_t uvc_mjpeg2gray(uvc_frame_t *in, uvc_frame_t *out);
 #endif
 
+
+typedef void (uvc_log_func_t)(const char *filename, unsigned line, const char *function, const char *log);
+void uvc_log_set_function(uvc_log_func_t func);
+void uvc_log(char *filename, unsigned line, const char *function, const char *format, ...);
+
 #ifdef __cplusplus
 }
 #endif
 
 #endif // !def(LIBUVC_H)
-
