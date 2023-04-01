@@ -1,3 +1,29 @@
+Changes in 0.0.7 (2023-03-31)
+----------------
+
+New features:
+  - USB 3 support
+  - Several image/stream formats (incl. NV12, H264, BGR, RGB, P010)
+  - Format conversion functions
+  - Accept pre-opened libusb handles (used on Android)
+  - Library filename versioning (libuvc.0.0.7.dylib)
+  - Store system time upon receipt of new frame
+  - In-stream still-image-capture support
+  - Ensure successful stream parameter negotiation
+  - Improved build scripts
+  - Better logging on Android
+
+Bug fixes:
+  - Many build issues
+  - Log spam in production builds
+  - A situation where libuvc could hang during shutdown
+  - A deadlock in get_frame()
+  - An issue that could cause the first frame to fail
+  - Incorrect settings usage in example code
+  - Unnecessary device reopening
+  - Excessive number of transfer buffers affecting Mac builds
+  - Freeing of transfers that may still be in progress
+
 Changes in 0.0.6 (2017-09-21)
 ----------------
 
