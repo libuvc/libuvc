@@ -22,8 +22,8 @@ void cb(uvc_frame_t *frame, void *ptr) {
     return;
   }
 
-  printf("callback! frame_format = %d, width = %d, height = %d, length = %lu, ptr = %d\n",
-    frame->frame_format, frame->width, frame->height, frame->data_bytes, (int) ptr);
+  printf("callback! frame_format = %d, width = %d, height = %d, length = %lu, ptr = %p\n",
+    frame->frame_format, frame->width, frame->height, frame->data_bytes, ptr);
 
   switch (frame->frame_format) {
   case UVC_FRAME_FORMAT_H264:
