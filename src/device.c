@@ -1060,12 +1060,13 @@ uvc_error_t uvc_scan_control(uvc_device_handle_t *devh, uvc_device_info_t *info)
 
   uvc_device_descriptor_t* dev_desc;
   int haveTISCamera = 0;
-  get_device_descriptor ( devh, &dev_desc );
-  if ( 0x199e == dev_desc->idVendor && ( 0x8101 == dev_desc->idProduct ||
-      0x8102 == dev_desc->idProduct )) {
-    haveTISCamera = 1;
+  if ( get_device_descriptor ( devh, &dev_desc ) == UVC_SUCCESS ) {
+    if ( 0x199e == dev_desc->idVendor && ( 0x8101 == dev_desc->idProduct ||
+        0x8102 == dev_desc->idProduct )) {
+      haveTISCamera = 1;
+    }
+    uvc_free_device_descriptor ( dev_desc );
   }
-  uvc_free_device_descriptor ( dev_desc );
 
   for (interface_idx = 0; interface_idx < info->config->bNumInterfaces; ++interface_idx) {
     if_desc = &info->config->interface[interface_idx].altsetting[0];
