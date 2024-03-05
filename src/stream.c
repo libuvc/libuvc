@@ -597,7 +597,7 @@ static int _uvc_stream_params_negotiated(
   uvc_stream_ctrl_t *actual) {
     return required->bFormatIndex == actual->bFormatIndex &&
     required->bFrameIndex == actual->bFrameIndex &&
-    required->dwMaxPayloadTransferSize == actual->dwMaxPayloadTransferSize;
+    required->dwMaxPayloadTransferSize >= actual->dwMaxPayloadTransferSize;
 }
 
 /** @internal
