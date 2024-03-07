@@ -529,6 +529,11 @@ typedef struct uvc_still_ctrl {
   uint8_t bInterfaceNumber;
 } uvc_still_ctrl_t;
 
+enum uvc_kernel_driver_mode {
+  UVC_KERNEL_DRIVER_MODE_DETACH_OFF = 0,
+  UVC_KERNEL_DRIVER_MODE_DETACH_ON = 1,
+};
+
 uvc_error_t uvc_init(uvc_context_t **ctx, struct libusb_context *usb_ctx);
 void uvc_exit(uvc_context_t *ctx);
 
@@ -561,12 +566,23 @@ uvc_error_t uvc_wrap(
     int sys_dev,
     uvc_context_t *context,
     uvc_device_handle_t **devh);
+
+uvc_error_t uvc_wrap_with_driver_mode(
+    int sys_dev,
+    uvc_context_t *context,
+    uvc_device_handle_t **devh,
+    enum uvc_kernel_driver_mode kernel_driver_mode);
 #endif
 
 uvc_error_t uvc_open(
     uvc_device_t *dev,
     uvc_device_handle_t **devh);
 void uvc_close(uvc_device_handle_t *devh);
+
+uvc_error_t uvc_open_with_driver_mode(
+    uvc_device_t *dev,
+    uvc_device_handle_t **devh,
+    enum uvc_kernel_driver_mode kernel_driver_mode);
 
 uvc_device_t *uvc_get_device(uvc_device_handle_t *devh);
 struct libusb_device_handle *uvc_get_libusb_handle(uvc_device_handle_t *devh);
