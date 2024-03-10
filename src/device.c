@@ -1139,6 +1139,8 @@ uvc_error_t uvc_parse_vc_header(uvc_device_t *dev,
     break;
   case 0x0110:
     break;
+  case 0x0150:
+    break;
   default:
     UVC_EXIT(UVC_ERROR_NOT_SUPPORTED);
     return UVC_ERROR_NOT_SUPPORTED;
