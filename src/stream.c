@@ -407,6 +407,20 @@ uvc_error_t uvc_stream_ctrl(uvc_stream_handle_t *strmh, uvc_stream_ctrl_t *ctrl)
   return UVC_SUCCESS;
 }
 
+/** @brief Gets current stream control block
+ * @ingroup streaming
+ *
+ * This may be executed whether or not the stream is running.
+ *
+ * @param[in] strmh Stream handle
+ * @param[out] ctrl Current control block
+ */
+uvc_error_t uvc_stream_get_current_ctrl(uvc_stream_handle_t *strmh, uvc_stream_ctrl_t *ctrl) {
+
+    *ctrl = strmh->cur_ctrl;
+    return UVC_SUCCESS;
+}
+
 /** @internal
  * @brief Find the descriptor for a specific frame configuration
  * @param stream_if Stream interface
@@ -747,26 +761,26 @@ void _uvc_process_payload(uvc_stream_handle_t *strmh, uint8_t *payload, size_t p
 
     header_info = payload[1];
 
-    if (header_info & 0x40) {
+    if (header_info & UVC_STREAM_ERR) {
       UVC_DEBUG("bad packet: error bit set");
       return;
     }
 
-    if (strmh->fid != (header_info & 1) && strmh->got_bytes != 0) {
+    if (strmh->fid != (header_info & UVC_STREAM_FID) && strmh->got_bytes != 0) {
       /* The frame ID bit was flipped, but we have image data sitting
          around from prior transfers. This means the camera didn't send
          an EOF for the last transfer of the previous frame. */
       _uvc_swap_buffers(strmh);
     }
 
-    strmh->fid = header_info & 1;
+    strmh->fid = (uint8_t) (header_info & UVC_STREAM_FID);
 
-    if (header_info & (1 << 2)) {
+    if (header_info & UVC_STREAM_PTS) {
       strmh->pts = DW_TO_INT(payload + variable_offset);
       variable_offset += 4;
     }
 
-    if (header_info & (1 << 3)) {
+    if (header_info & UVC_STREAM_SCR) {
       /** @todo read the SOF token counter */
       strmh->last_scr = DW_TO_INT(payload + variable_offset);
       variable_offset += 6;
@@ -787,7 +801,8 @@ void _uvc_process_payload(uvc_stream_handle_t *strmh, uint8_t *payload, size_t p
       data_len = strmh->cur_ctrl.dwMaxVideoFrameSize - strmh->got_bytes; /* Avoid overflow. */
     memcpy(strmh->outbuf + strmh->got_bytes, payload + header_len, data_len);
     strmh->got_bytes += data_len;
-    if (header_info & (1 << 1) || strmh->got_bytes == strmh->cur_ctrl.dwMaxVideoFrameSize) {
+
+    if (header_info & UVC_STREAM_EOF || strmh->got_bytes == strmh->cur_ctrl.dwMaxVideoFrameSize) {
       /* The EOF bit is set, so publish the complete frame */
       _uvc_swap_buffers(strmh);
     }
@@ -809,7 +824,7 @@ void LIBUSB_CALL _uvc_stream_callback(struct libusb_transfer *transfer) {
 
   switch (transfer->status) {
   case LIBUSB_TRANSFER_COMPLETED:
-    if (transfer->num_iso_packets == 0) {
+    if (transfer->type != LIBUSB_TRANSFER_TYPE_ISOCHRONOUS) {
       /* This is a bulk mode transfer, so it just has one payload transfer */
       _uvc_process_payload(strmh, transfer->buffer, transfer->actual_length);
     } else {
@@ -823,14 +838,13 @@ void LIBUSB_CALL _uvc_stream_callback(struct libusb_transfer *transfer) {
         pkt = transfer->iso_packet_desc + packet_id;
 
         if (pkt->status != 0) {
-          UVC_DEBUG("bad packet (isochronous transfer); status: %d", pkt->status);
+          UVC_DEBUG("bad packet (isochronous transfer); pkt_id=%d status: %s(%d), actual_length=%d", packet_id, libusb_error_name(pkt->status), pkt->status, pkt->actual_length);
           continue;
         }
 
         pktbuf = libusb_get_iso_packet_buffer_simple(transfer, packet_id);
 
         _uvc_process_payload(strmh, pktbuf, pkt->actual_length);
-
       }
     }
     break;
@@ -1128,6 +1142,7 @@ uvc_error_t uvc_stream_start(
   isochronous = interface->num_altsetting > 1;
 
   if (isochronous) {
+    UVC_DEBUG("isochronous transfer mode:  num_altsetting=%d", interface->num_altsetting);
     /* For isochronous streaming, we choose an appropriate altsetting for the endpoint
      * and set up several transfers */
     const struct libusb_interface_descriptor *altsetting = 0;
@@ -1205,8 +1220,8 @@ uvc_error_t uvc_stream_start(
       goto fail;
     }
 
-    /* Set up the transfers */
-    for (transfer_id = 0; transfer_id < LIBUVC_NUM_TRANSFER_BUFS; ++transfer_id) {
+  /* Set up the transfers */
+  for (transfer_id = 0; transfer_id < LIBUVC_NUM_TRANSFER_BUFS; ++transfer_id) {
       transfer = libusb_alloc_transfer(packets_per_transfer);
       strmh->transfers[transfer_id] = transfer;      
       strmh->transfer_bufs[transfer_id] = malloc(total_transfer_size);
@@ -1246,7 +1261,7 @@ uvc_error_t uvc_stream_start(
   for (transfer_id = 0; transfer_id < LIBUVC_NUM_TRANSFER_BUFS;
       transfer_id++) {
     ret = libusb_submit_transfer(strmh->transfers[transfer_id]);
-    if (ret != UVC_SUCCESS) {
+    if (ret != LIBUSB_SUCCESS) {
       UVC_DEBUG("libusb_submit_transfer failed: %d",ret);
       break;
     }
@@ -1334,7 +1349,7 @@ void _uvc_populate_frame(uvc_stream_handle_t *strmh) {
    * is going to be reopen_on_change anyway
    */
 
-  frame_desc = uvc_find_frame_desc(strmh->devh, strmh->cur_ctrl.bFormatIndex,
+  frame_desc = uvc_find_frame_desc_stream(strmh, strmh->cur_ctrl.bFormatIndex,
 				   strmh->cur_ctrl.bFrameIndex);
 
   frame->frame_format = strmh->frame_format;
