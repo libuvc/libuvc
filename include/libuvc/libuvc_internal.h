@@ -266,6 +266,8 @@ struct uvc_stream_handle {
   /* raw metadata buffer if available */
   uint8_t *meta_outbuf, *meta_holdbuf;
   size_t meta_got_bytes, meta_hold_bytes;
+
+  uint8_t frame_had_errors;
 };
 
 /** Handle on an open UVC device
