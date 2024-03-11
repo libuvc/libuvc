@@ -9,11 +9,6 @@ void cb(uvc_frame_t *frame, void *ptr) {
   uvc_frame_t *bgr;
   uvc_error_t ret;
   enum uvc_frame_format *frame_format = (enum uvc_frame_format *)ptr;
-  /* FILE *fp;
-   * static int jpeg_count = 0;
-   * static const char *H264_FILE = "iOSDevLog.h264";
-   * static const char *MJPEG_FILE = ".jpeg";
-   * char filename[16]; */
 
   /* We'll convert the image from YUV/JPEG to BGR, so allocate space */
   bgr = uvc_allocate_frame(frame->width * frame->height * 3);
