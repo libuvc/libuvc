@@ -930,6 +930,15 @@ const uvc_extension_unit_t *uvc_get_extension_units(uvc_device_handle_t *devh) {
 }
 
 /**
+ * @brief Get compliance to the UVC standard
+ *
+ * @param devh Device handle to an open UVC device
+ */
+const uint16_t uvc_get_uvc_compliance(uvc_device_handle_t *devh) {
+  return devh->info->ctrl_if.bcdUVC;
+}
+
+/**
  * @brief Increment the reference count for a device
  * @ingroup device
  *
@@ -981,9 +990,21 @@ uvc_error_t uvc_claim_if(uvc_device_handle_t *devh, int idx) {
     return ret;
   }
 
+  /* Check if kernel driver is active on a interface.
+   * Returns 0 if no kernel driver is active, 1 if a kernel driver is active or libusb error code
+   */
+  ret = libusb_kernel_driver_active(devh->usb_devh, idx);
+
+  if ((ret != 0) && (ret !=1)) {
+    UVC_DEBUG("failure while determining if kernel driver is active on interface %d (%s)",
+              idx, uvc_strerror(ret));
+    UVC_EXIT(ret);
+    return ret;
+  }
+
   /* Tell libusb to detach any active kernel drivers. libusb will keep track of whether
    * it found a kernel driver for this interface. */
-  ret = libusb_detach_kernel_driver(devh->usb_devh, idx);
+  ret = (ret == 0) ? UVC_SUCCESS : libusb_detach_kernel_driver(devh->usb_devh, idx);
 
   if (ret == UVC_SUCCESS || ret == LIBUSB_ERROR_NOT_FOUND || ret == LIBUSB_ERROR_NOT_SUPPORTED) {
     UVC_DEBUG("claiming interface %d", idx);
