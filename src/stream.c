@@ -278,6 +278,13 @@ uvc_error_t uvc_query_stream_ctrl(
         ctrl->dwMaxVideoFrameSize = frame->dwMaxVideoFrameBufferSize;
       }
     }
+    if (ctrl->dwMaxPayloadTransferSize == 0) {
+      uvc_frame_desc_t *frame = uvc_find_frame_desc(devh, ctrl->bFormatIndex, ctrl->bFrameIndex);
+
+      if (frame) {
+        ctrl->dwMaxPayloadTransferSize = frame->dwMaxBitRate;
+      }
+    }
   }
 
   return UVC_SUCCESS;
