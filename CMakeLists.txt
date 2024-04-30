@@ -118,6 +118,9 @@ foreach(target_name IN LISTS UVC_TARGETS)
     # libusb-1.0 used internally so we link to it privately.
     PRIVATE LibUSB::LibUSB ${threads}
   )
+  if(APPLE)
+    target_link_libraries(${target_name} PRIVATE "-framework IOKit" "-framework CoreFoundation" "-framework Security")
+  endif()
   if(JPEG_FOUND)
     target_link_libraries(${target_name}
       PRIVATE JPEG::JPEG
