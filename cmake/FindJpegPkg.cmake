@@ -8,9 +8,9 @@ target JPEG::JPEG (this is different from shipped one with CMake)
 #]==============================================]
 
 # TODO Append parts for Version compasion and REQUIRED support
-if (MSVC OR MINGW)
-  return()
-endif()
+# if (MSVC OR MINGW)
+#   return()
+# endif()
 
 # Try to find JPEG using a module or pkg-config. If that doesn't work, search for the header.
 if (NOT TARGET JPEG::JPEG)

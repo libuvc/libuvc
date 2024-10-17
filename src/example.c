@@ -1,6 +1,10 @@
 #include "libuvc/libuvc.h"
 #include <stdio.h>
+#ifdef _WIN32
+#include <io.h>
+#else
 #include <unistd.h>
+#endif
 
 /* This callback function runs once per frame. Use it to perform any
  * quick processing you need, or have it put the frame into your application's
@@ -22,7 +26,7 @@ void cb(uvc_frame_t *frame, void *ptr) {
     return;
   }
 
-  printf("callback! frame_format = %d, width = %d, height = %d, length = %lu, ptr = %p\n",
+  printf("callback! frame_format = %d, width = %d, height = %d, length = %zu, ptr = %p\n",
     frame->frame_format, frame->width, frame->height, frame->data_bytes, ptr);
 
   switch (frame->frame_format) {
@@ -199,7 +203,11 @@ int main(int argc, char **argv) {
             uvc_perror(res, " ... uvc_set_ae_mode failed to enable auto exposure mode");
           }
 
+#ifdef _WIN32
+          Sleep(10000); /* stream for 10 seconds */
+#else
           sleep(10); /* stream for 10 seconds */
+#endif
 
           /* End the stream. Blocks until last callback is serviced */
           uvc_stop_streaming(devh);

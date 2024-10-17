@@ -1,2 +1,4 @@
 # Build directory (recommended location)
 build/
+vcpkg-configuration.json
+CMakePresets.json

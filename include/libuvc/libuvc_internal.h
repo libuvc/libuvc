@@ -72,6 +72,9 @@
 /* http://stackoverflow.com/questions/19452971/array-size-macro-that-rejects-pointers */
 #define IS_INDEXABLE(arg) (sizeof(arg[0]))
 #define IS_ARRAY(arg) (IS_INDEXABLE(arg) && (((void *) &arg) == ((void *) arg)))
+#ifdef ARRAYSIZE
+#undef ARRAYSIZE
+#endif
 #define ARRAYSIZE(arr) (sizeof(arr) / (IS_ARRAY(arr) ? sizeof(arr[0]) : 0))
 
 /** Video interface subclass code (A.2) */
