@@ -24,6 +24,7 @@ endif()
 option(BUILD_EXAMPLE "Build example program" ON)
 option(BUILD_TEST "Build test program" OFF)
 option(ENABLE_UVC_DEBUGGING "Enable UVC debugging" OFF)
+option(DISABLE_JPEG "Disable JPEG support" OFF)
 
 set(libuvc_DESCRIPTION "A cross-platform library for USB video devices")
 set(libuvc_URL "https://github.com/libuvc/libuvc")
@@ -41,14 +42,18 @@ set(SOURCES
 
 find_package(LibUSB)
 
-# JpegPkg name to differ from shipped with CMake
-find_package(JpegPkg QUIET)
-if(JPEG_FOUND)
-  message(STATUS "Building libuvc with JPEG support.")
-  set(LIBUVC_HAS_JPEG TRUE)
-  list(APPEND SOURCES src/frame-mjpeg.c)
+if(DISABLE_JPEG)
+  message(WARNING "libuvc will not support JPEG decoding.")
 else()
-  message(WARNING "JPEG not found. libuvc will not support JPEG decoding.")
+  # JpegPkg name to differ from shipped with CMake
+  find_package(JpegPkg QUIET)
+  if(JPEG_FOUND)
+    message(STATUS "Building libuvc with JPEG support.")
+    set(LIBUVC_HAS_JPEG TRUE)
+    list(APPEND SOURCES src/frame-mjpeg.c)
+  else()
+    message(WARNING "JPEG not found. libuvc will not support JPEG decoding.")
+  endif()
 endif()
 
 if(UNIX AND NOT APPLE)
