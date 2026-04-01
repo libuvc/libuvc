@@ -60,22 +60,22 @@ enum uvc_frame_format {
   UVC_FRAME_FORMAT_UNKNOWN = 0,
   /** Any supported format */
   UVC_FRAME_FORMAT_ANY = 0,
-  UVC_FRAME_FORMAT_UNCOMPRESSED,
-  UVC_FRAME_FORMAT_COMPRESSED,
+  UVC_FRAME_FORMAT_UNCOMPRESSED, /* 1 */
+  UVC_FRAME_FORMAT_COMPRESSED, /* 2 */
   /** YUYV/YUV2/YUV422: YUV encoding with one luminance value per pixel and
    * one UV (chrominance) pair for every two pixels.
    */
-  UVC_FRAME_FORMAT_YUYV,
-  UVC_FRAME_FORMAT_UYVY,
+  UVC_FRAME_FORMAT_YUYV,  /* 3 */
+  UVC_FRAME_FORMAT_UYVY,  /* 4 */
   /** 24-bit RGB */
-  UVC_FRAME_FORMAT_RGB,
-  UVC_FRAME_FORMAT_BGR,
+  UVC_FRAME_FORMAT_RGB,   /* 5 */
+  UVC_FRAME_FORMAT_BGR,   /* 6 */
   /** Motion-JPEG (or JPEG) encoded images */
-  UVC_FRAME_FORMAT_MJPEG,
-  UVC_FRAME_FORMAT_H264,
+  UVC_FRAME_FORMAT_MJPEG, /* 7 */
+  UVC_FRAME_FORMAT_H264,  /* 8 */
   /** Greyscale images */
-  UVC_FRAME_FORMAT_GRAY8,
-  UVC_FRAME_FORMAT_GRAY16,
+  UVC_FRAME_FORMAT_GRAY8, /* 9 */
+  UVC_FRAME_FORMAT_GRAY16,/* 10 */
   /* Raw colour mosaic images */
   UVC_FRAME_FORMAT_BY8,
   UVC_FRAME_FORMAT_BA81,
