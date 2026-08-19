@@ -257,8 +257,9 @@ struct uvc_stream_handle {
   uint32_t last_polled_seq;
   uvc_frame_callback_t *user_cb;
   void *user_ptr;
-  struct libusb_transfer *transfers[LIBUVC_NUM_TRANSFER_BUFS];
-  uint8_t *transfer_bufs[LIBUVC_NUM_TRANSFER_BUFS];
+  size_t number_of_transport_buffers;
+  struct libusb_transfer **transfers;
+  uint8_t **transfer_bufs;
   struct uvc_frame frame;
   enum uvc_frame_format frame_format;
   struct timespec capture_time_finished;
@@ -317,4 +318,3 @@ uvc_error_t uvc_release_if(uvc_device_handle_t *devh, int idx);
 
 #endif // !def(LIBUVC_INTERNAL_H)
 /** @endcond */
-
