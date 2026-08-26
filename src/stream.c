@@ -602,10 +602,11 @@ void _uvc_populate_frame_ts_us(uvc_stream_handle_t *strmh, int packet_id)
     if (!((strmh->seq + 1) % first_measure_int))
     {
       strmh->avg_diff /= first_measure_int;
-      if (strmh->initial_avg_diff < 0)
+      if (!strmh->initial_avg_diff_set)
       {
         strmh->initial_avg_diff = strmh->avg_diff;
         strmh->initial_host_ts = host_ts_us;
+        strmh->initial_avg_diff_set = 1;
       }
       else
       {
@@ -617,7 +618,7 @@ void _uvc_populate_frame_ts_us(uvc_stream_handle_t *strmh, int packet_id)
         if (strmh->diff_measures > 10 && fabs(slope) > 0.0000005 /* 0.000005*/)
         {
           strmh->corrected_clock_freq *= 1.0 - slope;
-          strmh->initial_avg_diff = -1;
+          strmh->initial_avg_diff_set = 0;
           printf("*** Correcting clock frequency to %llu\n", strmh->corrected_clock_freq);
         }
       }
@@ -1086,7 +1087,8 @@ uvc_error_t uvc_stream_start(
   strmh->dev_clk_start_host_us = 0;
   strmh->frame_xfer_len_mf = 0;
   strmh->pts_time_base = 0;
-  strmh->initial_avg_diff = -1;
+  strmh->initial_avg_diff = 0;
+  strmh->initial_avg_diff_set = 0;
 
   frame_desc = uvc_find_frame_desc_stream(strmh, ctrl->bFormatIndex, ctrl->bFrameIndex);
   if (!frame_desc)
