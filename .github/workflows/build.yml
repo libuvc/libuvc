@@ -43,7 +43,7 @@ jobs:
             -DCMAKE_BUILD_TARGET=${{ matrix.target }} \
             -DLibUVC_STATIC=${{ matrix.target == 'Static' && 'ON' || 'OFF' }} \
             -DBUILD_EXAMPLE=ON \
-            ${{ matrix.jpeg == 'off' && '-DCMAKE_DISABLE_FIND_PACKAGE_JpegPkg=ON' || '' }}
+            -DDISABLE_JPEG=${{ matrix.jpeg == 'off' && 'ON' || 'OFF' }}
 
       - name: Build
         run: cmake --build build
