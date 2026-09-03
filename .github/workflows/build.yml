@@ -126,6 +126,42 @@ jobs:
       - name: Check example was built
         run: test -x build/example
 
+  # src/ctrl-gen.c and the control accessors in libuvc.h are generated from
+  # standard-units.yaml by src/ctrl-gen.py. Regenerate them here so the
+  # committed copies cannot drift from the generator or the YAML.
+  check-generated:
+    runs-on: ubuntu-latest
+
+    name: check generated files
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Check src/ctrl-gen.c is up to date
+        run: |
+          python3 src/ctrl-gen.py -i standard-units.yaml def > ctrl-gen.c.new
+          diff -u src/ctrl-gen.c ctrl-gen.c.new
+
+      - name: Check the generated block of libuvc.h is up to date
+        run: |
+          # Extract the block between the AUTO-GENERATED markers, excluding
+          # the marker lines themselves. `decl` ends with a trailing blank
+          # line that the header does not carry, so strip trailing blanks
+          # from both sides before comparing.
+          sed -n '/AUTO-GENERATED control accessors! Update/,/end AUTO-GENERATED/p' \
+            include/libuvc/libuvc.h | sed '1d;$d' > libuvc.h.block
+          python3 src/ctrl-gen.py -i standard-units.yaml decl > libuvc.h.new
+          diff -u <(sed -e :a -e '/^\n*$/{$d;N;};/\n$/ba' libuvc.h.block) \
+                  <(sed -e :a -e '/^\n*$/{$d;N;};/\n$/ba' libuvc.h.new)
+
+      - name: Check standard-units.yaml round-trips
+        run: |
+          python3 src/ctrl-gen.py -i standard-units.yaml yaml > standard-units.yaml.new
+          diff -u standard-units.yaml standard-units.yaml.new
+
   # The test program needs OpenCV, so it is built separately to keep the
   # dependency out of the main matrix.
   build-test:
