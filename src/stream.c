@@ -281,11 +281,10 @@ uvc_error_t uvc_query_stream_ctrl(
       }
     }
     if (ctrl->dwMaxPayloadTransferSize == 0) {
-      uvc_frame_desc_t *frame = uvc_find_frame_desc(devh, ctrl->bFormatIndex, ctrl->bFrameIndex);
-
-      if (frame) {
-        ctrl->dwMaxPayloadTransferSize = frame->dwMaxBitRate;
-      }
+      /* No per-frame maximum payload size exists in the descriptors, so fall
+       * back on the frame size fixed up above: a payload never needs to be
+       * larger than a whole frame, and both are byte counts. */
+      ctrl->dwMaxPayloadTransferSize = ctrl->dwMaxVideoFrameSize;
     }
   }
 
