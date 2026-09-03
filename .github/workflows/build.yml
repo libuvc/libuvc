@@ -51,6 +51,43 @@ jobs:
       - name: Check example was built
         run: test -x build/example
 
+  build-macos:
+    runs-on: macos-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [ Both, Shared, Static ]
+        jpeg: [ on, off ]
+
+    name: macos, ${{ matrix.target }}${{ matrix.jpeg == 'off' && ', no jpeg' || '' }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install dependencies
+        run: |
+          brew install libusb
+          if [ "${{ matrix.jpeg }}" = "on" ]; then
+            brew install jpeg
+          fi
+
+      - name: Configure
+        run: |
+          # LibUVC_STATIC makes the LibUVC::UVC alias point at the static
+          # library, which the example program links against.
+          cmake -B build \
+            -DCMAKE_BUILD_TARGET=${{ matrix.target }} \
+            -DLibUVC_STATIC=${{ matrix.target == 'Static' && 'ON' || 'OFF' }} \
+            -DBUILD_EXAMPLE=ON \
+            -DDISABLE_JPEG=${{ matrix.jpeg == 'off' && 'ON' || 'OFF' }}
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Check example was built
+        run: test -x build/example
+
   # The test program needs OpenCV, so it is built separately to keep the
   # dependency out of the main matrix.
   build-test:
