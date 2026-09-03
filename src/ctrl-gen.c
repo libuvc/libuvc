@@ -203,7 +203,7 @@ uvc_error_t uvc_get_exposure_abs(uvc_device_handle_t *devh, uint32_t* time, enum
     0);
 
   if (ret == sizeof(data)) {
-    *time = DW_TO_INT(data + 0);
+    *time = DW_TO_UINT32(data + 0);
     return UVC_SUCCESS;
   } else {
     return ret;
@@ -760,8 +760,8 @@ uvc_error_t uvc_get_pantilt_abs(uvc_device_handle_t *devh, int32_t* pan, int32_t
     0);
 
   if (ret == sizeof(data)) {
-    *pan = DW_TO_INT(data + 0);
-    *tilt = DW_TO_INT(data + 4);
+    *pan = DW_TO_UINT32(data + 0);
+    *tilt = DW_TO_UINT32(data + 4);
     return UVC_SUCCESS;
   } else {
     return ret;
