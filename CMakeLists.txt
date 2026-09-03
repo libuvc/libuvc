@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(libuvc
   VERSION 0.0.7
-  LANGUAGES C CXX
+  LANGUAGES C
 )
 
 # Additional search scripts path for libusb-1.0, libjpeg, OpenCV
@@ -159,6 +159,10 @@ if(BUILD_EXAMPLE)
 endif()
 
 if(BUILD_TEST)
+  # Only the test program is C++; the library itself is C, so do not
+  # require a C++ compiler unless the test is actually built.
+  enable_language(CXX)
+
   # OpenCV defines targets with transitive dependencies not with namespaces but using opencv_ prefix. 
   # This targets provide necessary include directories and linked flags.
   find_package(OpenCVPkg REQUIRED
@@ -172,7 +176,10 @@ if(BUILD_TEST)
     # not always contains C include files. So we need to additional check.
     # highgui_c.h is currently broken.
     find_file(highgui_path
-      HINTS /usr/include/opencv4 /usr/local/include/opencv4
+      HINTS
+        ${OpenCV_INCLUDE_DIRS}
+        ${OpenCV_opencv_highgui_INCLUDE_DIR}
+      PATH_SUFFIXES opencv4
       NAMES opencv2/highgui/highgui_c.h
     )
     if(highgui_path)
