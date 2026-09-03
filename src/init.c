@@ -71,7 +71,7 @@ YUV stream from a UVC device such as a standard webcam.
 
 */
 #include <stdarg.h>
-#include <libgen.h>
+#include <string.h>
 
 #ifdef __ANDROID__
 #include <android/log.h>
@@ -168,26 +168,40 @@ void uvc_start_handler_thread(uvc_context_t *ctx) {
 }
 
 
-static uvc_log_func_t *uvc_log_func = NULL;
+static uvc_log_func_t uvc_log_func = NULL;
+
 #define UVC_LOG_LINE_MAX_LEN 1024
+
 void uvc_log_set_function(uvc_log_func_t func) {
-    uvc_log_func = func;
+  uvc_log_func = func;
 }
 
-void uvc_log(char *filename, unsigned line, const char *function, const char *format, ...) {
-    char buf_line[UVC_LOG_LINE_MAX_LEN] = {0};
+void uvc_log(const char *filename, unsigned line, const char *function, const char *format, ...) {
+  char buf_line[UVC_LOG_LINE_MAX_LEN];
+  const char *base;
+  va_list args;
 
-    va_list org;
-    va_start(org, format);
-    vsnprintf(buf_line, sizeof(buf_line), format, org);
-    if (uvc_log_func) {
-      (*uvc_log_func)(filename, line, function, buf_line);
-    } else {
-      #ifdef __ANDROID__
-        __android_log_print(ANDROID_LOG_DEBUG, "libuvc", "[%s:%d] %s - %s\n", basename(filename), line, function, buf_line);
-      #else
-        fprintf(stderr, "[%s:%d] %s - %s\n", basename(filename), line, function, buf_line);
-      #endif
-    }
-    va_end(org);
+  va_start(args, format);
+  vsnprintf(buf_line, sizeof(buf_line), format, args);
+  va_end(args);
+
+  if (uvc_log_func) {
+    uvc_log_func(filename, line, function, buf_line);
+    return;
+  }
+
+  /* Not basename(): the one from <libgen.h> is the POSIX version, which is
+   * allowed to modify its argument, and filename is __FILE__. The GNU
+   * version is const-correct but needs _GNU_SOURCE and glibc, so it is not
+   * available on musl, macOS or bionic. */
+  base = strrchr(filename, '/');
+  base = base ? base + 1 : filename;
+
+#ifdef __ANDROID__
+  __android_log_print(ANDROID_LOG_DEBUG, "libuvc", "[%s:%u] %s - %s\n",
+                      base, line, function, buf_line);
+#else
+  fprintf(stderr, "[%s:%u] %s - %s\n",
+          base, line, function, buf_line);
+#endif
 }

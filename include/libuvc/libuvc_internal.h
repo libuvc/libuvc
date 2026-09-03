@@ -49,7 +49,6 @@
   } while (0);
 
 #ifdef UVC_DEBUGGING
-#include <libgen.h>
 #define UVC_DEBUG(...)  uvc_log(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define UVC_ENTER()     uvc_log(__FILE__, __LINE__, __FUNCTION__, "Entering")
 #define UVC_EXIT(code)  uvc_log(__FILE__, __LINE__, __FUNCTION__, "Ending: %d", code)
