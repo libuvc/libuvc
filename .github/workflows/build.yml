@@ -147,13 +147,28 @@ jobs:
 
       - name: Check the generated block of libuvc.h is up to date
         run: |
-          # Extract the block between the AUTO-GENERATED markers, excluding
-          # the marker lines themselves. `decl` ends with a trailing blank
-          # line that the header does not carry, so strip trailing blanks
-          # from both sides before comparing.
-          sed -n '/AUTO-GENERATED control accessors! Update/,/end AUTO-GENERATED/p' \
+          # Unlike ctrl-gen.c, libuvc.h is only partly generated: `decl`
+          # emits just the accessor prototypes, and the rest of the header
+          # is hand written. So compare the region between the markers.
+          # Fail loudly if a marker is missing, otherwise a reworded marker
+          # would silently shrink the extracted block and the diff would
+          # pass while checking nothing.
+          grep -c '^/\* AUTO-GENERATED control accessors' include/libuvc/libuvc.h \
+            | grep -qx 1 || { echo "start marker missing/duplicated" >&2; exit 1; }
+          grep -c '^/\* end AUTO-GENERATED control accessors \*/$' include/libuvc/libuvc.h \
+            | grep -qx 1 || { echo "end marker missing/duplicated" >&2; exit 1; }
+
+          sed -n '/^\/\* AUTO-GENERATED control accessors/,/^\/\* end AUTO-GENERATED control accessors \*\/$/p' \
             include/libuvc/libuvc.h | sed '1d;$d' > libuvc.h.block
           python3 src/ctrl-gen.py -i standard-units.yaml decl > libuvc.h.new
+
+          # Sanity-check that extraction actually found the accessors, so a
+          # future header reshuffle cannot reduce this to an empty diff.
+          test "$(wc -l < libuvc.h.block)" -gt 100 || {
+            echo "extracted block implausibly short" >&2; exit 1; }
+
+          # `decl` ends with a trailing blank line the header does not
+          # carry, so strip trailing blanks from both sides.
           diff -u <(sed -e :a -e '/^\n*$/{$d;N;};/\n$/ba' libuvc.h.block) \
                   <(sed -e :a -e '/^\n*$/{$d;N;};/\n$/ba' libuvc.h.new)
 
