@@ -236,7 +236,7 @@ uvc_error_t uvc_query_stream_ctrl(
     INT_TO_DW(ctrl->dwMaxPayloadTransferSize, buf + 22);
 
     if (len >= 34) {
-      INT_TO_DW ( ctrl->dwClockFrequency, buf + 26 );
+      INT_TO_DW(ctrl->dwClockFrequency, buf + 26);
       buf[30] = ctrl->bmFramingInfo;
       buf[31] = ctrl->bPreferredVersion;
       buf[32] = ctrl->bMinVersion;
@@ -274,7 +274,7 @@ uvc_error_t uvc_query_stream_ctrl(
     ctrl->dwMaxPayloadTransferSize = DW_TO_UINT32(buf + 22);
 
     if (len >= 34) {
-      ctrl->dwClockFrequency = DW_TO_UINT32 ( buf + 26 );
+      ctrl->dwClockFrequency = DW_TO_UINT32(buf + 26);
       ctrl->bmFramingInfo = buf[30];
       ctrl->bPreferredVersion = buf[31];
       ctrl->bMinVersion = buf[32];
