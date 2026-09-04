@@ -43,7 +43,7 @@ set(SOURCES
 find_package(LibUSB)
 
 if(DISABLE_JPEG)
-  message(WARNING "libuvc will not support JPEG decoding.")
+  message(STATUS "libuvc will not support JPEG decoding.")
 else()
   # JpegPkg name to differ from shipped with CMake
   find_package(JpegPkg QUIET)
