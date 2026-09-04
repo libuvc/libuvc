@@ -196,16 +196,18 @@ uvc_error_t uvc_query_stream_ctrl(
     uvc_stream_ctrl_t *ctrl,
     uint8_t probe,
     enum uvc_req_code req) {
-  uint8_t buf[34];
+  uint8_t buf[48];
   size_t len;
   uvc_error_t err;
 
   memset(buf, 0, sizeof(buf));
 
-  if (devh->info->ctrl_if.bcdUVC >= 0x0110)
+  if (devh->info->ctrl_if.bcdUVC < 0x0110)
+    len = 26;
+  else if (devh->info->ctrl_if.bcdUVC < 0x0150)
     len = 34;
   else
-    len = 26;
+    len = 48;
 
   /* prepare for a SET transfer */
   if (req == UVC_SET_CUR) {
@@ -221,7 +223,7 @@ uvc_error_t uvc_query_stream_ctrl(
     INT_TO_DW(ctrl->dwMaxVideoFrameSize, buf + 18);
     INT_TO_DW(ctrl->dwMaxPayloadTransferSize, buf + 22);
 
-    if (len == 34) {
+    if (len >= 34) {
       INT_TO_DW ( ctrl->dwClockFrequency, buf + 26 );
       buf[30] = ctrl->bmFramingInfo;
       buf[31] = ctrl->bPreferredVersion;
@@ -259,7 +261,7 @@ uvc_error_t uvc_query_stream_ctrl(
     ctrl->dwMaxVideoFrameSize = DW_TO_INT(buf + 18);
     ctrl->dwMaxPayloadTransferSize = DW_TO_INT(buf + 22);
 
-    if (len == 34) {
+    if (len >= 34) {
       ctrl->dwClockFrequency = DW_TO_INT ( buf + 26 );
       ctrl->bmFramingInfo = buf[30];
       ctrl->bPreferredVersion = buf[31];
