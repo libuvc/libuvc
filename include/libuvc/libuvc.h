@@ -87,6 +87,8 @@ enum uvc_frame_format {
   UVC_FRAME_FORMAT_NV12,
   /** YUV: P010 */
   UVC_FRAME_FORMAT_P010,
+  UVC_FRAME_FORMAT_I420,
+  UVC_FRAME_FORMAT_NV21,
   /** Number of formats understood */
   UVC_FRAME_FORMAT_COUNT,
 };
@@ -588,6 +590,7 @@ const uvc_output_terminal_t *uvc_get_output_terminals(uvc_device_handle_t *devh)
 const uvc_selector_unit_t *uvc_get_selector_units(uvc_device_handle_t *devh);
 const uvc_processing_unit_t *uvc_get_processing_units(uvc_device_handle_t *devh);
 const uvc_extension_unit_t *uvc_get_extension_units(uvc_device_handle_t *devh);
+const uint16_t uvc_get_uvc_compliance(uvc_device_handle_t *devh);
 
 uvc_error_t uvc_get_stream_ctrl_format_size(
     uvc_device_handle_t *devh,
@@ -608,6 +611,9 @@ uvc_error_t uvc_trigger_still(
     uvc_still_ctrl_t *still_ctrl);
 
 const uvc_format_desc_t *uvc_get_format_descs(uvc_device_handle_t* );
+
+enum uvc_frame_format uvc_frame_format_for_guid(uint8_t guid[16]);
+
 
 uvc_error_t uvc_probe_stream_ctrl(
     uvc_device_handle_t *devh,
@@ -800,6 +806,7 @@ uvc_error_t uvc_yuyv2y(uvc_frame_t *in, uvc_frame_t *out);
 uvc_error_t uvc_yuyv2uv(uvc_frame_t *in, uvc_frame_t *out);
 
 #ifdef LIBUVC_HAS_JPEG
+uvc_error_t uvc_mjpeg2bgr(uvc_frame_t *in, uvc_frame_t *out);
 uvc_error_t uvc_mjpeg2rgb(uvc_frame_t *in, uvc_frame_t *out);
 uvc_error_t uvc_mjpeg2gray(uvc_frame_t *in, uvc_frame_t *out);
 #endif
