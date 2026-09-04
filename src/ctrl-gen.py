@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-from __future__ import print_function
+#!/usr/bin/env python3
 from collections import OrderedDict
 import getopt
 import sys
@@ -24,7 +23,7 @@ yaml.add_representer(OrderedDict, ordered_dict_presenter)
 def dict_constructor(loader, node):
     return OrderedDict(loader.construct_pairs(node))
 _mapping_tag = yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG
-yaml.add_constructor(_mapping_tag, dict_constructor)
+yaml.add_constructor(_mapping_tag, dict_constructor, Loader=yaml.SafeLoader)
 
 class IntField(object):
     def __init__(self, name, position, length, signed):
@@ -65,10 +64,6 @@ class IntField(object):
         if self.signed:
             rep.append(('signed', True))
         return rep
-
-    @staticmethod
-    def load(spec):
-        return IntField(spec['name'], spec['position'], spec['length'], spec['signed'] if signed in spec else False)
 
 def load_field(name, spec):
     if spec['type'] == 'int':
@@ -241,6 +236,10 @@ def export_unit(unit):
     unit_out['controls'] = OrderedDict([fmt_ctrl(ctrl_name, ctrl_details) for ctrl_name, ctrl_details in unit['controls'].items()])
     return unit_out
 
+def usage():
+    print("Usage: {0} [-i|--input FILE]... (def|decl|yaml)".format(sys.argv[0]),
+          file=sys.stderr)
+
 if __name__ == '__main__':
     try:
         opts, args = getopt.getopt(sys.argv[1:], "hi:", ["help", "input="])
@@ -273,8 +272,8 @@ if __name__ == '__main__':
     def iterunits():
         for input_file in inputs:
             with open(input_file, "r") as fp:
-                units = yaml.load(fp)['units']
-                for unit_name, unit_details in units.iteritems():
+                units = yaml.load(fp, Loader=yaml.SafeLoader)['units']
+                for unit_name, unit_details in units.items():
                     yield unit_name, unit_details
 
     if mode == 'def':
@@ -297,6 +296,6 @@ static const int REQ_TYPE_GET = 0xa1;
         sys.exit(0)
 
     for unit_name, unit_details in iterunits():
-        for control_name, control_details in unit_details['controls'].iteritems():
+        for control_name, control_details in unit_details['controls'].items():
             code = fun(unit_name, unit_details, control_name, control_details)
             print(code)

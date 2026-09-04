@@ -1,0 +1,204 @@
+name: Build
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [ gcc, clang ]
+        target: [ Both, Shared, Static ]
+        jpeg: [ on, off ]
+
+    name: ${{ matrix.compiler }}, ${{ matrix.target }}${{ matrix.jpeg == 'off' && ', no jpeg' || '' }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libusb-1.0-0-dev
+          if [ "${{ matrix.jpeg }}" = "on" ]; then
+            sudo apt-get install -y libjpeg-dev
+          fi
+
+      - name: Configure
+        env:
+          CC: ${{ matrix.compiler }}
+        run: |
+          # LibUVC_STATIC makes the LibUVC::UVC alias point at the static
+          # library, which the example program links against.
+          cmake -B build \
+            -DCMAKE_BUILD_TARGET=${{ matrix.target }} \
+            -DLibUVC_STATIC=${{ matrix.target == 'Static' && 'ON' || 'OFF' }} \
+            -DBUILD_EXAMPLE=ON \
+            -DDISABLE_JPEG=${{ matrix.jpeg == 'off' && 'ON' || 'OFF' }}
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Check example was built
+        run: test -x build/example
+
+  # ubuntu-latest still defaults to CMake 3.x, so pin CMake 4 explicitly to
+  # guard against regressing the cmake_minimum_required bump: CMake 4 removed
+  # compatibility with < 3.5 and refuses to configure such projects.
+  build-cmake4:
+    runs-on: ubuntu-latest
+
+    name: gcc, cmake 4
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libusb-1.0-0-dev libjpeg-dev
+
+      - name: Install CMake 4
+        uses: lukka/get-cmake@v4.4.2
+        with:
+          cmakeVersion: 4.1.2
+
+      - name: Check cmake version
+        run: |
+          cmake --version
+          cmake --version | head -1 | grep -q ' 4\.' || {
+            echo "expected CMake 4.x" >&2
+            exit 1
+          }
+
+      - name: Configure
+        run: cmake -B build
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Check example was built
+        run: test -x build/example
+
+  build-macos:
+    runs-on: macos-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [ Both, Shared, Static ]
+        jpeg: [ on, off ]
+
+    name: macos, ${{ matrix.target }}${{ matrix.jpeg == 'off' && ', no jpeg' || '' }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install dependencies
+        run: |
+          brew install libusb
+          if [ "${{ matrix.jpeg }}" = "on" ]; then
+            brew install jpeg
+          fi
+
+      - name: Configure
+        run: |
+          # LibUVC_STATIC makes the LibUVC::UVC alias point at the static
+          # library, which the example program links against.
+          cmake -B build \
+            -DCMAKE_BUILD_TARGET=${{ matrix.target }} \
+            -DLibUVC_STATIC=${{ matrix.target == 'Static' && 'ON' || 'OFF' }} \
+            -DBUILD_EXAMPLE=ON \
+            -DDISABLE_JPEG=${{ matrix.jpeg == 'off' && 'ON' || 'OFF' }}
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Check example was built
+        run: test -x build/example
+
+  # src/ctrl-gen.c and the control accessors in libuvc.h are generated from
+  # standard-units.yaml by src/ctrl-gen.py. Regenerate them here so the
+  # committed copies cannot drift from the generator or the YAML.
+  check-generated:
+    runs-on: ubuntu-latest
+
+    name: check generated files
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Check src/ctrl-gen.c is up to date
+        run: |
+          python3 src/ctrl-gen.py -i standard-units.yaml def > ctrl-gen.c.new
+          diff -u src/ctrl-gen.c ctrl-gen.c.new
+
+      - name: Check the generated block of libuvc.h is up to date
+        run: |
+          # Unlike ctrl-gen.c, libuvc.h is only partly generated: `decl`
+          # emits just the accessor prototypes, and the rest of the header
+          # is hand written. So compare the region between the markers.
+          # Fail loudly if a marker is missing, otherwise a reworded marker
+          # would silently shrink the extracted block and the diff would
+          # pass while checking nothing.
+          grep -c '^/\* AUTO-GENERATED control accessors' include/libuvc/libuvc.h \
+            | grep -qx 1 || { echo "start marker missing/duplicated" >&2; exit 1; }
+          grep -c '^/\* end AUTO-GENERATED control accessors \*/$' include/libuvc/libuvc.h \
+            | grep -qx 1 || { echo "end marker missing/duplicated" >&2; exit 1; }
+
+          sed -n '/^\/\* AUTO-GENERATED control accessors/,/^\/\* end AUTO-GENERATED control accessors \*\/$/p' \
+            include/libuvc/libuvc.h | sed '1d;$d' > libuvc.h.block
+          python3 src/ctrl-gen.py -i standard-units.yaml decl > libuvc.h.new
+
+          # Sanity-check that extraction actually found the accessors, so a
+          # future header reshuffle cannot reduce this to an empty diff.
+          test "$(wc -l < libuvc.h.block)" -gt 100 || {
+            echo "extracted block implausibly short" >&2; exit 1; }
+
+          # `decl` ends with a trailing blank line the header does not
+          # carry, so strip trailing blanks from both sides.
+          diff -u <(sed -e :a -e '/^\n*$/{$d;N;};/\n$/ba' libuvc.h.block) \
+                  <(sed -e :a -e '/^\n*$/{$d;N;};/\n$/ba' libuvc.h.new)
+
+      - name: Check standard-units.yaml round-trips
+        run: |
+          python3 src/ctrl-gen.py -i standard-units.yaml yaml > standard-units.yaml.new
+          diff -u standard-units.yaml standard-units.yaml.new
+
+  # The test program needs OpenCV, so it is built separately to keep the
+  # dependency out of the main matrix.
+  build-test:
+    runs-on: ubuntu-latest
+
+    name: gcc, test program
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libusb-1.0-0-dev libjpeg-dev libopencv-dev
+
+      - name: Configure
+        run: cmake -B build -DBUILD_TEST=ON
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Check programs were built
+        run: |
+          test -x build/example
+          test -x build/uvc_test
