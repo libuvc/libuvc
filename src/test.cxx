@@ -33,7 +33,7 @@
 *********************************************************************/
 #include <stdio.h>
 #include <unistd.h>
-#include <opencv2/highgui/highgui_c.h>
+#include <opencv2/highgui.hpp>
 
 #include "libuvc/libuvc.h"
 
@@ -42,7 +42,6 @@ using namespace cv;
 void cb(uvc_frame_t *frame, void *ptr) {
   uvc_frame_t *bgr;
   uvc_error_t ret;
-  IplImage* cvImg;
 
   printf("callback! length = %zu, ptr = %p\n", frame->data_bytes, ptr);
 
@@ -59,18 +58,13 @@ void cb(uvc_frame_t *frame, void *ptr) {
     return;
   }
 
-  cvImg = cvCreateImageHeader(
-      cvSize(bgr->width, bgr->height),
-      IPL_DEPTH_8U,
-      3);
+  /* Wrap the frame data without copying it; cvImg is only valid until
+   * the frame is freed below. */
+  Mat cvImg(bgr->height, bgr->width, CV_8UC3, bgr->data, bgr->width * 3);
 
-  cvSetData(cvImg, bgr->data, bgr->width * 3); 
-
-  cvNamedWindow("Test", CV_WINDOW_AUTOSIZE);
-  cvShowImage("Test", cvImg);
-  cvWaitKey(10);
-
-  cvReleaseImageHeader(&cvImg);
+  namedWindow("Test", WINDOW_AUTOSIZE);
+  imshow("Test", cvImg);
+  waitKey(10);
 
   uvc_free_frame(bgr);
 }
