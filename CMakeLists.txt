@@ -24,6 +24,7 @@ endif()
 option(BUILD_EXAMPLE "Build example program" ON)
 option(BUILD_TEST "Build test program" OFF)
 option(ENABLE_UVC_DEBUGGING "Enable UVC debugging" OFF)
+option(DISABLE_JPEG "Disable JPEG support" OFF)
 
 set(libuvc_DESCRIPTION "A cross-platform library for USB video devices")
 set(libuvc_URL "https://github.com/libuvc/libuvc")
@@ -41,14 +42,18 @@ set(SOURCES
 
 find_package(LibUSB)
 
-# JpegPkg name to differ from shipped with CMake
-find_package(JpegPkg QUIET)
-if(JPEG_FOUND)
-  message(STATUS "Building libuvc with JPEG support.")
-  set(LIBUVC_HAS_JPEG TRUE)
-  list(APPEND SOURCES src/frame-mjpeg.c)
+if(DISABLE_JPEG)
+  message(STATUS "libuvc will not support JPEG decoding.")
 else()
-  message(WARNING "JPEG not found. libuvc will not support JPEG decoding.")
+  # JpegPkg name to differ from shipped with CMake
+  find_package(JpegPkg QUIET)
+  if(JPEG_FOUND)
+    message(STATUS "Building libuvc with JPEG support.")
+    set(LIBUVC_HAS_JPEG TRUE)
+    list(APPEND SOURCES src/frame-mjpeg.c)
+  else()
+    message(WARNING "JPEG not found. libuvc will not support JPEG decoding.")
+  endif()
 endif()
 
 if(UNIX AND NOT APPLE)
@@ -154,6 +159,10 @@ if(BUILD_EXAMPLE)
 endif()
 
 if(BUILD_TEST)
+  # Only the test program is C++; the library itself is C, so do not
+  # require a C++ compiler unless the test is actually built.
+  enable_language(CXX)
+
   # OpenCV defines targets with transitive dependencies not with namespaces but using opencv_ prefix. 
   # This targets provide necessary include directories and linked flags.
   find_package(OpenCVPkg REQUIRED
@@ -162,7 +171,25 @@ if(BUILD_TEST)
       opencv_highgui
   )
 
-  add_executable(uvc_test src/test.c)
+  if(OpenCVPkg_FOUND)
+    # Our example written in C language but found OpenCV modules does
+    # not always contains C include files. So we need to additional check.
+    # highgui_c.h is currently broken.
+    find_file(highgui_path
+      HINTS
+        ${OpenCV_INCLUDE_DIRS}
+        ${OpenCV_opencv_highgui_INCLUDE_DIR}
+      PATH_SUFFIXES opencv4
+      NAMES opencv2/highgui/highgui_c.h
+    )
+    if(highgui_path)
+      message(STATUS "C include file for HighGUI OpenCV module found")
+    else()
+      message(FATAL_ERROR "C include file for HighGUI OpenCV module not found. In Ubuntu it located within libopencv-dev or libhighgui-dev")
+    endif()
+  endif()
+
+  add_executable(uvc_test src/test.cxx)
   target_link_libraries(uvc_test
     PRIVATE
       LibUVC::UVC

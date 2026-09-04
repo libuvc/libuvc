@@ -32,16 +32,19 @@
 *  POSSIBILITY OF SUCH DAMAGE.
 *********************************************************************/
 #include <stdio.h>
+#include <unistd.h>
 #include <opencv2/highgui/highgui_c.h>
 
 #include "libuvc/libuvc.h"
+
+using namespace cv;
 
 void cb(uvc_frame_t *frame, void *ptr) {
   uvc_frame_t *bgr;
   uvc_error_t ret;
   IplImage* cvImg;
 
-  printf("callback! length = %u, ptr = %d\n", frame->data_bytes, (int) ptr);
+  printf("callback! length = %zu, ptr = %p\n", frame->data_bytes, ptr);
 
   bgr = uvc_allocate_frame(frame->width * frame->height * 3);
   if (!bgr) {
@@ -115,7 +118,7 @@ int main(int argc, char **argv) {
       if (res < 0) {
         uvc_perror(res, "get_mode");
       } else {
-        res = uvc_start_streaming(devh, &ctrl, cb, 12345, 0);
+        res = uvc_start_streaming(devh, &ctrl, cb, (void*)12345, 0);
 
         if (res < 0) {
           uvc_perror(res, "start_streaming");
