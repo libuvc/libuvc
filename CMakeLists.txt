@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.13)
 project(libuvc
   VERSION 0.0.7
   LANGUAGES C
@@ -25,6 +25,16 @@ option(BUILD_EXAMPLE "Build example program" ON)
 option(BUILD_TEST "Build test program" OFF)
 option(ENABLE_UVC_DEBUGGING "Enable UVC debugging" OFF)
 option(DISABLE_JPEG "Disable JPEG support" OFF)
+option(BUILD_TESTING "Build the unit tests" OFF)
+option(ENABLE_SANITIZERS "Build with AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
+
+# Applied to the whole build, not just the tests: an out-of-bounds read
+# inside the library is only caught if the library itself is instrumented.
+if(ENABLE_SANITIZERS)
+  set(uvc_sanitizer_flags -fsanitize=address,undefined -fno-omit-frame-pointer)
+  add_compile_options(${uvc_sanitizer_flags})
+  add_link_options(${uvc_sanitizer_flags})
+endif()
 
 set(libuvc_DESCRIPTION "A cross-platform library for USB video devices")
 set(libuvc_URL "https://github.com/libuvc/libuvc")
@@ -196,6 +206,13 @@ if(BUILD_TEST)
       opencv_core
       opencv_highgui
   )
+endif()
+
+if(BUILD_TESTING)
+  # enable_language(CXX) happens inside test/, so a build with
+  # BUILD_TESTING=OFF never requires a C++ compiler.
+  enable_testing()
+  add_subdirectory(test)
 endif()
 
 
