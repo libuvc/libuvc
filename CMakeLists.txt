@@ -171,24 +171,6 @@ if(BUILD_TEST)
       opencv_highgui
   )
 
-  if(OpenCVPkg_FOUND)
-    # Our example written in C language but found OpenCV modules does
-    # not always contains C include files. So we need to additional check.
-    # highgui_c.h is currently broken.
-    find_file(highgui_path
-      HINTS
-        ${OpenCV_INCLUDE_DIRS}
-        ${OpenCV_opencv_highgui_INCLUDE_DIR}
-      PATH_SUFFIXES opencv4
-      NAMES opencv2/highgui/highgui_c.h
-    )
-    if(highgui_path)
-      message(STATUS "C include file for HighGUI OpenCV module found")
-    else()
-      message(FATAL_ERROR "C include file for HighGUI OpenCV module not found. In Ubuntu it located within libopencv-dev or libhighgui-dev")
-    endif()
-  endif()
-
   add_executable(uvc_test src/test.cxx)
   target_link_libraries(uvc_test
     PRIVATE
