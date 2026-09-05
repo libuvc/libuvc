@@ -151,3 +151,46 @@ jobs:
         run: |
           test -x build/example
           test -x build/uvc_test
+
+  # The frame converter unit tests. Run under AddressSanitizer and
+  # UndefinedBehaviorSanitizer: several of the cases check that a converter
+  # stays inside its input buffer, and without a sanitizer an overread just
+  # returns stale heap bytes and the test passes.
+  #
+  # Both gcc and clang, since the two sanitizer runtimes do not always report
+  # the same thing.
+  unit-tests:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [ gcc, clang ]
+
+    name: ${{ matrix.compiler }}, unit tests
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libusb-1.0-0-dev libjpeg-dev libgtest-dev
+
+      - name: Configure
+        env:
+          CC: ${{ matrix.compiler }}
+          CXX: ${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}
+        run: |
+          cmake -B build \
+            -DBUILD_TESTING=ON \
+            -DENABLE_SANITIZERS=ON \
+            -DBUILD_EXAMPLE=OFF
+
+      - name: Build
+        run: cmake --build build
+
+      # --output-on-failure so a failing case shows its sanitizer report in
+      # the log rather than just a test name.
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure
