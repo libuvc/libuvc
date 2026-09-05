@@ -155,6 +155,24 @@ static uvc_error_t uvc_mjpeg_convert(uvc_frame_t *in, uvc_frame_t *out) {
 
   jpeg_start_decompress(&dinfo);
 
+  /* The output buffer was sized by the caller from the frame's declared
+     width and height, which come from the negotiated format. The JPEG's own
+     dimensions come from the frame data, which a broken or hostile device
+     controls independently, so a frame can claim one size and carry a larger
+     picture. Decoding it would write past the end of the buffer, since the
+     loop below advances by out->step per scanline and runs to libjpeg's
+     output_height. Reject the mismatch rather than resizing: the caller
+     allocated for the declared geometry and expects a frame of that size.
+
+     Checked after jpeg_start_decompress(), which is where output_width,
+     output_height and output_components take their final values. */
+  if (dinfo.output_width != out->width ||
+      dinfo.output_height != out->height ||
+      dinfo.output_components != (out->frame_format == UVC_FRAME_FORMAT_RGB ? 3 : 1)) {
+    jpeg_abort_decompress(&dinfo);
+    goto fail;
+  }
+
   lines_read = 0;
   while (dinfo.output_scanline < dinfo.output_height) {
     unsigned char *buffer[1] = {( unsigned char*) out->data + lines_read * out->step };

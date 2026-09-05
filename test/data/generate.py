@@ -26,6 +26,7 @@ and, for the MJPEG decoder:
     plasma_64x32.jpg.gray   the same, as GRAY8
     oversize_128x64.jpg     a JPEG whose real size exceeds the frame's
     oversize_64x256.jpg     geometry, for the bounds tests
+    gray_64x32.jpg          a single-component JPEG
 
 JPEG is lossy, so the .jpg.rgb reference cannot be compared byte for byte
 against the YUYV path; it is only meaningful against the same decoder.
@@ -185,6 +186,13 @@ def jpeg_files():
         f"{BASE}.jpg.gray": decode_jpeg(jpeg, "gray"),
         "oversize_128x64.jpg": make_jpeg("128x64", 11),
         "oversize_64x256.jpg": make_jpeg("64x256", 7),
+        # Encoded with a single component. Decoding it as RGB must still
+        # work: libjpeg upsamples to three when asked for JCS_RGB.
+        "gray_64x32.jpg": magick([
+            "-size", f"{WIDTH}x{HEIGHT}", "-seed", "9", "plasma:fractal",
+            "-colorspace", "Gray", "-type", "Grayscale",
+            "-quality", "90", "jpg:-",
+        ]),
     }
 
 

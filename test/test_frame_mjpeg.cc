@@ -119,6 +119,27 @@ TEST(MjpegDecode, MatchesReferenceImage) {
   }
 }
 
+/** A grayscale-encoded JPEG decoded as RGB.
+ *
+ * libjpeg upsamples a single-component image to three when asked for
+ * JCS_RGB, so output_components is 3 even though the file holds one. A
+ * bounds check that compared against the file's component count rather than
+ * the decoder's output would wrongly reject this.
+ */
+TEST(MjpegDecode, GrayscaleJpegDecodesAsRgb) {
+  std::vector<uint8_t> jpeg = ReadFixture("gray_64x32.jpg");
+  ASSERT_FALSE(jpeg.empty()) << "regenerate with test/data/generate.py";
+
+  auto in = MakeMjpegFrame(jpeg, 64, 32);
+  ASSERT_NE(in, nullptr);
+  FramePtr out(uvc_allocate_frame(0));
+  ASSERT_NE(out, nullptr);
+
+  EXPECT_EQ(uvc_mjpeg2rgb(in.get(), out.get()), UVC_SUCCESS);
+  EXPECT_EQ(out->width, 64u);
+  EXPECT_EQ(out->height, 32u);
+}
+
 /** A frame that is not MJPEG must be refused. */
 TEST(MjpegDecode, WrongInputFormatRejected) {
   std::vector<uint8_t> jpeg = ReadFixture("plasma_64x32.jpg");
