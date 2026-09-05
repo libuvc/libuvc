@@ -1,3 +1,18 @@
+Unreleased
+----------------
+
+Bug fixes:
+  - Heap buffer overflow in the MJPEG decoder on a mismatched frame size #323
+    - uvc_mjpeg2rgb(), uvc_mjpeg2bgr() and uvc_mjpeg2gray() sized the output
+      from the frame's negotiated width and height, but decoded as many
+      scanlines as the JPEG itself declared. A JPEG larger than the
+      negotiated format wrote past the end of the output buffer and still
+      returned UVC_SUCCESS.
+    - Behaviour change: a JPEG whose dimensions do not match the negotiated
+      format, in either direction, is now rejected with an error instead of
+      being decoded. A camera that sends frames of a different size than it
+      advertised will see its MJPEG conversions fail.
+
 Changes in 0.0.8 (2026-09-11)
 ----------------
 
