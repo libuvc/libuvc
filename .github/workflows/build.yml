@@ -1,0 +1,196 @@
+name: Build
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [ gcc, clang ]
+        target: [ Both, Shared, Static ]
+        jpeg: [ on, off ]
+
+    name: ${{ matrix.compiler }}, ${{ matrix.target }}${{ matrix.jpeg == 'off' && ', no jpeg' || '' }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libusb-1.0-0-dev
+          if [ "${{ matrix.jpeg }}" = "on" ]; then
+            sudo apt-get install -y libjpeg-dev
+          fi
+
+      - name: Configure
+        env:
+          CC: ${{ matrix.compiler }}
+        run: |
+          # LibUVC_STATIC makes the LibUVC::UVC alias point at the static
+          # library, which the example program links against.
+          cmake -B build \
+            -DCMAKE_BUILD_TARGET=${{ matrix.target }} \
+            -DLibUVC_STATIC=${{ matrix.target == 'Static' && 'ON' || 'OFF' }} \
+            -DBUILD_EXAMPLE=ON \
+            -DDISABLE_JPEG=${{ matrix.jpeg == 'off' && 'ON' || 'OFF' }}
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Check example was built
+        run: test -x build/example
+
+  # ubuntu-latest still defaults to CMake 3.x, so pin CMake 4 explicitly to
+  # guard against regressing the cmake_minimum_required bump: CMake 4 removed
+  # compatibility with < 3.5 and refuses to configure such projects.
+  build-cmake4:
+    runs-on: ubuntu-latest
+
+    name: gcc, cmake 4
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libusb-1.0-0-dev libjpeg-dev
+
+      - name: Install CMake 4
+        uses: lukka/get-cmake@v4.4.2
+        with:
+          cmakeVersion: 4.1.2
+
+      - name: Check cmake version
+        run: |
+          cmake --version
+          cmake --version | head -1 | grep -q ' 4\.' || {
+            echo "expected CMake 4.x" >&2
+            exit 1
+          }
+
+      - name: Configure
+        run: cmake -B build
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Check example was built
+        run: test -x build/example
+
+  build-macos:
+    runs-on: macos-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [ Both, Shared, Static ]
+        jpeg: [ on, off ]
+
+    name: macos, ${{ matrix.target }}${{ matrix.jpeg == 'off' && ', no jpeg' || '' }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install dependencies
+        run: |
+          brew install libusb
+          if [ "${{ matrix.jpeg }}" = "on" ]; then
+            brew install jpeg
+          fi
+
+      - name: Configure
+        run: |
+          # LibUVC_STATIC makes the LibUVC::UVC alias point at the static
+          # library, which the example program links against.
+          cmake -B build \
+            -DCMAKE_BUILD_TARGET=${{ matrix.target }} \
+            -DLibUVC_STATIC=${{ matrix.target == 'Static' && 'ON' || 'OFF' }} \
+            -DBUILD_EXAMPLE=ON \
+            -DDISABLE_JPEG=${{ matrix.jpeg == 'off' && 'ON' || 'OFF' }}
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Check example was built
+        run: test -x build/example
+
+  # The test program needs OpenCV, so it is built separately to keep the
+  # dependency out of the main matrix.
+  build-test:
+    runs-on: ubuntu-latest
+
+    name: gcc, test program
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libusb-1.0-0-dev libjpeg-dev libopencv-dev
+
+      - name: Configure
+        run: cmake -B build -DBUILD_TEST=ON
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Check programs were built
+        run: |
+          test -x build/example
+          test -x build/uvc_test
+
+  # The frame converter unit tests. Run under AddressSanitizer and
+  # UndefinedBehaviorSanitizer: several of the cases check that a converter
+  # stays inside its input buffer, and without a sanitizer an overread just
+  # returns stale heap bytes and the test passes.
+  #
+  # Both gcc and clang, since the two sanitizer runtimes do not always report
+  # the same thing.
+  unit-tests:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [ gcc, clang ]
+
+    name: ${{ matrix.compiler }}, unit tests
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libusb-1.0-0-dev libjpeg-dev libgtest-dev
+
+      - name: Configure
+        env:
+          CC: ${{ matrix.compiler }}
+          CXX: ${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}
+        run: |
+          cmake -B build \
+            -DBUILD_TESTING=ON \
+            -DENABLE_SANITIZERS=ON \
+            -DBUILD_EXAMPLE=OFF
+
+      - name: Build
+        run: cmake --build build
+
+      # --output-on-failure so a failing case shows its sanitizer report in
+      # the log rather than just a test name.
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure
