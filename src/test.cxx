@@ -58,13 +58,14 @@ void cb(uvc_frame_t *frame, void *ptr) {
     return;
   }
 
-  /* Wrap the frame data without copying it; cvImg is only valid until
-   * the frame is freed below. */
-  Mat cvImg(bgr->height, bgr->width, CV_8UC3, bgr->data, bgr->width * 3);
+  {
+    /* Wrap the frame data in a scoped cvImg, without copying it. */
+    Mat cvImg(bgr->height, bgr->width, CV_8UC3, bgr->data, bgr->step);
 
-  namedWindow("Test", WINDOW_AUTOSIZE);
-  imshow("Test", cvImg);
-  waitKey(10);
+    namedWindow("Test", WINDOW_AUTOSIZE);
+    imshow("Test", cvImg);
+    waitKey(10);
+  }
 
   uvc_free_frame(bgr);
 }
