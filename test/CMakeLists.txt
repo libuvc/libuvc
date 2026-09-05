@@ -25,6 +25,14 @@ target_compile_definitions(test_frame_reference
   PRIVATE UVC_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data"
 )
 
+# Compiles to an empty translation unit when libuvc was built without JPEG
+# support, so it needs no guard here.
+add_executable(test_frame_mjpeg test_frame_mjpeg.cc)
+target_link_libraries(test_frame_mjpeg PRIVATE uvc_static GTest::gtest_main)
+target_compile_definitions(test_frame_mjpeg
+  PRIVATE UVC_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data"
+)
+
 # The descriptor parsers are internal symbols that the shared library does not
 # export, so this links the static library and includes libuvc_internal.h.
 add_executable(test_descriptor test_descriptor.cc)
@@ -42,7 +50,7 @@ target_link_libraries(test_stream
 )
 target_include_directories(test_stream PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
-foreach(test_name IN ITEMS test_frame test_frame_reference test_descriptor test_stream)
+foreach(test_name IN ITEMS test_frame test_frame_reference test_frame_mjpeg test_descriptor test_stream)
   gtest_discover_tests(${test_name}
     DISCOVERY_TIMEOUT 30
     # A zero-length descriptor makes uvc_scan_streaming() loop forever, so a

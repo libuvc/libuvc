@@ -18,6 +18,17 @@ Files written, all for one 64x32 frame:
     plasma_64x32.bgr    the same, channels swapped
     plasma_64x32.y      the luma plane
     plasma_64x32.uv     the interleaved chroma bytes
+
+and, for the MJPEG decoder:
+
+    plasma_64x32.jpg        a 64x32 JPEG of the same image
+    plasma_64x32.jpg.rgb    what it decodes to, per ImageMagick
+    plasma_64x32.jpg.gray   the same, as GRAY8
+    oversize_128x64.jpg     a JPEG whose real size exceeds the frame's
+    oversize_64x256.jpg     geometry, for the bounds tests
+
+JPEG is lossy, so the .jpg.rgb reference cannot be compared byte for byte
+against the YUYV path; it is only meaningful against the same decoder.
 """
 
 import pathlib
@@ -107,6 +118,31 @@ def decode_rgb(ycbcr):
     return data
 
 
+def make_jpeg(size, seed, quality=90):
+    """A JPEG of a plasma frame at the given size."""
+    return magick([
+        "-size", size, "-seed", str(seed), "plasma:fractal",
+        "-quality", str(quality), "jpg:-",
+    ])
+
+
+def decode_jpeg(jpeg, colorspace):
+    """Decode a JPEG to raw bytes in the given colorspace.
+
+    Grayscale uses -grayscale Rec601Luma, not -colorspace Gray: libjpeg's
+    JCS_GRAYSCALE hands back the JPEG's own Y channel, which is Rec601
+    luma, whereas -colorspace Gray computes linear-light luminance. The two
+    differ by up to 18 levels on this image, which would swamp any
+    reasonable tolerance.
+    """
+    args = ["-depth", "8", "jpg:-"]
+    if colorspace == "gray":
+        args += ["-grayscale", "Rec601Luma", "-depth", "8", "gray:-"]
+    else:
+        args += ["-depth", "8", "rgb:-"]
+    return magick(args, stdin=jpeg)
+
+
 def swap_rgb_bgr(rgb):
     out = bytearray()
     for i in range(0, len(rgb), 3):
@@ -130,6 +166,25 @@ def build():
         # every odd one.
         f"{BASE}.y": bytes(yuyv[i] for i in range(0, len(yuyv), 2)),
         f"{BASE}.uv": bytes(yuyv[i + 1] for i in range(0, len(yuyv), 2)),
+        **jpeg_files(),
+    }
+
+
+def jpeg_files():
+    """Fixtures for the MJPEG decoder.
+
+    The oversized frames exist for the bounds tests: libuvc sizes the output
+    buffer from the frame's declared width and height, but libjpeg decodes to
+    whatever the JPEG header says, so a frame that understates its size makes
+    the decoder write past the end of the buffer.
+    """
+    jpeg = make_jpeg(f"{WIDTH}x{HEIGHT}", SEED)
+    return {
+        f"{BASE}.jpg": jpeg,
+        f"{BASE}.jpg.rgb": decode_jpeg(jpeg, "rgb"),
+        f"{BASE}.jpg.gray": decode_jpeg(jpeg, "gray"),
+        "oversize_128x64.jpg": make_jpeg("128x64", 11),
+        "oversize_64x256.jpg": make_jpeg("64x256", 7),
     }
 
 
