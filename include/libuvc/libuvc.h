@@ -87,7 +87,9 @@ enum uvc_frame_format {
   UVC_FRAME_FORMAT_NV12,
   /** YUV: P010 */
   UVC_FRAME_FORMAT_P010,
+  /** YUV420: I420 (planar Y, U, V) */
   UVC_FRAME_FORMAT_I420,
+  /** YUV420: NV21 */
   UVC_FRAME_FORMAT_NV21,
   /** Number of formats understood */
   UVC_FRAME_FORMAT_COUNT,
@@ -612,7 +614,6 @@ uvc_error_t uvc_trigger_still(
 const uvc_format_desc_t *uvc_get_format_descs(uvc_device_handle_t* );
 
 enum uvc_frame_format uvc_frame_format_for_guid(uint8_t guid[16]);
-
 
 uvc_error_t uvc_probe_stream_ctrl(
     uvc_device_handle_t *devh,
