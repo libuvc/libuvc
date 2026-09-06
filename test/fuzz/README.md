@@ -10,17 +10,18 @@ whose class-specific descriptor bytes come from the fuzzer. It is the same
 shape as the reproducer in [libuvc/libuvc#300][300], and finds that bug from
 an empty corpus in under a minute.
 
-It calls two real library functions and re-implements none of libuvc's own
-descriptor walking, so it cannot drift from the code it tests:
+The entry point is `uvc_scan_control()` — the same function `uvc_open()`
+calls once it has a configuration descriptor. It selects the VideoControl
+interface, walks its class-specific blocks and dispatches each to the
+parsers, so one call covers the whole path in the #300 report and the fuzzer
+re-implements none of libuvc's descriptor walking.
 
-- `uvc_scan_streaming()`, which walks the block list itself and is the
-  function in the #300 stack trace;
-- `uvc_parse_vc()`, for one VideoControl block.
+It takes a `uvc_device_handle_t` only to look up a device-specific quirk and
+tolerates `NULL`, which is what makes it reachable without a USB device.
 
-`uvc_scan_control()` would be a third, but it needs a `uvc_device_handle_t`
-for the TIS-camera quirk, so it cannot run without a real USB device. It adds
-nothing the two above miss: its loop is the same shape as
-`uvc_scan_streaming()`'s.
+`uvc_scan_streaming()` is driven separately. `uvc_scan_control()` only
+reaches it through a VideoControl header that names a valid interface, so
+calling it directly gets there in far fewer mutations.
 
 [300]: https://github.com/libuvc/libuvc/issues/300
 
@@ -79,9 +80,8 @@ Keeping the first two out of the descriptor bytes matters for #300: that bug
 needs an interface index the configuration does not actually have, so the
 fuzzer has to vary the count and the index independently of the block.
 
-`uvc_parse_vc()` is only called when at least three bytes of block remain.
-Every caller in libuvc checks that first -- "parseX needs to see buf[0,2]" --
-so a shorter call would report a read the library cannot actually receive.
+Both entry points do their own bounds handling on the block, so the harness
+imposes none of its own: whatever `bLength` says is what the library sees.
 
 ## Regression corpus
 

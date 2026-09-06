@@ -10,16 +10,18 @@
  * an interface in a synthetic USB configuration, which is exactly where they
  * would come from on a real device.
  *
- * Two entry points are driven, both real library functions -- nothing here
- * re-implements libuvc's own descriptor walk, so the fuzzer cannot drift
- * from the code it is testing:
+ * The entry point is uvc_scan_control(), the same function uvc_open() calls
+ * once it has a configuration descriptor. It picks the VideoControl
+ * interface, walks its class-specific blocks and dispatches each to the
+ * parsers, so one call covers the whole path in the #300 report without the
+ * fuzzer re-implementing any of libuvc's own descriptor walking.
  *
- *   uvc_scan_streaming()  walks the block list itself, and is the function
- *                         in the #300 stack trace.
- *   uvc_parse_vc()        one VideoControl block, reached directly.
+ * It takes a uvc_device_handle_t only for a device-specific quirk lookup and
+ * tolerates NULL, which is what makes it reachable without a USB device.
  *
- * uvc_scan_control() would be the third, but it needs a uvc_device_handle_t
- * for the TIS-camera quirk, which means a real USB device.
+ * uvc_scan_streaming() is driven separately: uvc_scan_control() only reaches
+ * it through a VideoControl header naming an interface, so calling it
+ * directly gets there in far fewer mutations.
  *
  * Build: see test/fuzz/README.md, or -DBUILD_FUZZERS=ON with clang.
  */
@@ -44,28 +46,33 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     return 0;
 
   /* Byte 0 picks how many interfaces the configuration declares and byte 1
-     which one to scan. Varying the two independently is what reaches #300:
-     that bug needs baInterfaceNr[] in a VC header to name an interface the
-     configuration does not have. */
+     which one uvc_scan_streaming() is pointed at. Varying the two
+     independently is what reaches #300: that bug needs an interface index
+     the configuration does not actually have. */
   num_interfaces = (data[0] % UVC_FUZZ_MAX_INTERFACES) + 1;
   target = data[1] % (UVC_FUZZ_MAX_INTERFACES + 1);
   data += 2;
   size -= 2;
 
+  /* Interface 0 is the VideoControl interface, so uvc_scan_control() selects
+     it and parses the fuzzed block. */
+  uvc_test_config_init(&tc, num_interfaces);
+  tc.altsettings[0].bInterfaceSubClass = UVC_SC_VIDEOCONTROL;
+  uvc_test_config_set_extra(&tc, 0, data, (int)size);
+  uvc_test_info_init(&info, &tc);
+
+  uvc_scan_control(NULL, &info);
+
+  uvc_test_info_free(&info);
+  uvc_test_config_free(&tc);
+
+  /* The VideoStreaming side, reached directly rather than through a
+     VideoControl header that has to name a valid interface first. */
   uvc_test_config_init(&tc, num_interfaces);
   uvc_test_config_set_extra(&tc, 0, data, (int)size);
   uvc_test_info_init(&info, &tc);
 
-  /* Walks the block list itself, including the bLength handling that decides
-     how far it advances. */
   uvc_scan_streaming(NULL, &info, target);
-
-  /* And the VideoControl side, one block, no walking. Every caller checks
-     for at least three bytes first ("parseX needs to see buf[0,2]"), so
-     honour that contract rather than reporting a short read the library
-     cannot actually receive. */
-  if (size >= 3)
-    uvc_parse_vc(NULL, &info, data, size);
 
   uvc_test_info_free(&info);
   uvc_test_config_free(&tc);

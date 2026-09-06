@@ -534,10 +534,17 @@ static uvc_error_t get_device_descriptor(
         uvc_device_descriptor_t **desc) {
   uvc_device_descriptor_t *desc_internal;
   struct libusb_device_descriptor usb_desc;
-  struct libusb_device_handle *usb_devh = devh->usb_devh;
+  struct libusb_device_handle *usb_devh;
   uvc_error_t ret;
 
   UVC_ENTER();
+
+  if (devh == NULL) {
+    UVC_EXIT(UVC_ERROR_INVALID_PARAM);
+    return UVC_ERROR_INVALID_PARAM;
+  }
+
+  usb_devh = devh->usb_devh;
 
   ret = libusb_get_device_descriptor(devh->dev->usb_dev, &usb_desc);
 
@@ -1063,6 +1070,11 @@ uvc_error_t uvc_release_if(uvc_device_handle_t *devh, int idx) {
 /** @internal
  * Find a device's VideoControl interface and process its descriptor
  * @ingroup device
+ *
+ * @p devh may be NULL, in which case the device-specific quirk lookup is
+ * skipped and only info->config is parsed. Nothing below this point uses the
+ * handle for anything else: the uvc_device_t threaded through the parsers is
+ * passed along but never dereferenced.
  */
 uvc_error_t uvc_scan_control(uvc_device_handle_t *devh, uvc_device_info_t *info) {
   const struct libusb_interface_descriptor *if_desc;
@@ -1113,7 +1125,7 @@ uvc_error_t uvc_scan_control(uvc_device_handle_t *devh, uvc_device_info_t *info)
 
   while (buffer_left >= 3) { // parseX needs to see buf[0,2] = length,type
     block_size = buffer[0];
-    parse_ret = uvc_parse_vc(devh->dev, info, buffer, block_size);
+    parse_ret = uvc_parse_vc(devh ? devh->dev : NULL, info, buffer, block_size);
 
     if (parse_ret != UVC_SUCCESS) {
       ret = parse_ret;

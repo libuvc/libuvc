@@ -155,6 +155,35 @@ TEST_F(DescriptorTest, VcHeaderRejectsUnsupportedVersion) {
             UVC_ERROR_NOT_SUPPORTED);
 }
 
+/** uvc_scan_control() accepts a NULL device handle.
+ *
+ * The handle is used only to look up a device-specific quirk, so the parse
+ * runs without one. That is what lets the fuzzer drive the real entry point
+ * rather than an approximation of it.
+ */
+TEST_F(DescriptorTest, ScanControlAcceptsNullDeviceHandle) {
+  static const unsigned char block[] = {
+    0x0c, 0x24, 0x01, 0x00, 0x01, 0x0c, 0x00,
+    0x80, 0x8d, 0x5b, 0x00,   /* dwClockFrequency = 6000000 */
+    0x00                      /* bInCollection = 0 */
+  };
+
+  SetUpConfig(1);
+  tc_.altsettings[0].bInterfaceSubClass = UVC_SC_VIDEOCONTROL;
+  uvc_test_config_set_extra(&tc_, 0, block, sizeof(block));
+
+  EXPECT_EQ(uvc_scan_control(nullptr, &info_), UVC_SUCCESS);
+  EXPECT_EQ(info_.ctrl_if.bcdUVC, 0x0100);
+  EXPECT_EQ(info_.ctrl_if.dwClockFrequency, 6000000u);
+}
+
+/** A configuration with no VideoControl interface is rejected, not walked. */
+TEST_F(DescriptorTest, ScanControlRejectsConfigWithNoControlInterface) {
+  SetUpConfig(2);   /* both interfaces are VideoStreaming by default */
+
+  EXPECT_EQ(uvc_scan_control(nullptr, &info_), UVC_ERROR_INVALID_DEVICE);
+}
+
 /* Regression test for libuvc/libuvc#300.
  *
  * baInterfaceNr[] holds raw interface indices straight off the wire.
