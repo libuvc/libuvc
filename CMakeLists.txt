@@ -26,6 +26,7 @@ option(BUILD_TEST "Build test program" OFF)
 option(ENABLE_UVC_DEBUGGING "Enable UVC debugging" OFF)
 option(DISABLE_JPEG "Disable JPEG support" OFF)
 option(BUILD_TESTING "Build the unit tests" OFF)
+option(BUILD_FUZZERS "Build the libFuzzer targets (requires clang)" OFF)
 option(ENABLE_SANITIZERS "Build with AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
 
 # Applied to the whole build, not just the tests: an out-of-bounds read
