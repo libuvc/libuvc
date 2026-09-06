@@ -72,7 +72,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   uvc_test_config_set_extra(&tc, 0, data, (int)size);
   uvc_test_info_init(&info, &tc);
 
-  uvc_scan_streaming(NULL, &info, target);
+  uvc_scan_streaming(&info, target);
 
   uvc_test_info_free(&info);
   uvc_test_config_free(&tc);

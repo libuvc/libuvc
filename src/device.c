@@ -46,33 +46,25 @@ uvc_error_t uvc_get_device_info(uvc_device_handle_t *devh, uvc_device_info_t **i
 void uvc_free_device_info(uvc_device_info_t *info);
 
 uvc_error_t uvc_scan_control(uvc_device_handle_t *devh, uvc_device_info_t *info);
-uvc_error_t uvc_parse_vc(uvc_device_t *dev,
-			 uvc_device_info_t *info,
+uvc_error_t uvc_parse_vc(uvc_device_info_t *info,
 			 const unsigned char *block, size_t block_size);
-uvc_error_t uvc_parse_vc_selector_unit(uvc_device_t *dev,
-					uvc_device_info_t *info,
+uvc_error_t uvc_parse_vc_selector_unit(uvc_device_info_t *info,
 					const unsigned char *block, size_t block_size);
-uvc_error_t uvc_parse_vc_extension_unit(uvc_device_t *dev,
-					uvc_device_info_t *info,
+uvc_error_t uvc_parse_vc_extension_unit(uvc_device_info_t *info,
 					const unsigned char *block,
 					size_t block_size);
-uvc_error_t uvc_parse_vc_header(uvc_device_t *dev,
-				uvc_device_info_t *info,
+uvc_error_t uvc_parse_vc_header(uvc_device_info_t *info,
 				const unsigned char *block, size_t block_size);
-uvc_error_t uvc_parse_vc_input_terminal(uvc_device_t *dev,
-					uvc_device_info_t *info,
+uvc_error_t uvc_parse_vc_input_terminal(uvc_device_info_t *info,
 					const unsigned char *block,
 					size_t block_size);
-uvc_error_t uvc_parse_vc_processing_unit(uvc_device_t *dev,
-					 uvc_device_info_t *info,
+uvc_error_t uvc_parse_vc_processing_unit(uvc_device_info_t *info,
 					 const unsigned char *block,
 					 size_t block_size);
 
-uvc_error_t uvc_scan_streaming(uvc_device_t *dev,
-			       uvc_device_info_t *info,
+uvc_error_t uvc_scan_streaming(uvc_device_info_t *info,
 			       int interface_idx);
-uvc_error_t uvc_parse_vs(uvc_device_t *dev,
-			 uvc_device_info_t *info,
+uvc_error_t uvc_parse_vs(uvc_device_info_t *info,
 			 uvc_streaming_interface_t *stream_if,
 			 const unsigned char *block, size_t block_size);
 uvc_error_t uvc_parse_vs_format_uncompressed(uvc_streaming_interface_t *stream_if,
@@ -1072,9 +1064,8 @@ uvc_error_t uvc_release_if(uvc_device_handle_t *devh, int idx) {
  * @ingroup device
  *
  * @p devh may be NULL, in which case the device-specific quirk lookup is
- * skipped and only info->config is parsed. Nothing below this point uses the
- * handle for anything else: the uvc_device_t threaded through the parsers is
- * passed along but never dereferenced.
+ * skipped and only info->config is parsed. That is the handle's only use
+ * here; nothing below this point needs a device at all.
  */
 uvc_error_t uvc_scan_control(uvc_device_handle_t *devh, uvc_device_info_t *info) {
   const struct libusb_interface_descriptor *if_desc;
@@ -1125,7 +1116,7 @@ uvc_error_t uvc_scan_control(uvc_device_handle_t *devh, uvc_device_info_t *info)
 
   while (buffer_left >= 3) { // parseX needs to see buf[0,2] = length,type
     block_size = buffer[0];
-    parse_ret = uvc_parse_vc(devh ? devh->dev : NULL, info, buffer, block_size);
+    parse_ret = uvc_parse_vc(info, buffer, block_size);
 
     if (parse_ret != UVC_SUCCESS) {
       ret = parse_ret;
@@ -1144,8 +1135,7 @@ uvc_error_t uvc_scan_control(uvc_device_handle_t *devh, uvc_device_info_t *info)
  * @brief Parse a VideoControl header.
  * @ingroup device
  */
-uvc_error_t uvc_parse_vc_header(uvc_device_t *dev,
-				uvc_device_info_t *info,
+uvc_error_t uvc_parse_vc_header(uvc_device_info_t *info,
 				const unsigned char *block, size_t block_size) {
   size_t i;
   uvc_error_t scan_ret, ret = UVC_SUCCESS;
@@ -1177,7 +1167,7 @@ uvc_error_t uvc_parse_vc_header(uvc_device_t *dev,
   }
 
   for (i = 12; i < block_size; ++i) {
-    scan_ret = uvc_scan_streaming(dev, info, block[i]);
+    scan_ret = uvc_scan_streaming(info, block[i]);
     if (scan_ret != UVC_SUCCESS) {
       ret = scan_ret;
       break;
@@ -1192,8 +1182,7 @@ uvc_error_t uvc_parse_vc_header(uvc_device_t *dev,
  * @brief Parse a VideoControl input terminal.
  * @ingroup device
  */
-uvc_error_t uvc_parse_vc_input_terminal(uvc_device_t *dev,
-					uvc_device_info_t *info,
+uvc_error_t uvc_parse_vc_input_terminal(uvc_device_info_t *info,
 					const unsigned char *block, size_t block_size) {
   uvc_input_terminal_t *term;
   size_t i;
@@ -1227,8 +1216,7 @@ uvc_error_t uvc_parse_vc_input_terminal(uvc_device_t *dev,
  * @brief Parse a VideoControl processing unit.
  * @ingroup device
  */
-uvc_error_t uvc_parse_vc_processing_unit(uvc_device_t *dev,
-					 uvc_device_info_t *info,
+uvc_error_t uvc_parse_vc_processing_unit(uvc_device_info_t *info,
 					 const unsigned char *block, size_t block_size) {
   uvc_processing_unit_t *unit;
   size_t i;
@@ -1252,8 +1240,7 @@ uvc_error_t uvc_parse_vc_processing_unit(uvc_device_t *dev,
  * @brief Parse a VideoControl selector unit.
  * @ingroup device
  */
-uvc_error_t uvc_parse_vc_selector_unit(uvc_device_t *dev,
-					 uvc_device_info_t *info,
+uvc_error_t uvc_parse_vc_selector_unit(uvc_device_info_t *info,
 					 const unsigned char *block, size_t block_size) {
   uvc_selector_unit_t *unit;
 
@@ -1272,8 +1259,7 @@ uvc_error_t uvc_parse_vc_selector_unit(uvc_device_t *dev,
  * @brief Parse a VideoControl extension unit.
  * @ingroup device
  */
-uvc_error_t uvc_parse_vc_extension_unit(uvc_device_t *dev,
-					uvc_device_info_t *info,
+uvc_error_t uvc_parse_vc_extension_unit(uvc_device_info_t *info,
 					const unsigned char *block, size_t block_size) {
   uvc_extension_unit_t *unit = calloc(1, sizeof(*unit));
   const uint8_t *start_of_controls;
@@ -1303,7 +1289,6 @@ uvc_error_t uvc_parse_vc_extension_unit(uvc_device_t *dev,
  * @ingroup device
  */
 uvc_error_t uvc_parse_vc(
-    uvc_device_t *dev,
     uvc_device_info_t *info,
     const unsigned char *block, size_t block_size) {
   int descriptor_subtype;
@@ -1320,21 +1305,21 @@ uvc_error_t uvc_parse_vc(
 
   switch (descriptor_subtype) {
   case UVC_VC_HEADER:
-    ret = uvc_parse_vc_header(dev, info, block, block_size);
+    ret = uvc_parse_vc_header(info, block, block_size);
     break;
   case UVC_VC_INPUT_TERMINAL:
-    ret = uvc_parse_vc_input_terminal(dev, info, block, block_size);
+    ret = uvc_parse_vc_input_terminal(info, block, block_size);
     break;
   case UVC_VC_OUTPUT_TERMINAL:
     break;
   case UVC_VC_SELECTOR_UNIT:
-    ret = uvc_parse_vc_selector_unit(dev, info, block, block_size);
+    ret = uvc_parse_vc_selector_unit(info, block, block_size);
     break;
   case UVC_VC_PROCESSING_UNIT:
-    ret = uvc_parse_vc_processing_unit(dev, info, block, block_size);
+    ret = uvc_parse_vc_processing_unit(info, block, block_size);
     break;
   case UVC_VC_EXTENSION_UNIT:
-    ret = uvc_parse_vc_extension_unit(dev, info, block, block_size);
+    ret = uvc_parse_vc_extension_unit(info, block, block_size);
     break;
   default:
     ret = UVC_ERROR_INVALID_DEVICE;
@@ -1348,8 +1333,7 @@ uvc_error_t uvc_parse_vc(
  * Process a VideoStreaming interface
  * @ingroup device
  */
-uvc_error_t uvc_scan_streaming(uvc_device_t *dev,
-			       uvc_device_info_t *info,
+uvc_error_t uvc_scan_streaming(uvc_device_info_t *info,
 			       int interface_idx) {
   const struct libusb_interface_descriptor *if_desc;
   const unsigned char *buffer;
@@ -1372,7 +1356,7 @@ uvc_error_t uvc_scan_streaming(uvc_device_t *dev,
 
   while (buffer_left >= 3) {
     block_size = buffer[0];
-    parse_ret = uvc_parse_vs(dev, info, stream_if, buffer, block_size);
+    parse_ret = uvc_parse_vs(info, stream_if, buffer, block_size);
 
     if (parse_ret != UVC_SUCCESS) {
       ret = parse_ret;
@@ -1665,7 +1649,6 @@ uvc_error_t uvc_parse_vs_still_image_frame(uvc_streaming_interface_t *stream_if,
  * @ingroup device
  */
 uvc_error_t uvc_parse_vs(
-    uvc_device_t *dev,
     uvc_device_info_t *info,
     uvc_streaming_interface_t *stream_if,
     const unsigned char *block, size_t block_size) {
