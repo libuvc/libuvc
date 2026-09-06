@@ -12,16 +12,21 @@
  *
  * The entry point is uvc_scan_control(), the same function uvc_open() calls
  * once it has a configuration descriptor. It picks the VideoControl
- * interface, walks its class-specific blocks and dispatches each to the
- * parsers, so one call covers the whole path in the #300 report without the
- * fuzzer re-implementing any of libuvc's own descriptor walking.
+ * interface, walks its class-specific blocks, dispatches each to the parsers,
+ * and follows a VideoControl header into uvc_scan_streaming() for every
+ * interface it names -- so one call covers the whole path in the #300 report
+ * without the fuzzer re-implementing any of libuvc's descriptor walking.
  *
  * It takes a uvc_device_handle_t only for a device-specific quirk lookup and
  * tolerates NULL, which is what makes it reachable without a USB device.
  *
- * uvc_scan_streaming() is driven separately: uvc_scan_control() only reaches
- * it through a VideoControl header naming an interface, so calling it
- * directly gets there in far fewer mutations.
+ * The same fuzzed block is installed on two interfaces: interface 0, the
+ * VideoControl one that uvc_scan_control() selects, and one other, so that
+ * the VideoStreaming parsers see fuzzed bytes too rather than the empty
+ * `extra` they would get otherwise. Reaching them still depends on the block
+ * happening to form a VideoControl header naming that interface, so
+ * uvc_scan_streaming() is also called directly afterwards -- the same
+ * parsers, minus the many mutations it takes to stumble on a valid header.
  *
  * Build: see test/fuzz/README.md, or -DBUILD_FUZZERS=ON with clang.
  */
@@ -58,24 +63,26 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   data += 2;
   size -= 2;
 
-  /* Interface 0 is the VideoControl interface, so uvc_scan_control() selects
-     it and parses the fuzzed block. */
+  /* One configuration for both calls. Interface 0 is VideoControl, so
+     uvc_scan_control() selects it; `target` also carries the block, so a
+     VideoControl header naming it drives the VideoStreaming parsers over
+     fuzzed bytes rather than an empty descriptor. */
   uvc_test_config_init(&tc, num_interfaces);
   tc.altsettings[0].bInterfaceSubClass = UVC_SC_VIDEOCONTROL;
   uvc_test_config_set_extra(&tc, 0, data, (int)size);
+  if (target < num_interfaces && target != 0)
+    uvc_test_config_set_extra(&tc, target, data, (int)size);
   uvc_test_info_init(&info, &tc);
 
   uvc_scan_control(NULL, &info);
 
-  uvc_test_info_free(&info);
-  uvc_test_config_free(&tc);
-
-  /* The VideoStreaming side, reached directly rather than through a
-     VideoControl header that has to name a valid interface first. */
-  uvc_test_config_init(&tc, num_interfaces);
-  uvc_test_config_set_extra(&tc, 0, data, (int)size);
-  uvc_test_info_init(&info, &tc);
-
+  /* And the VideoStreaming side directly. uvc_scan_control() gets here only
+     via a header naming a valid interface, which costs the fuzzer a great
+     many mutations to produce; `target` is deliberately allowed to exceed
+     num_interfaces, which is what #300 turns on. Reuses the parsed info
+     rather than rebuilding it -- uvc_scan_control() appends to the same
+     lists, so this exercises the two running against shared state, as they
+     do inside uvc_get_device_info(). */
   uvc_scan_streaming(&info, target);
 
   uvc_test_info_free(&info);
