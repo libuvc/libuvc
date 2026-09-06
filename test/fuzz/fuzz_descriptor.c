@@ -32,9 +32,13 @@
 
 #include "uvc_test_util.h"
 
-/* Descriptor blocks are bounded by bLength being a single byte, so nothing
- * beyond a few hundred bytes explores new parser states. */
-#define UVC_FUZZ_MAX_INPUT 4096
+/* A single block is bounded by bLength being one byte, but `extra` is a list
+ * of them and has no such limit: the Logitech HD Pro 920 in cameras/ carries
+ * ~153 blocks totalling ~3.5 kB, and the QuickCam Pro 9000 ~2.6 kB. The cap
+ * here is well past both. Note libFuzzer stops at 4096 bytes of its own
+ * accord unless -max_len says otherwise, so reaching this bound takes
+ * -max_len=16384 on the command line; see README.md. */
+#define UVC_FUZZ_MAX_INPUT 16384
 #define UVC_FUZZ_MAX_INTERFACES 8
 
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
