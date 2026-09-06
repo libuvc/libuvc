@@ -27,7 +27,14 @@ target_link_libraries(test_descriptor
 )
 target_include_directories(test_descriptor PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
-foreach(test_name IN ITEMS test_frame test_descriptor)
+# Uses internal stream structures, so it needs libusb's headers too.
+add_executable(test_stream test_stream.cc)
+target_link_libraries(test_stream
+  PRIVATE uvc_static LibUSB::LibUSB GTest::gtest_main
+)
+target_include_directories(test_stream PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+foreach(test_name IN ITEMS test_frame test_descriptor test_stream)
   gtest_discover_tests(${test_name}
     DISCOVERY_TIMEOUT 30
     # A zero-length descriptor makes uvc_scan_streaming() loop forever, so a
@@ -50,23 +57,26 @@ if(BUILD_FUZZERS)
   # untrusted bytes, but they are branch-free arithmetic over the payload: the
   # only thing that varies their control flow is the geometry-vs-length
   # relationship, which test_frame.cc already enumerates exhaustively.
-  add_executable(fuzz_descriptor fuzz/fuzz_descriptor.c)
-  target_link_libraries(fuzz_descriptor PRIVATE uvc_static LibUSB::LibUSB)
-  target_include_directories(fuzz_descriptor PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+  foreach(fuzzer IN ITEMS fuzz_descriptor fuzz_payload)
+    add_executable(${fuzzer} fuzz/${fuzzer}.c)
+    target_link_libraries(${fuzzer} PRIVATE uvc_static LibUSB::LibUSB)
+    target_include_directories(${fuzzer} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
-  if(DEFINED ENV{LIB_FUZZING_ENGINE})
-    target_link_libraries(fuzz_descriptor PRIVATE $ENV{LIB_FUZZING_ENGINE})
-  else()
-    target_compile_options(fuzz_descriptor PRIVATE -fsanitize=fuzzer)
-    target_link_options(fuzz_descriptor PRIVATE -fsanitize=fuzzer)
-  endif()
+    if(DEFINED ENV{LIB_FUZZING_ENGINE})
+      target_link_libraries(${fuzzer} PRIVATE $ENV{LIB_FUZZING_ENGINE})
+    else()
+      target_compile_options(${fuzzer} PRIVATE -fsanitize=fuzzer)
+      target_link_options(${fuzzer} PRIVATE -fsanitize=fuzzer)
+    endif()
+  endforeach()
 
   # Replay the checked-in corpus as an ordinary test, so the regression inputs
   # are exercised on every run without anyone having to fuzz.
-  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/corpus/fuzz_descriptor)
-    add_test(NAME fuzz_descriptor_corpus
-      COMMAND fuzz_descriptor -runs=0
-              ${CMAKE_CURRENT_SOURCE_DIR}/corpus/fuzz_descriptor
-    )
-  endif()
+  foreach(fuzzer IN ITEMS fuzz_descriptor fuzz_payload)
+    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/corpus/${fuzzer})
+      add_test(NAME ${fuzzer}_corpus
+        COMMAND ${fuzzer} -runs=0 ${CMAKE_CURRENT_SOURCE_DIR}/corpus/${fuzzer}
+      )
+    endif()
+  endforeach()
 endif()

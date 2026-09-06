@@ -24,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [ fuzz_descriptor ]
+        target: [ fuzz_descriptor, fuzz_payload ]
 
     name: ${{ matrix.target }}
 
