@@ -144,6 +144,8 @@ static uvc_error_t uvc_mjpeg_convert(uvc_frame_t *in, uvc_frame_t *out) {
 
   if (out->frame_format == UVC_FRAME_FORMAT_RGB)
     dinfo.out_color_space = JCS_RGB;
+  else if (out->frame_format == UVC_FRAME_FORMAT_BGR)
+    dinfo.out_color_space = JCS_EXT_BGR;
   else if (out->frame_format == UVC_FRAME_FORMAT_GRAY8)
     dinfo.out_color_space = JCS_GRAYSCALE;
   else
@@ -171,6 +173,32 @@ fail:
   return UVC_ERROR_OTHER;
 }
 
+
+/** @brief Convert an MJPEG frame to BGR
+ * @ingroup frame
+ *
+ * @param in MJPEG frame
+ * @param out BGR frame
+ */
+uvc_error_t uvc_mjpeg2bgr(uvc_frame_t *in, uvc_frame_t *out) {
+  if (in->frame_format != UVC_FRAME_FORMAT_MJPEG)
+    return UVC_ERROR_INVALID_PARAM;
+
+  if (uvc_ensure_frame_size(out, (size_t)in->width * in->height * 3) < 0)
+    return UVC_ERROR_NO_MEM;
+
+  out->width = in->width;
+  out->height = in->height;
+  out->frame_format = UVC_FRAME_FORMAT_BGR;
+  out->step = in->width * 3;
+  out->sequence = in->sequence;
+  out->capture_time = in->capture_time;
+  out->capture_time_finished = in->capture_time_finished;
+  out->source = in->source;
+
+  return uvc_mjpeg_convert(in, out);
+}
+
 /** @brief Convert an MJPEG frame to RGB
  * @ingroup frame
  *
@@ -181,7 +209,7 @@ uvc_error_t uvc_mjpeg2rgb(uvc_frame_t *in, uvc_frame_t *out) {
   if (in->frame_format != UVC_FRAME_FORMAT_MJPEG)
     return UVC_ERROR_INVALID_PARAM;
 
-  if (uvc_ensure_frame_size(out, in->width * in->height * 3) < 0)
+  if (uvc_ensure_frame_size(out, (size_t)in->width * in->height * 3) < 0)
     return UVC_ERROR_NO_MEM;
 
   out->width = in->width;
@@ -206,7 +234,7 @@ uvc_error_t uvc_mjpeg2gray(uvc_frame_t *in, uvc_frame_t *out) {
   if (in->frame_format != UVC_FRAME_FORMAT_MJPEG)
     return UVC_ERROR_INVALID_PARAM;
 
-  if (uvc_ensure_frame_size(out, in->width * in->height) < 0)
+  if (uvc_ensure_frame_size(out, (size_t)in->width * in->height) < 0)
     return UVC_ERROR_NO_MEM;
 
   out->width = in->width;
