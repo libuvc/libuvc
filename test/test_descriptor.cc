@@ -76,7 +76,7 @@ class DescriptorTest : public ::testing::Test {
     uvc_device_info_t info; \
     uvc_test_config_init(&tc, (num_interfaces)); \
     uvc_test_info_init(&info, &tc); \
-    REQUIRE_IN_CHILD(uvc_parse_vc_header(nullptr, &info, (block), \
+    REQUIRE_IN_CHILD(uvc_parse_vc_header(&info, (block), \
                                          (block_len)) != UVC_SUCCESS); \
     uvc_test_info_free(&info); \
     uvc_test_config_free(&tc); \
@@ -103,7 +103,7 @@ TEST_F(DescriptorTest, VcHeaderValidNoStreamingInterfaces) {
 
   SetUpConfig(1);
 
-  EXPECT_EQ(uvc_parse_vc_header(nullptr, &info_, block, sizeof(block)),
+  EXPECT_EQ(uvc_parse_vc_header(&info_, block, sizeof(block)),
             UVC_SUCCESS);
   EXPECT_EQ(info_.ctrl_if.bcdUVC, 0x0100);
   EXPECT_EQ(info_.ctrl_if.dwClockFrequency, 6000000u);
@@ -119,7 +119,7 @@ TEST_F(DescriptorTest, VcHeaderOneStreamingInterface) {
 
   SetUpConfig(2);
 
-  EXPECT_EQ(uvc_parse_vc_header(nullptr, &info_, block, sizeof(block)),
+  EXPECT_EQ(uvc_parse_vc_header(&info_, block, sizeof(block)),
             UVC_SUCCESS);
   ASSERT_NE(info_.stream_ifs, nullptr);
   EXPECT_EQ(info_.stream_ifs->bInterfaceNumber, 1);
@@ -134,7 +134,7 @@ TEST_F(DescriptorTest, VcHeaderAcceptsEveryKnownUvcVersion) {
     block[4] = static_cast<unsigned char>(bcd >> 8);
 
     SetUpConfig(1);
-    EXPECT_EQ(uvc_parse_vc_header(nullptr, &info_, block, sizeof(block)),
+    EXPECT_EQ(uvc_parse_vc_header(&info_, block, sizeof(block)),
               UVC_SUCCESS) << "bcdUVC = " << std::hex << bcd;
     EXPECT_EQ(info_.ctrl_if.bcdUVC, bcd);
 
@@ -151,7 +151,7 @@ TEST_F(DescriptorTest, VcHeaderRejectsUnsupportedVersion) {
 
   SetUpConfig(1);
 
-  EXPECT_EQ(uvc_parse_vc_header(nullptr, &info_, block, sizeof(block)),
+  EXPECT_EQ(uvc_parse_vc_header(&info_, block, sizeof(block)),
             UVC_ERROR_NOT_SUPPORTED);
 }
 
@@ -213,8 +213,8 @@ TEST_F(DescriptorTest, VcHeaderRejectsInterfaceIndexOutOfRange) {
 TEST_F(DescriptorTest, ScanStreamingAcceptsInterfaceIndexInRange) {
   SetUpConfig(2);
 
-  EXPECT_EQ(uvc_scan_streaming(nullptr, &info_, 0), UVC_SUCCESS);
-  EXPECT_EQ(uvc_scan_streaming(nullptr, &info_, 1), UVC_SUCCESS);
+  EXPECT_EQ(uvc_scan_streaming(&info_, 0), UVC_SUCCESS);
+  EXPECT_EQ(uvc_scan_streaming(&info_, 1), UVC_SUCCESS);
 }
 
 /* Each out-of-range index gets its own child: on unfixed code every one of
@@ -229,7 +229,7 @@ TEST_F(DescriptorTest, ScanStreamingRejectsInterfaceIndexOutOfRange) {
       uvc_device_info_t info;
       uvc_test_config_init(&tc, 2);
       uvc_test_info_init(&info, &tc);
-      REQUIRE_IN_CHILD(uvc_scan_streaming(nullptr, &info, idx) != UVC_SUCCESS);
+      REQUIRE_IN_CHILD(uvc_scan_streaming(&info, idx) != UVC_SUCCESS);
       uvc_test_info_free(&info);
       uvc_test_config_free(&tc);
     }) << "interface index " << idx;
@@ -258,7 +258,7 @@ TEST_F(DescriptorTest, ParseVcIgnoresNonClassSpecificDescriptor) {
 
   SetUpConfig(1);
 
-  EXPECT_EQ(uvc_parse_vc(nullptr, &info_, block, sizeof(block)), UVC_SUCCESS);
+  EXPECT_EQ(uvc_parse_vc(&info_, block, sizeof(block)), UVC_SUCCESS);
 }
 
 /* uvc_scan_control() only guarantees three bytes are present before calling
@@ -274,7 +274,7 @@ TEST_F(DescriptorTest, ParseVcShortBlockStaysInBounds) {
     uvc_device_info_t info;
     uvc_test_config_init(&tc, 1);
     uvc_test_info_init(&info, &tc);
-    (void)uvc_parse_vc(nullptr, &info, block, sizeof(block));
+    (void)uvc_parse_vc(&info, block, sizeof(block));
     uvc_test_info_free(&info);
     uvc_test_config_free(&tc);
   });
@@ -302,7 +302,7 @@ TEST_F(DescriptorTest, ParseVcExtensionUnitOversizedControls) {
     uvc_device_info_t info;
     uvc_test_config_init(&tc, 1);
     uvc_test_info_init(&info, &tc);
-    (void)uvc_parse_vc(nullptr, &info, block, sizeof(block));
+    (void)uvc_parse_vc(&info, block, sizeof(block));
     uvc_test_info_free(&info);
     uvc_test_config_free(&tc);
   });
@@ -322,7 +322,7 @@ TEST_F(DescriptorTest, ParseVcExtensionUnitOversizedPinCount) {
     uvc_device_info_t info;
     uvc_test_config_init(&tc, 1);
     uvc_test_info_init(&info, &tc);
-    (void)uvc_parse_vc(nullptr, &info, block, sizeof(block));
+    (void)uvc_parse_vc(&info, block, sizeof(block));
     uvc_test_info_free(&info);
     uvc_test_config_free(&tc);
   });
@@ -346,7 +346,7 @@ TEST_F(DescriptorTest, ParseVcInputTerminalOversizedControls) {
     uvc_device_info_t info;
     uvc_test_config_init(&tc, 1);
     uvc_test_info_init(&info, &tc);
-    (void)uvc_parse_vc(nullptr, &info, block, sizeof(block));
+    (void)uvc_parse_vc(&info, block, sizeof(block));
     uvc_test_info_free(&info);
     uvc_test_config_free(&tc);
   });
@@ -367,7 +367,7 @@ TEST_F(DescriptorTest, ParseVcProcessingUnitOversizedControls) {
     uvc_device_info_t info;
     uvc_test_config_init(&tc, 1);
     uvc_test_info_init(&info, &tc);
-    (void)uvc_parse_vc(nullptr, &info, block, sizeof(block));
+    (void)uvc_parse_vc(&info, block, sizeof(block));
     uvc_test_info_free(&info);
     uvc_test_config_free(&tc);
   });
@@ -388,7 +388,7 @@ TEST_F(DescriptorTest, ScanStreamingTerminatesOnZeroLengthBlock) {
     uvc_test_config_init(&tc, 1);
     uvc_test_config_set_extra(&tc, 0, extra, sizeof(extra));
     uvc_test_info_init(&info, &tc);
-    (void)uvc_scan_streaming(nullptr, &info, 0);
+    (void)uvc_scan_streaming(&info, 0);
     uvc_test_info_free(&info);
     uvc_test_config_free(&tc);
   });
@@ -405,7 +405,7 @@ TEST_F(DescriptorTest, ScanStreamingBlockSizeOverrunsBuffer) {
     uvc_test_config_init(&tc, 1);
     uvc_test_config_set_extra(&tc, 0, extra, sizeof(extra));
     uvc_test_info_init(&info, &tc);
-    (void)uvc_scan_streaming(nullptr, &info, 0);
+    (void)uvc_scan_streaming(&info, 0);
     uvc_test_info_free(&info);
     uvc_test_config_free(&tc);
   });
@@ -416,7 +416,7 @@ TEST_F(DescriptorTest, ScanStreamingEmptyExtraIsSafe) {
   SetUpConfig(1);
   uvc_test_config_set_extra(&tc_, 0, nullptr, 0);
 
-  EXPECT_EQ(uvc_scan_streaming(nullptr, &info_, 0), UVC_SUCCESS);
+  EXPECT_EQ(uvc_scan_streaming(&info_, 0), UVC_SUCCESS);
 }
 
 }  // namespace
