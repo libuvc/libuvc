@@ -546,6 +546,7 @@ static uvc_error_t get_device_descriptor(
     return ret;
   }
 
+  /* calloc: leaves the reserved field zeroed */
   desc_internal = calloc(1, sizeof(*desc_internal));
   desc_internal->idVendor = usb_desc.idVendor;
   desc_internal->idProduct = usb_desc.idProduct;
@@ -604,6 +605,7 @@ uvc_error_t uvc_get_device_descriptor(
     return ret;
   }
 
+  /* calloc: leaves the reserved field zeroed */
   desc_internal = calloc(1, sizeof(*desc_internal));
   desc_internal->idVendor = usb_desc.idVendor;
   desc_internal->idProduct = usb_desc.idProduct;
