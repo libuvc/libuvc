@@ -19,8 +19,16 @@ jobs:
         compiler: [ gcc, clang ]
         target: [ Both, Shared, Static ]
         jpeg: [ on, off ]
+        debugging: [ off ]
+        # ENABLE_UVC_DEBUGGING is off by default, so nothing above compiles
+        # the UVC_DEBUGGING code paths. One variant is enough to cover them.
+        include:
+          - compiler: gcc
+            target: Both
+            jpeg: on
+            debugging: on
 
-    name: ${{ matrix.compiler }}, ${{ matrix.target }}${{ matrix.jpeg == 'off' && ', no jpeg' || '' }}
+    name: ${{ matrix.compiler }}, ${{ matrix.target }}${{ matrix.jpeg == 'off' && ', no jpeg' || '' }}${{ matrix.debugging == 'on' && ', uvc debugging' || '' }}
 
     steps:
       - uses: actions/checkout@v5
@@ -44,7 +52,8 @@ jobs:
             -DLibUVC_STATIC=${{ matrix.target == 'Static' && 'ON' || 'OFF' }} \
             -DBUILD_EXAMPLE=ON \
             -DDISABLE_JPEG=${{ matrix.jpeg == 'off' && 'ON' || 'OFF' }} \
-            -DWARNINGS_AS_ERRORS=ON
+            -DWARNINGS_AS_ERRORS=ON \
+            -DENABLE_UVC_DEBUGGING=${{ matrix.debugging == 'on' && 'ON' || 'OFF' }}
 
       - name: Build
         run: cmake --build build
