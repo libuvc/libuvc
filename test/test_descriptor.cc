@@ -13,6 +13,7 @@
 #include <gtest/gtest.h>
 
 #include <cstdio>
+#include <cstring>
 
 #include "uvc_test_util.h"
 
@@ -417,6 +418,155 @@ TEST_F(DescriptorTest, ScanStreamingEmptyExtraIsSafe) {
   uvc_test_config_set_extra(&tc_, 0, nullptr, 0);
 
   EXPECT_EQ(uvc_scan_streaming(&info_, 0), UVC_SUCCESS);
+}
+
+/* ------------------------------------------------ VideoStreaming parsers */
+
+/** Drive one VideoStreaming block through uvc_scan_streaming(). */
+static void ScanStreamingBlock(const unsigned char *block, size_t len) {
+  uvc_test_config_t tc;
+  uvc_device_info_t info;
+
+  uvc_test_config_init(&tc, 1);
+  uvc_test_config_set_extra(&tc, 0, block, (int)len);
+  uvc_test_info_init(&info, &tc);
+  (void)uvc_scan_streaming(&info, 0);
+  uvc_test_info_free(&info);
+  uvc_test_config_free(&tc);
+}
+
+/* A frame descriptor describes the format block before it, which the parsers
+ * reach as stream_if->format_descs->prev. A device that sends a frame block
+ * without a preceding format leaves that list empty, and the deref is a NULL
+ * pointer read -- found by the fuzzer once the VideoControl bugs above
+ * stopped masking it. */
+TEST_F(DescriptorTest, VsFrameWithoutPrecedingFormatIsRejected) {
+  for (unsigned char subtype : {UVC_VS_FRAME_UNCOMPRESSED,
+                                UVC_VS_FRAME_MJPEG,
+                                UVC_VS_FRAME_FRAME_BASED,
+                                UVC_VS_STILL_IMAGE_FRAME}) {
+    unsigned char block[64] = {};
+    block[0] = sizeof(block);
+    block[1] = 0x24;            /* CS_INTERFACE */
+    block[2] = subtype;
+
+    EXPECT_MEMORY_SAFE({
+      ScanStreamingBlock(block, sizeof(block));
+    }) << "subtype 0x" << std::hex << int(subtype);
+  }
+}
+
+/* Every VideoStreaming parser reads a fixed header and ignored block_size
+ * entirely, so a block shorter than that header read past its end. bLength
+ * is checked against the buffer now, but a device can still declare a short
+ * block, and each parser must handle its own minimum. */
+TEST_F(DescriptorTest, VsShortBlocksStayInBounds) {
+  for (unsigned char subtype : {UVC_VS_INPUT_HEADER,
+                                UVC_VS_FORMAT_UNCOMPRESSED,
+                                UVC_VS_FORMAT_MJPEG,
+                                UVC_VS_FORMAT_FRAME_BASED,
+                                UVC_VS_FRAME_UNCOMPRESSED,
+                                UVC_VS_FRAME_MJPEG,
+                                UVC_VS_FRAME_FRAME_BASED,
+                                UVC_VS_STILL_IMAGE_FRAME}) {
+    /* Three bytes is the least the walk loop passes on. */
+    for (size_t len : {size_t(3), size_t(5), size_t(10)}) {
+      unsigned char block[16] = {};
+      block[0] = (unsigned char)len;
+      block[1] = 0x24;
+      block[2] = subtype;
+
+      EXPECT_MEMORY_SAFE({
+        ScanStreamingBlock(block, len);
+      }) << "subtype 0x" << std::hex << int(subtype)
+         << " length " << std::dec << len;
+    }
+  }
+}
+
+/* bFrameIntervalType counts four-byte intervals that follow the fixed part,
+ * and is device-supplied. A large value ran the read off the end. */
+TEST_F(DescriptorTest, VsFrameOversizedIntervalCountIsRejected) {
+  unsigned char block[64] = {};
+
+  /* A format block first, so the frame block has a parent to attach to. */
+  unsigned char format[32] = {};
+  format[0] = sizeof(format);
+  format[1] = 0x24;
+  format[2] = UVC_VS_FORMAT_UNCOMPRESSED;
+  format[3] = 1;              /* bFormatIndex */
+
+  block[0] = sizeof(block);
+  block[1] = 0x24;
+  block[2] = UVC_VS_FRAME_UNCOMPRESSED;
+  block[3] = 1;               /* bFrameIndex */
+  block[25] = 0xff;           /* bFrameIntervalType: 255 * 4 bytes claimed */
+
+  unsigned char extra[sizeof(format) + sizeof(block)];
+  memcpy(extra, format, sizeof(format));
+  memcpy(extra + sizeof(format), block, sizeof(block));
+
+  EXPECT_MEMORY_SAFE({
+    ScanStreamingBlock(extra, sizeof(extra));
+  });
+}
+
+/* Still-image frames carry two device-supplied counts: bNumImageSizePatterns
+ * (four bytes each) and, after them, bNumCompressionPattern (one each). Both
+ * indexed into the block unchecked. */
+TEST_F(DescriptorTest, VsStillImageFrameOversizedCountsAreRejected) {
+  unsigned char format[32] = {};
+  format[0] = sizeof(format);
+  format[1] = 0x24;
+  format[2] = UVC_VS_FORMAT_UNCOMPRESSED;
+  format[3] = 1;
+
+  /* One with a huge pattern count, one where the count fits but the
+     compression run that follows it does not. */
+  for (unsigned char patterns : {(unsigned char)0xff, (unsigned char)2}) {
+    unsigned char block[32] = {};
+    block[0] = sizeof(block);
+    block[1] = 0x24;
+    block[2] = UVC_VS_STILL_IMAGE_FRAME;
+    block[4] = patterns;
+    if (patterns == 2)
+      block[5 + 4 * 2] = 0xff;  /* bNumCompressionPattern */
+
+    unsigned char extra[sizeof(format) + sizeof(block)];
+    memcpy(extra, format, sizeof(format));
+    memcpy(extra + sizeof(format), block, sizeof(block));
+
+    EXPECT_MEMORY_SAFE({
+      ScanStreamingBlock(extra, sizeof(extra));
+    }) << "bNumImageSizePatterns " << int(patterns);
+  }
+}
+
+/** A well-formed format-then-frame pair still parses. */
+TEST_F(DescriptorTest, VsFormatThenFrameParses) {
+  static const unsigned char extra[] = {
+    /* VS input header */
+    0x0e, 0x24, 0x01, 0x01, 0x00, 0x00, 0x81, 0x00,
+    0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+    /* Uncompressed format, bFormatIndex 1, 1 frame descriptor */
+    0x1b, 0x24, 0x04, 0x01, 0x01,
+    'Y', 'U', 'Y', '2', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa,
+    0x00, 0x38, 0x9b, 0x71, 0x10, 0x01, 0x00, 0x00, 0x00, 0x00,
+    /* Uncompressed frame, 640x480, one discrete interval */
+    0x1e, 0x24, 0x05, 0x01, 0x00, 0x80, 0x02, 0xe0, 0x01,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x09, 0x00, 0x15, 0x16, 0x05, 0x00,
+    0x01, 0x15, 0x16, 0x05, 0x00
+  };
+
+  SetUpConfig(1);
+  uvc_test_config_set_extra(&tc_, 0, extra, sizeof(extra));
+
+  EXPECT_EQ(uvc_scan_streaming(&info_, 0), UVC_SUCCESS);
+  ASSERT_NE(info_.stream_ifs, nullptr);
+  ASSERT_NE(info_.stream_ifs->format_descs, nullptr);
+  EXPECT_EQ(info_.stream_ifs->format_descs->bFormatIndex, 1);
+  EXPECT_NE(info_.stream_ifs->format_descs->frame_descs, nullptr);
 }
 
 }  // namespace

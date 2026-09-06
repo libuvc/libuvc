@@ -1116,6 +1116,15 @@ uvc_error_t uvc_scan_control(uvc_device_handle_t *devh, uvc_device_info_t *info)
 
   while (buffer_left >= 3) { // parseX needs to see buf[0,2] = length,type
     block_size = buffer[0];
+
+    /* bLength is device-supplied. Zero would never advance the cursor, and a
+       value past the end would underflow buffer_left, which is unsigned, and
+       send the walk over whatever follows the buffer. */
+    if (block_size < 3 || block_size > buffer_left) {
+      ret = UVC_ERROR_INVALID_DEVICE;
+      break;
+    }
+
     parse_ret = uvc_parse_vc(info, buffer, block_size);
 
     if (parse_ret != UVC_SUCCESS) {
@@ -1147,6 +1156,14 @@ uvc_error_t uvc_parse_vc_header(uvc_device_info_t *info,
   uvc_version = (block[4] >> 4) * 1000 + (block[4] & 0x0f) * 100
     + (block[3] >> 4) * 10 + (block[3] & 0x0f);
   */
+
+  /* Fixed part is 12 bytes: bLength, bDescriptorType, bDescriptorSubtype,
+     bcdUVC, wTotalLength, dwClockFrequency, bInCollection (UVC 1.5 Table
+     3-3). baInterfaceNr[] follows. */
+  if (block_size < 12) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
 
   info->ctrl_if.bcdUVC = SW_TO_SHORT(&block[3]);
 
@@ -1189,10 +1206,23 @@ uvc_error_t uvc_parse_vc_input_terminal(uvc_device_info_t *info,
 
   UVC_ENTER();
 
+  /* Fixed part is 15 bytes up to and including bControlSize (UVC 1.5 Table
+     3-6); bmControls follows. */
+  if (block_size < 15) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
+
   /* only supporting camera-type input terminals */
   if (SW_TO_SHORT(&block[4]) != UVC_ITT_CAMERA) {
     UVC_EXIT(UVC_SUCCESS);
     return UVC_SUCCESS;
+  }
+
+  /* bControlSize counts the bmControls bytes that follow it. */
+  if (block_size < (size_t)15 + block[14]) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
   }
 
   term = calloc(1, sizeof(*term));
@@ -1223,6 +1253,13 @@ uvc_error_t uvc_parse_vc_processing_unit(uvc_device_info_t *info,
 
   UVC_ENTER();
 
+  /* Fixed part is 8 bytes up to and including bControlSize (UVC 1.5 Table
+     3-8); bmControls follows. */
+  if (block_size < 8 || block_size < (size_t)8 + block[7]) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
+
   unit = calloc(1, sizeof(*unit));
   unit->bUnitID = block[3];
   unit->bSourceID = block[4];
@@ -1246,6 +1283,12 @@ uvc_error_t uvc_parse_vc_selector_unit(uvc_device_info_t *info,
 
   UVC_ENTER();
 
+  /* bUnitID is at offset 3. */
+  if (block_size < 4) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
+
   unit = calloc(1, sizeof(*unit));
   unit->bUnitID = block[3];
 
@@ -1261,19 +1304,38 @@ uvc_error_t uvc_parse_vc_selector_unit(uvc_device_info_t *info,
  */
 uvc_error_t uvc_parse_vc_extension_unit(uvc_device_info_t *info,
 					const unsigned char *block, size_t block_size) {
-  uvc_extension_unit_t *unit = calloc(1, sizeof(*unit));
+  uvc_extension_unit_t *unit;
   const uint8_t *start_of_controls;
   int size_of_controls, num_in_pins;
   int i;
 
   UVC_ENTER();
 
-  unit->bUnitID = block[3];
-  memcpy(unit->guidExtensionCode, &block[4], 16);
+  /* Fixed part is 22 bytes up to and including bNrInPins (UVC 1.5 Table
+     3-9), then baSourceID[bNrInPins], then bControlSize, then bmControls. */
+  if (block_size < 22) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
 
   num_in_pins = block[21];
+
+  if (block_size < (size_t)23 + num_in_pins) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
+
   size_of_controls = block[22 + num_in_pins];
   start_of_controls = &block[23 + num_in_pins];
+
+  if (block_size < (size_t)23 + num_in_pins + size_of_controls) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
+
+  unit = calloc(1, sizeof(*unit));
+  unit->bUnitID = block[3];
+  memcpy(unit->guidExtensionCode, &block[4], 16);
 
   for (i = size_of_controls - 1; i >= 0; --i)
     unit->bmControls = start_of_controls[i] + (unit->bmControls << 8);
@@ -1295,6 +1357,13 @@ uvc_error_t uvc_parse_vc(
   uvc_error_t ret = UVC_SUCCESS;
 
   UVC_ENTER();
+
+  /* Callers guarantee three bytes, enough for bLength, bDescriptorType and
+     bDescriptorSubtype. Everything past that is this block's own business. */
+  if (block_size < 3) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
 
   if (block[1] != 36) { // not a CS_INTERFACE descriptor??
     UVC_EXIT(UVC_SUCCESS);
@@ -1345,6 +1414,14 @@ uvc_error_t uvc_scan_streaming(uvc_device_info_t *info,
 
   ret = UVC_SUCCESS;
 
+  /* interface_idx comes from baInterfaceNr[] in a VideoControl header, i.e.
+     straight from the device, so it can name an interface that does not
+     exist. Indexing the array with it unchecked is libuvc/libuvc#300. */
+  if (interface_idx < 0 || interface_idx >= info->config->bNumInterfaces) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
+
   if_desc = &(info->config->interface[interface_idx].altsetting[0]);
   buffer = if_desc->extra;
   buffer_left = if_desc->extra_length;
@@ -1356,6 +1433,14 @@ uvc_error_t uvc_scan_streaming(uvc_device_info_t *info,
 
   while (buffer_left >= 3) {
     block_size = buffer[0];
+
+    /* See uvc_scan_control(): a zero bLength never advances, and one larger
+       than what remains underflows buffer_left. */
+    if (block_size < 3 || block_size > buffer_left) {
+      ret = UVC_ERROR_INVALID_DEVICE;
+      break;
+    }
+
     parse_ret = uvc_parse_vs(info, stream_if, buffer, block_size);
 
     if (parse_ret != UVC_SUCCESS) {
@@ -1380,6 +1465,11 @@ uvc_error_t uvc_parse_vs_input_header(uvc_streaming_interface_t *stream_if,
 				      size_t block_size) {
   UVC_ENTER();
 
+  if (block_size < 10) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
+
   stream_if->bEndpointAddress = block[6] & 0x8f;
   stream_if->bTerminalLink = block[8];
   stream_if->bStillCaptureMethod = block[9];
@@ -1396,6 +1486,11 @@ uvc_error_t uvc_parse_vs_format_uncompressed(uvc_streaming_interface_t *stream_i
 					     const unsigned char *block,
 					     size_t block_size) {
   UVC_ENTER();
+
+  if (block_size < 27) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
 
   uvc_format_desc_t *format = calloc(1, sizeof(*format));
 
@@ -1427,6 +1522,13 @@ uvc_error_t uvc_parse_vs_frame_format(uvc_streaming_interface_t *stream_if,
 					     size_t block_size) {
   UVC_ENTER();
 
+  /* Despite the name this is a format descriptor: it reads through
+     bVariableSize at offset 27. */
+  if (block_size < 28) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
+
   uvc_format_desc_t *format = calloc(1, sizeof(*format));
 
   format->parent = stream_if;
@@ -1456,6 +1558,11 @@ uvc_error_t uvc_parse_vs_format_mjpeg(uvc_streaming_interface_t *stream_if,
 					     const unsigned char *block,
 					     size_t block_size) {
   UVC_ENTER();
+
+  if (block_size < 11) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
 
   uvc_format_desc_t *format = calloc(1, sizeof(*format));
 
@@ -1491,6 +1598,33 @@ uvc_error_t uvc_parse_vs_frame_frame(uvc_streaming_interface_t *stream_if,
   int i;
 
   UVC_ENTER();
+
+  /* A frame descriptor describes the format that precedes it, so there has
+     to be one. A device that sends a frame block first leaves the list
+     empty. */
+  if (stream_if->format_descs == NULL) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
+
+  /* Fixed part up to and including bFrameIntervalType. */
+  if (block_size < 22) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
+
+  /* bFrameIntervalType == 0 means a continuous range: three more dwords.
+     Otherwise it counts the discrete intervals that follow, four bytes
+     each. Either way the device chooses how much it claims is there. */
+  if (block[21] == 0) {
+    if (block_size < 34) {
+      UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+      return UVC_ERROR_INVALID_DEVICE;
+    }
+  } else if (block_size < (size_t)22 + (size_t)block[21] * 4) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
 
   format = stream_if->format_descs->prev;
   frame = calloc(1, sizeof(*frame));
@@ -1544,6 +1678,33 @@ uvc_error_t uvc_parse_vs_frame_uncompressed(uvc_streaming_interface_t *stream_if
 
   UVC_ENTER();
 
+  /* A frame descriptor describes the format that precedes it, so there has
+     to be one. A device that sends a frame block first leaves the list
+     empty. */
+  if (stream_if->format_descs == NULL) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
+
+  /* Fixed part up to and including bFrameIntervalType. */
+  if (block_size < 26) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
+
+  /* bFrameIntervalType == 0 means a continuous range: three more dwords.
+     Otherwise it counts the discrete intervals that follow, four bytes
+     each. Either way the device chooses how much it claims is there. */
+  if (block[25] == 0) {
+    if (block_size < 38) {
+      UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+      return UVC_ERROR_INVALID_DEVICE;
+    }
+  } else if (block_size < (size_t)26 + (size_t)block[25] * 4) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
+
   format = stream_if->format_descs->prev;
   frame = calloc(1, sizeof(*frame));
 
@@ -1596,6 +1757,35 @@ uvc_error_t uvc_parse_vs_still_image_frame(uvc_streaming_interface_t *stream_if,
   int i;
 
   UVC_ENTER();
+
+  /* Describes the format that precedes it, so there has to be one. */
+  if (stream_if->format_descs == NULL) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
+
+  /* Fixed part is 5 bytes through bNumImageSizePatterns (UVC 1.5 Table
+     3-18), then 4 bytes per pattern, then bNumCompressionPattern and one
+     byte per compression pattern. All three counts come from the device. */
+  if (block_size < 5) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
+
+  {
+    size_t need = (size_t)5 + (size_t)block[4] * 4;
+
+    /* Room for bNumCompressionPattern itself... */
+    if (block_size < need + 1) {
+      UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+      return UVC_ERROR_INVALID_DEVICE;
+    }
+    /* ...and for the patterns it claims follow it. */
+    if (block_size < need + 1 + block[need]) {
+      UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+      return UVC_ERROR_INVALID_DEVICE;
+    }
+  }
 
   format = stream_if->format_descs->prev;
   frame = calloc(1, sizeof(*frame));
