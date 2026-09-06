@@ -56,6 +56,15 @@ mkdir -p corpus
 ./build-fuzz/test/fuzz_descriptor -max_total_time=60 corpus
 ```
 
+libFuzzer generates nothing larger than 4096 bytes unless told to, which is
+smaller than some real descriptors: the Logitech HD Pro 920 in `cameras/`
+carries ~153 blocks totalling ~3.5 kB, so a longer list of blocks than that
+is only reachable with
+
+```sh
+./build-fuzz/test/fuzz_descriptor -max_len=16384 -max_total_time=60 corpus
+```
+
 From an empty corpus this finds an out-of-bounds read in a few seconds. To
 keep going past the first crash and collect distinct ones:
 
