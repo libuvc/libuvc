@@ -34,6 +34,8 @@ uvc_error_t uvc_parse_vc_header(uvc_device_t *dev, uvc_device_info_t *info,
                                 const unsigned char *block, size_t block_size);
 uvc_error_t uvc_scan_streaming(uvc_device_t *dev, uvc_device_info_t *info,
                                int interface_idx);
+/* Accepts a NULL handle: it is used only for a device-specific quirk. */
+uvc_error_t uvc_scan_control(uvc_device_handle_t *devh, uvc_device_info_t *info);
 uvc_error_t uvc_parse_vs(uvc_device_t *dev, uvc_device_info_t *info,
                          uvc_streaming_interface_t *stream_if,
                          const unsigned char *block, size_t block_size);
