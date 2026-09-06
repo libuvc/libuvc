@@ -151,3 +151,36 @@ jobs:
         run: |
           test -x build/example
           test -x build/uvc_test
+
+  # apt only ever ships OpenCV 4 (still 4.10 in 26.04), so the job above can
+  # never cover OpenCV 5, which removed the legacy C highgui API. Homebrew is
+  # on 5.x and has bottles, so use the macOS runner for that coverage.
+  build-test-opencv5:
+    runs-on: macos-latest
+
+    name: macos, test program, opencv 5
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install dependencies
+        run: brew install libusb jpeg opencv
+
+      - name: Check OpenCV version
+        run: |
+          brew list --versions opencv
+          brew list --versions opencv | grep -q ' 5\.' || {
+            echo "expected OpenCV 5.x" >&2
+            exit 1
+          }
+
+      - name: Configure
+        run: cmake -B build -DBUILD_TEST=ON
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Check programs were built
+        run: |
+          test -x build/example
+          test -x build/uvc_test
