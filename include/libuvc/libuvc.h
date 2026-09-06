@@ -441,7 +441,7 @@ typedef struct uvc_device_descriptor {
   uint16_t idProduct;
   /** Reserved; was bcdUVC, which was never populated (always read 0).
    * Kept to preserve the layout of the fields below.
-   * Use uvc_get_uvc_compliance() on an open handle instead. */
+   * Use uvc_get_spec_version() on an open handle instead. */
   uint16_t reserved;
   /** Serial number (null if unavailable) */
   const char *serialNumber;
@@ -590,7 +590,7 @@ const uvc_output_terminal_t *uvc_get_output_terminals(uvc_device_handle_t *devh)
 const uvc_selector_unit_t *uvc_get_selector_units(uvc_device_handle_t *devh);
 const uvc_processing_unit_t *uvc_get_processing_units(uvc_device_handle_t *devh);
 const uvc_extension_unit_t *uvc_get_extension_units(uvc_device_handle_t *devh);
-uint16_t uvc_get_uvc_compliance(uvc_device_handle_t *devh);
+uint16_t uvc_get_spec_version(uvc_device_handle_t *devh);
 
 uvc_error_t uvc_get_stream_ctrl_format_size(
     uvc_device_handle_t *devh,

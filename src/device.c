@@ -931,11 +931,19 @@ const uvc_extension_unit_t *uvc_get_extension_units(uvc_device_handle_t *devh) {
 }
 
 /**
- * @brief Get compliance to the UVC standard
+ * @brief Get the UVC specification version this video function complies with.
+ *
+ * Per the spec, bcdUVC "identifies the release of the Video Device Class
+ * Specification with which this video function and its descriptors are
+ * compliant" -- it describes the video function of the open handle, not the
+ * USB device, which may expose several.
+ *
+ * The value is the bcdUVC field of the VideoControl header, in BCD: 0x0100
+ * for UVC 1.0, 0x010a for 1.0a, 0x0110 for 1.1, 0x0150 for 1.5.
  *
  * @param devh Device handle to an open UVC device
  */
-uint16_t uvc_get_uvc_compliance(uvc_device_handle_t *devh) {
+uint16_t uvc_get_spec_version(uvc_device_handle_t *devh) {
   return devh->info->ctrl_if.bcdUVC;
 }
 
