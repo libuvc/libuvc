@@ -457,6 +457,7 @@ uvc_error_t uvc_get_device_info(uvc_device_handle_t *devh,
 void uvc_free_device_info(uvc_device_info_t *info) {
   uvc_input_terminal_t *input_term, *input_term_tmp;
   uvc_processing_unit_t *proc_unit, *proc_unit_tmp;
+  uvc_selector_unit_t *selector_unit, *selector_unit_tmp;
   uvc_extension_unit_t *ext_unit, *ext_unit_tmp;
 
   uvc_streaming_interface_t *stream_if, *stream_if_tmp;
@@ -475,6 +476,11 @@ void uvc_free_device_info(uvc_device_info_t *info) {
   DL_FOREACH_SAFE(info->ctrl_if.processing_unit_descs, proc_unit, proc_unit_tmp) {
     DL_DELETE(info->ctrl_if.processing_unit_descs, proc_unit);
     free(proc_unit);
+  }
+
+  DL_FOREACH_SAFE(info->ctrl_if.selector_unit_descs, selector_unit, selector_unit_tmp) {
+    DL_DELETE(info->ctrl_if.selector_unit_descs, selector_unit);
+    free(selector_unit);
   }
 
   DL_FOREACH_SAFE(info->ctrl_if.extension_unit_descs, ext_unit, ext_unit_tmp) {
