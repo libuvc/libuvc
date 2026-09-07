@@ -777,13 +777,25 @@ void _uvc_process_payload(uvc_stream_handle_t *strmh, uint8_t *payload, size_t p
 
     strmh->fid = (uint8_t) (header_info & UVC_STREAM_FID);
 
+    /* The PTS and SCR fields are announced by the flags byte but their
+       presence is not implied by it: bLength has to actually cover them.
+       A device that sets either bit on a two-byte header sends the reads
+       below off the end of the packet. */
     if (header_info & UVC_STREAM_PTS) {
+      if (header_len < variable_offset + 4) {
+        UVC_DEBUG("bogus packet: PTS flag set but header_len=%zd", header_len);
+        return;
+      }
       strmh->pts = DW_TO_INT(payload + variable_offset);
       variable_offset += 4;
     }
 
     if (header_info & UVC_STREAM_SCR) {
       /** @todo read the SOF token counter */
+      if (header_len < variable_offset + 6) {
+        UVC_DEBUG("bogus packet: SCR flag set but header_len=%zd", header_len);
+        return;
+      }
       strmh->last_scr = DW_TO_INT(payload + variable_offset);
       variable_offset += 6;
     }
@@ -791,16 +803,25 @@ void _uvc_process_payload(uvc_stream_handle_t *strmh, uint8_t *payload, size_t p
     if (header_len > variable_offset) {
         // Metadata is attached to header
         size_t meta_len = header_len - variable_offset;
-        if (strmh->meta_got_bytes + meta_len > LIBUVC_XFER_META_BUF_SIZE)
-          meta_len = LIBUVC_XFER_META_BUF_SIZE - strmh->meta_got_bytes; /* Avoid overflow. */
+        /* Clamp to the space left. Subtracting the other way round would
+           underflow once meta_got_bytes reached the limit, since both are
+           size_t. */
+        if (strmh->meta_got_bytes >= LIBUVC_XFER_META_BUF_SIZE)
+          meta_len = 0;
+        else if (meta_len > LIBUVC_XFER_META_BUF_SIZE - strmh->meta_got_bytes)
+          meta_len = LIBUVC_XFER_META_BUF_SIZE - strmh->meta_got_bytes;
         memcpy(strmh->meta_outbuf + strmh->meta_got_bytes, payload + variable_offset, meta_len);
         strmh->meta_got_bytes += meta_len;
     }
   }
 
   if (data_len > 0) {
-    if (strmh->got_bytes + data_len > strmh->cur_ctrl.dwMaxVideoFrameSize)
-      data_len = strmh->cur_ctrl.dwMaxVideoFrameSize - strmh->got_bytes; /* Avoid overflow. */
+    /* Clamp to the space left in the frame buffer, guarding the subtraction
+       the same way as the metadata copy above. */
+    if (strmh->got_bytes >= strmh->cur_ctrl.dwMaxVideoFrameSize)
+      data_len = 0;
+    else if (data_len > strmh->cur_ctrl.dwMaxVideoFrameSize - strmh->got_bytes)
+      data_len = strmh->cur_ctrl.dwMaxVideoFrameSize - strmh->got_bytes;
     memcpy(strmh->outbuf + strmh->got_bytes, payload + header_len, data_len);
     strmh->got_bytes += data_len;
 

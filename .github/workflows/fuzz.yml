@@ -1,0 +1,91 @@
+name: Fuzz
+
+on:
+  schedule:
+    # 03:17 UTC daily. Off the hour because GitHub queues scheduled jobs
+    # heavily on the hour.
+    - cron: '17 3 * * *'
+
+  # So a change to the harness can be exercised without waiting a day.
+  workflow_dispatch:
+    inputs:
+      duration:
+        description: 'Seconds to fuzz each target'
+        required: false
+        default: '600'
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [ fuzz_descriptor, fuzz_payload ]
+
+    name: ${{ matrix.target }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libusb-1.0-0-dev libjpeg-dev clang
+
+      - name: Configure
+        run: |
+          cmake -B build \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DBUILD_TESTING=ON \
+            -DBUILD_FUZZERS=ON \
+            -DENABLE_SANITIZERS=ON \
+            -DBUILD_EXAMPLE=OFF
+
+      - name: Build
+        run: cmake --build build --target ${{ matrix.target }}
+
+      # Seeded from the checked-in corpus, and copied rather than used in
+      # place so libFuzzer's new inputs do not show up as repository changes.
+      - name: Fuzz
+        env:
+          DURATION: ${{ github.event.inputs.duration || '600' }}
+        run: |
+          mkdir -p corpus artifacts
+          cp test/corpus/${{ matrix.target }}/* corpus/ 2>/dev/null || true
+
+          # -max_len is needed to exceed libFuzzer's own 4096-byte default;
+          # real descriptors get close to that (see test/fuzz/README.md).
+          ./build/test/${{ matrix.target }} \
+            -max_total_time="$DURATION" \
+            -max_len=16384 \
+            -timeout=25 \
+            -rss_limit_mb=4096 \
+            -print_final_stats=1 \
+            -artifact_prefix=artifacts/ \
+            corpus
+
+      # A crash leaves an input behind, which is the thing worth keeping:
+      # it is the reproducer, and belongs in test/corpus/ once triaged.
+      - name: Upload crashes
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}-crashes
+          path: artifacts/
+          if-no-files-found: ignore
+          retention-days: 30
+
+      # The corpus libFuzzer grew is worth keeping too: it makes the next
+      # run start from better coverage than the checked-in seeds alone.
+      - name: Upload corpus
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}-corpus
+          path: corpus/
+          retention-days: 7

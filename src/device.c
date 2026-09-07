@@ -46,33 +46,25 @@ uvc_error_t uvc_get_device_info(uvc_device_handle_t *devh, uvc_device_info_t **i
 void uvc_free_device_info(uvc_device_info_t *info);
 
 uvc_error_t uvc_scan_control(uvc_device_handle_t *devh, uvc_device_info_t *info);
-uvc_error_t uvc_parse_vc(uvc_device_t *dev,
-			 uvc_device_info_t *info,
+uvc_error_t uvc_parse_vc(uvc_device_info_t *info,
 			 const unsigned char *block, size_t block_size);
-uvc_error_t uvc_parse_vc_selector_unit(uvc_device_t *dev,
-					uvc_device_info_t *info,
+uvc_error_t uvc_parse_vc_selector_unit(uvc_device_info_t *info,
 					const unsigned char *block, size_t block_size);
-uvc_error_t uvc_parse_vc_extension_unit(uvc_device_t *dev,
-					uvc_device_info_t *info,
+uvc_error_t uvc_parse_vc_extension_unit(uvc_device_info_t *info,
 					const unsigned char *block,
 					size_t block_size);
-uvc_error_t uvc_parse_vc_header(uvc_device_t *dev,
-				uvc_device_info_t *info,
+uvc_error_t uvc_parse_vc_header(uvc_device_info_t *info,
 				const unsigned char *block, size_t block_size);
-uvc_error_t uvc_parse_vc_input_terminal(uvc_device_t *dev,
-					uvc_device_info_t *info,
+uvc_error_t uvc_parse_vc_input_terminal(uvc_device_info_t *info,
 					const unsigned char *block,
 					size_t block_size);
-uvc_error_t uvc_parse_vc_processing_unit(uvc_device_t *dev,
-					 uvc_device_info_t *info,
+uvc_error_t uvc_parse_vc_processing_unit(uvc_device_info_t *info,
 					 const unsigned char *block,
 					 size_t block_size);
 
-uvc_error_t uvc_scan_streaming(uvc_device_t *dev,
-			       uvc_device_info_t *info,
+uvc_error_t uvc_scan_streaming(uvc_device_info_t *info,
 			       int interface_idx);
-uvc_error_t uvc_parse_vs(uvc_device_t *dev,
-			 uvc_device_info_t *info,
+uvc_error_t uvc_parse_vs(uvc_device_info_t *info,
 			 uvc_streaming_interface_t *stream_if,
 			 const unsigned char *block, size_t block_size);
 uvc_error_t uvc_parse_vs_format_uncompressed(uvc_streaming_interface_t *stream_if,
@@ -465,6 +457,7 @@ uvc_error_t uvc_get_device_info(uvc_device_handle_t *devh,
 void uvc_free_device_info(uvc_device_info_t *info) {
   uvc_input_terminal_t *input_term, *input_term_tmp;
   uvc_processing_unit_t *proc_unit, *proc_unit_tmp;
+  uvc_selector_unit_t *selector_unit, *selector_unit_tmp;
   uvc_extension_unit_t *ext_unit, *ext_unit_tmp;
 
   uvc_streaming_interface_t *stream_if, *stream_if_tmp;
@@ -483,6 +476,11 @@ void uvc_free_device_info(uvc_device_info_t *info) {
   DL_FOREACH_SAFE(info->ctrl_if.processing_unit_descs, proc_unit, proc_unit_tmp) {
     DL_DELETE(info->ctrl_if.processing_unit_descs, proc_unit);
     free(proc_unit);
+  }
+
+  DL_FOREACH_SAFE(info->ctrl_if.selector_unit_descs, selector_unit, selector_unit_tmp) {
+    DL_DELETE(info->ctrl_if.selector_unit_descs, selector_unit);
+    free(selector_unit);
   }
 
   DL_FOREACH_SAFE(info->ctrl_if.extension_unit_descs, ext_unit, ext_unit_tmp) {
@@ -534,10 +532,17 @@ static uvc_error_t get_device_descriptor(
         uvc_device_descriptor_t **desc) {
   uvc_device_descriptor_t *desc_internal;
   struct libusb_device_descriptor usb_desc;
-  struct libusb_device_handle *usb_devh = devh->usb_devh;
+  struct libusb_device_handle *usb_devh;
   uvc_error_t ret;
 
   UVC_ENTER();
+
+  if (devh == NULL) {
+    UVC_EXIT(UVC_ERROR_INVALID_PARAM);
+    return UVC_ERROR_INVALID_PARAM;
+  }
+
+  usb_devh = devh->usb_devh;
 
   ret = libusb_get_device_descriptor(devh->dev->usb_dev, &usb_desc);
 
@@ -1044,6 +1049,10 @@ uvc_error_t uvc_release_if(uvc_device_handle_t *devh, int idx) {
 /** @internal
  * Find a device's VideoControl interface and process its descriptor
  * @ingroup device
+ *
+ * @p devh may be NULL, in which case the device-specific quirk lookup is
+ * skipped and only info->config is parsed. That is the handle's only use
+ * here; nothing below this point needs a device at all.
  */
 uvc_error_t uvc_scan_control(uvc_device_handle_t *devh, uvc_device_info_t *info) {
   const struct libusb_interface_descriptor *if_desc;
@@ -1094,7 +1103,16 @@ uvc_error_t uvc_scan_control(uvc_device_handle_t *devh, uvc_device_info_t *info)
 
   while (buffer_left >= 3) { // parseX needs to see buf[0,2] = length,type
     block_size = buffer[0];
-    parse_ret = uvc_parse_vc(devh->dev, info, buffer, block_size);
+
+    /* bLength is device-supplied. Zero would never advance the cursor, and a
+       value past the end would underflow buffer_left, which is unsigned, and
+       send the walk over whatever follows the buffer. */
+    if (block_size < 3 || block_size > buffer_left) {
+      ret = UVC_ERROR_INVALID_DEVICE;
+      break;
+    }
+
+    parse_ret = uvc_parse_vc(info, buffer, block_size);
 
     if (parse_ret != UVC_SUCCESS) {
       ret = parse_ret;
@@ -1113,8 +1131,7 @@ uvc_error_t uvc_scan_control(uvc_device_handle_t *devh, uvc_device_info_t *info)
  * @brief Parse a VideoControl header.
  * @ingroup device
  */
-uvc_error_t uvc_parse_vc_header(uvc_device_t *dev,
-				uvc_device_info_t *info,
+uvc_error_t uvc_parse_vc_header(uvc_device_info_t *info,
 				const unsigned char *block, size_t block_size) {
   size_t i;
   uvc_error_t scan_ret, ret = UVC_SUCCESS;
@@ -1126,6 +1143,14 @@ uvc_error_t uvc_parse_vc_header(uvc_device_t *dev,
   uvc_version = (block[4] >> 4) * 1000 + (block[4] & 0x0f) * 100
     + (block[3] >> 4) * 10 + (block[3] & 0x0f);
   */
+
+  /* Fixed part is 12 bytes: bLength, bDescriptorType, bDescriptorSubtype,
+     bcdUVC, wTotalLength, dwClockFrequency, bInCollection (UVC 1.5 Table
+     3-3). baInterfaceNr[] follows. */
+  if (block_size < 12) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
 
   info->ctrl_if.bcdUVC = SW_TO_SHORT(&block[3]);
 
@@ -1146,7 +1171,7 @@ uvc_error_t uvc_parse_vc_header(uvc_device_t *dev,
   }
 
   for (i = 12; i < block_size; ++i) {
-    scan_ret = uvc_scan_streaming(dev, info, block[i]);
+    scan_ret = uvc_scan_streaming(info, block[i]);
     if (scan_ret != UVC_SUCCESS) {
       ret = scan_ret;
       break;
@@ -1161,18 +1186,30 @@ uvc_error_t uvc_parse_vc_header(uvc_device_t *dev,
  * @brief Parse a VideoControl input terminal.
  * @ingroup device
  */
-uvc_error_t uvc_parse_vc_input_terminal(uvc_device_t *dev,
-					uvc_device_info_t *info,
+uvc_error_t uvc_parse_vc_input_terminal(uvc_device_info_t *info,
 					const unsigned char *block, size_t block_size) {
   uvc_input_terminal_t *term;
   size_t i;
 
   UVC_ENTER();
 
+  /* Fixed part is 15 bytes up to and including bControlSize (UVC 1.5 Table
+     3-6); bmControls follows. */
+  if (block_size < 15) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
+
   /* only supporting camera-type input terminals */
   if (SW_TO_SHORT(&block[4]) != UVC_ITT_CAMERA) {
     UVC_EXIT(UVC_SUCCESS);
     return UVC_SUCCESS;
+  }
+
+  /* bControlSize counts the bmControls bytes that follow it. */
+  if (block_size < (size_t)15 + block[14]) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
   }
 
   term = calloc(1, sizeof(*term));
@@ -1196,13 +1233,19 @@ uvc_error_t uvc_parse_vc_input_terminal(uvc_device_t *dev,
  * @brief Parse a VideoControl processing unit.
  * @ingroup device
  */
-uvc_error_t uvc_parse_vc_processing_unit(uvc_device_t *dev,
-					 uvc_device_info_t *info,
+uvc_error_t uvc_parse_vc_processing_unit(uvc_device_info_t *info,
 					 const unsigned char *block, size_t block_size) {
   uvc_processing_unit_t *unit;
   size_t i;
 
   UVC_ENTER();
+
+  /* Fixed part is 8 bytes up to and including bControlSize (UVC 1.5 Table
+     3-8); bmControls follows. */
+  if (block_size < 8 || block_size < (size_t)8 + block[7]) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
 
   unit = calloc(1, sizeof(*unit));
   unit->bUnitID = block[3];
@@ -1221,12 +1264,17 @@ uvc_error_t uvc_parse_vc_processing_unit(uvc_device_t *dev,
  * @brief Parse a VideoControl selector unit.
  * @ingroup device
  */
-uvc_error_t uvc_parse_vc_selector_unit(uvc_device_t *dev,
-					 uvc_device_info_t *info,
+uvc_error_t uvc_parse_vc_selector_unit(uvc_device_info_t *info,
 					 const unsigned char *block, size_t block_size) {
   uvc_selector_unit_t *unit;
 
   UVC_ENTER();
+
+  /* bUnitID is at offset 3. */
+  if (block_size < 4) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
 
   unit = calloc(1, sizeof(*unit));
   unit->bUnitID = block[3];
@@ -1241,22 +1289,40 @@ uvc_error_t uvc_parse_vc_selector_unit(uvc_device_t *dev,
  * @brief Parse a VideoControl extension unit.
  * @ingroup device
  */
-uvc_error_t uvc_parse_vc_extension_unit(uvc_device_t *dev,
-					uvc_device_info_t *info,
+uvc_error_t uvc_parse_vc_extension_unit(uvc_device_info_t *info,
 					const unsigned char *block, size_t block_size) {
-  uvc_extension_unit_t *unit = calloc(1, sizeof(*unit));
+  uvc_extension_unit_t *unit;
   const uint8_t *start_of_controls;
   int size_of_controls, num_in_pins;
   int i;
 
   UVC_ENTER();
 
-  unit->bUnitID = block[3];
-  memcpy(unit->guidExtensionCode, &block[4], 16);
+  /* Fixed part is 22 bytes up to and including bNrInPins (UVC 1.5 Table
+     3-9), then baSourceID[bNrInPins], then bControlSize, then bmControls. */
+  if (block_size < 22) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
 
   num_in_pins = block[21];
+
+  if (block_size < (size_t)23 + num_in_pins) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
+
   size_of_controls = block[22 + num_in_pins];
   start_of_controls = &block[23 + num_in_pins];
+
+  if (block_size < (size_t)23 + num_in_pins + size_of_controls) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
+
+  unit = calloc(1, sizeof(*unit));
+  unit->bUnitID = block[3];
+  memcpy(unit->guidExtensionCode, &block[4], 16);
 
   for (i = size_of_controls - 1; i >= 0; --i)
     unit->bmControls = start_of_controls[i] + (unit->bmControls << 8);
@@ -1272,13 +1338,19 @@ uvc_error_t uvc_parse_vc_extension_unit(uvc_device_t *dev,
  * @ingroup device
  */
 uvc_error_t uvc_parse_vc(
-    uvc_device_t *dev,
     uvc_device_info_t *info,
     const unsigned char *block, size_t block_size) {
   int descriptor_subtype;
   uvc_error_t ret = UVC_SUCCESS;
 
   UVC_ENTER();
+
+  /* Callers guarantee three bytes, enough for bLength, bDescriptorType and
+     bDescriptorSubtype. Everything past that is this block's own business. */
+  if (block_size < 3) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
 
   if (block[1] != 36) { // not a CS_INTERFACE descriptor??
     UVC_EXIT(UVC_SUCCESS);
@@ -1289,21 +1361,21 @@ uvc_error_t uvc_parse_vc(
 
   switch (descriptor_subtype) {
   case UVC_VC_HEADER:
-    ret = uvc_parse_vc_header(dev, info, block, block_size);
+    ret = uvc_parse_vc_header(info, block, block_size);
     break;
   case UVC_VC_INPUT_TERMINAL:
-    ret = uvc_parse_vc_input_terminal(dev, info, block, block_size);
+    ret = uvc_parse_vc_input_terminal(info, block, block_size);
     break;
   case UVC_VC_OUTPUT_TERMINAL:
     break;
   case UVC_VC_SELECTOR_UNIT:
-    ret = uvc_parse_vc_selector_unit(dev, info, block, block_size);
+    ret = uvc_parse_vc_selector_unit(info, block, block_size);
     break;
   case UVC_VC_PROCESSING_UNIT:
-    ret = uvc_parse_vc_processing_unit(dev, info, block, block_size);
+    ret = uvc_parse_vc_processing_unit(info, block, block_size);
     break;
   case UVC_VC_EXTENSION_UNIT:
-    ret = uvc_parse_vc_extension_unit(dev, info, block, block_size);
+    ret = uvc_parse_vc_extension_unit(info, block, block_size);
     break;
   default:
     ret = UVC_ERROR_INVALID_DEVICE;
@@ -1317,8 +1389,7 @@ uvc_error_t uvc_parse_vc(
  * Process a VideoStreaming interface
  * @ingroup device
  */
-uvc_error_t uvc_scan_streaming(uvc_device_t *dev,
-			       uvc_device_info_t *info,
+uvc_error_t uvc_scan_streaming(uvc_device_info_t *info,
 			       int interface_idx) {
   const struct libusb_interface_descriptor *if_desc;
   const unsigned char *buffer;
@@ -1329,6 +1400,14 @@ uvc_error_t uvc_scan_streaming(uvc_device_t *dev,
   UVC_ENTER();
 
   ret = UVC_SUCCESS;
+
+  /* interface_idx comes from baInterfaceNr[] in a VideoControl header, i.e.
+     straight from the device, so it can name an interface that does not
+     exist. Indexing the array with it unchecked is libuvc/libuvc#300. */
+  if (interface_idx < 0 || interface_idx >= info->config->bNumInterfaces) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
 
   if_desc = &(info->config->interface[interface_idx].altsetting[0]);
   buffer = if_desc->extra;
@@ -1341,7 +1420,15 @@ uvc_error_t uvc_scan_streaming(uvc_device_t *dev,
 
   while (buffer_left >= 3) {
     block_size = buffer[0];
-    parse_ret = uvc_parse_vs(dev, info, stream_if, buffer, block_size);
+
+    /* See uvc_scan_control(): a zero bLength never advances, and one larger
+       than what remains underflows buffer_left. */
+    if (block_size < 3 || block_size > buffer_left) {
+      ret = UVC_ERROR_INVALID_DEVICE;
+      break;
+    }
+
+    parse_ret = uvc_parse_vs(info, stream_if, buffer, block_size);
 
     if (parse_ret != UVC_SUCCESS) {
       ret = parse_ret;
@@ -1365,6 +1452,11 @@ uvc_error_t uvc_parse_vs_input_header(uvc_streaming_interface_t *stream_if,
 				      size_t block_size) {
   UVC_ENTER();
 
+  if (block_size < 10) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
+
   stream_if->bEndpointAddress = block[6] & 0x8f;
   stream_if->bTerminalLink = block[8];
   stream_if->bStillCaptureMethod = block[9];
@@ -1381,6 +1473,11 @@ uvc_error_t uvc_parse_vs_format_uncompressed(uvc_streaming_interface_t *stream_i
 					     const unsigned char *block,
 					     size_t block_size) {
   UVC_ENTER();
+
+  if (block_size < 27) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
 
   uvc_format_desc_t *format = calloc(1, sizeof(*format));
 
@@ -1412,6 +1509,13 @@ uvc_error_t uvc_parse_vs_frame_format(uvc_streaming_interface_t *stream_if,
 					     size_t block_size) {
   UVC_ENTER();
 
+  /* Despite the name this is a format descriptor: it reads through
+     bVariableSize at offset 27. */
+  if (block_size < 28) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
+
   uvc_format_desc_t *format = calloc(1, sizeof(*format));
 
   format->parent = stream_if;
@@ -1441,6 +1545,11 @@ uvc_error_t uvc_parse_vs_format_mjpeg(uvc_streaming_interface_t *stream_if,
 					     const unsigned char *block,
 					     size_t block_size) {
   UVC_ENTER();
+
+  if (block_size < 11) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
 
   uvc_format_desc_t *format = calloc(1, sizeof(*format));
 
@@ -1476,6 +1585,33 @@ uvc_error_t uvc_parse_vs_frame_frame(uvc_streaming_interface_t *stream_if,
   int i;
 
   UVC_ENTER();
+
+  /* A frame descriptor describes the format that precedes it, so there has
+     to be one. A device that sends a frame block first leaves the list
+     empty. */
+  if (stream_if->format_descs == NULL) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
+
+  /* Fixed part up to and including bFrameIntervalType. */
+  if (block_size < 22) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
+
+  /* bFrameIntervalType == 0 means a continuous range: three more dwords.
+     Otherwise it counts the discrete intervals that follow, four bytes
+     each. Either way the device chooses how much it claims is there. */
+  if (block[21] == 0) {
+    if (block_size < 34) {
+      UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+      return UVC_ERROR_INVALID_DEVICE;
+    }
+  } else if (block_size < (size_t)22 + (size_t)block[21] * 4) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
 
   format = stream_if->format_descs->prev;
   frame = calloc(1, sizeof(*frame));
@@ -1528,6 +1664,33 @@ uvc_error_t uvc_parse_vs_frame_uncompressed(uvc_streaming_interface_t *stream_if
   int i;
 
   UVC_ENTER();
+
+  /* A frame descriptor describes the format that precedes it, so there has
+     to be one. A device that sends a frame block first leaves the list
+     empty. */
+  if (stream_if->format_descs == NULL) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
+
+  /* Fixed part up to and including bFrameIntervalType. */
+  if (block_size < 26) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
+
+  /* bFrameIntervalType == 0 means a continuous range: three more dwords.
+     Otherwise it counts the discrete intervals that follow, four bytes
+     each. Either way the device chooses how much it claims is there. */
+  if (block[25] == 0) {
+    if (block_size < 38) {
+      UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+      return UVC_ERROR_INVALID_DEVICE;
+    }
+  } else if (block_size < (size_t)26 + (size_t)block[25] * 4) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
 
   format = stream_if->format_descs->prev;
   frame = calloc(1, sizeof(*frame));
@@ -1582,6 +1745,35 @@ uvc_error_t uvc_parse_vs_still_image_frame(uvc_streaming_interface_t *stream_if,
 
   UVC_ENTER();
 
+  /* Describes the format that precedes it, so there has to be one. */
+  if (stream_if->format_descs == NULL) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
+
+  /* Fixed part is 5 bytes through bNumImageSizePatterns (UVC 1.5 Table
+     3-18), then 4 bytes per pattern, then bNumCompressionPattern and one
+     byte per compression pattern. All three counts come from the device. */
+  if (block_size < 5) {
+    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+    return UVC_ERROR_INVALID_DEVICE;
+  }
+
+  {
+    size_t need = (size_t)5 + (size_t)block[4] * 4;
+
+    /* Room for bNumCompressionPattern itself... */
+    if (block_size < need + 1) {
+      UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+      return UVC_ERROR_INVALID_DEVICE;
+    }
+    /* ...and for the patterns it claims follow it. */
+    if (block_size < need + 1 + block[need]) {
+      UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+      return UVC_ERROR_INVALID_DEVICE;
+    }
+  }
+
   format = stream_if->format_descs->prev;
   frame = calloc(1, sizeof(*frame));
 
@@ -1634,7 +1826,6 @@ uvc_error_t uvc_parse_vs_still_image_frame(uvc_streaming_interface_t *stream_if,
  * @ingroup device
  */
 uvc_error_t uvc_parse_vs(
-    uvc_device_t *dev,
     uvc_device_info_t *info,
     uvc_streaming_interface_t *stream_if,
     const unsigned char *block, size_t block_size) {
