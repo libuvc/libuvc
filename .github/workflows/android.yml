@@ -1,0 +1,156 @@
+name: Android
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # Nothing else in CI cross-compiles, so the Android-only code paths --
+  # the __ANDROID__ logging in libuvc_internal.h and the liblog lookup in
+  # CMakeLists.txt -- were never built by any job.
+  build-android:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # armeabi-v7a is the only 32-bit ABI here and the reason to keep it:
+        # it is the only CI target where size_t is not unsigned long, so it
+        # catches format-specifier and truncation bugs the 64-bit jobs miss.
+        abi: [ armeabi-v7a, arm64-v8a, x86_64 ]
+        # The Android logging path is compiled only with debugging enabled,
+        # so build both ways rather than leaving half the code uncovered.
+        debugging: [ on, off ]
+
+    name: android, ${{ matrix.abi }}${{ matrix.debugging == 'on' && ', debug logging' || '' }}
+
+    env:
+      # android-21 is libusb's own minimum for Android and the oldest API
+      # level current NDKs still support.
+      API_LEVEL: 21
+      LIBUSB_VERSION: 1.0.30
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # There is no NDK-built libusb to apt-get, so it has to be built from
+      # source. Cache it: it is a fixed upstream release, so it only ever
+      # needs rebuilding when the version or the ABI changes.
+      - name: Cache libusb
+        id: cache-libusb
+        uses: actions/cache@v4
+        with:
+          path: libusb-install
+          key: libusb-${{ env.LIBUSB_VERSION }}-${{ matrix.abi }}-api${{ env.API_LEVEL }}-${{ hashFiles('.github/workflows/android.yml') }}
+
+      - name: Install dependencies
+        if: steps.cache-libusb.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          # libusb ships no configure script in git, so autotools is needed
+          # to generate one -- and with it libusb-1.0.pc, which is what
+          # FindLibUSB.cmake actually looks for.
+          sudo apt-get install -y autoconf automake libtool
+
+      - name: Build libusb
+        if: steps.cache-libusb.outputs.cache-hit != 'true'
+        run: |
+          set -eux
+
+          # The NDK triple for 32-bit ARM is armv7a-linux-androideabi for the
+          # compiler but arm-linux-androideabi for --host, so the two cannot
+          # be derived from each other.
+          case "${{ matrix.abi }}" in
+            armeabi-v7a) HOST=arm-linux-androideabi;  CC_PREFIX=armv7a-linux-androideabi ;;
+            arm64-v8a)   HOST=aarch64-linux-android;  CC_PREFIX=aarch64-linux-android ;;
+            x86_64)      HOST=x86_64-linux-android;   CC_PREFIX=x86_64-linux-android ;;
+            *) echo "unhandled ABI ${{ matrix.abi }}" >&2; exit 1 ;;
+          esac
+
+          TOOLCHAIN="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64"
+          export PATH="$TOOLCHAIN/bin:$PATH"
+
+          git clone --depth 1 --branch "v$LIBUSB_VERSION" \
+            https://github.com/libusb/libusb.git libusb-src
+          (cd libusb-src && ./bootstrap.sh)
+
+          mkdir libusb-build
+          cd libusb-build
+          # --disable-udev: Android has no udev, and libusb's Android backend
+          # does not use it. Shared only, to match how an app ships it.
+          CC="$CC_PREFIX$API_LEVEL-clang" AR=llvm-ar RANLIB=llvm-ranlib \
+            ../libusb-src/configure \
+              --host="$HOST" \
+              --prefix="$GITHUB_WORKSPACE/libusb-install" \
+              --enable-shared \
+              --disable-static \
+              --disable-udev
+          make -j"$(nproc)" install
+
+      - name: Configure
+        run: |
+          set -eux
+          PREFIX="$GITHUB_WORKSPACE/libusb-install"
+
+          # -Werror only in this job: it exists to catch cross-compilation
+          # problems, and on a warning-clean tree the surest way to catch one
+          # is to refuse to let it in. It has to go in CMAKE_C_FLAGS -- a
+          # CFLAGS=... on the build command line does not reach the compile
+          # rules CMake generates.
+          #
+          # CMAKE_FIND_ROOT_PATH keeps the search inside the cross prefix:
+          # the runner also has a host x86_64 libusb installed, and picking
+          # that one up would only fail later, at link time.
+          cmake -B build \
+            -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=${{ matrix.abi }} \
+            -DANDROID_PLATFORM=android-$API_LEVEL \
+            -DCMAKE_FIND_ROOT_PATH="$PREFIX" \
+            -DCMAKE_PREFIX_PATH="$PREFIX" \
+            -DENABLE_UVC_DEBUGGING=${{ matrix.debugging == 'on' && 'ON' || 'OFF' }} \
+            -DBUILD_EXAMPLE=ON \
+            -DDISABLE_JPEG=ON \
+            -DCMAKE_C_FLAGS=-Werror
+
+      - name: Build
+        run: cmake --build build
+
+      # A cross-build that quietly produced host binaries would still pass
+      # every step above, so check what actually came out.
+      - name: Check the output is Android
+        run: |
+          set -eux
+          READELF="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"
+
+          test -f build/libuvc.so
+          test -f build/libuvc.a
+          test -x build/example
+
+          case "${{ matrix.abi }}" in
+            armeabi-v7a) EXPECTED_MACHINE=ARM ;;
+            arm64-v8a)   EXPECTED_MACHINE=AArch64 ;;
+            x86_64)      EXPECTED_MACHINE=X86-64 ;;
+          esac
+          "$READELF" -h build/libuvc.so | grep -q "Machine:.*$EXPECTED_MACHINE" || {
+            echo "libuvc.so is not $EXPECTED_MACHINE" >&2
+            "$READELF" -h build/libuvc.so >&2
+            exit 1
+          }
+
+          # Guards the __ANDROID__ branch specifically: without it the build
+          # still succeeds, having silently logged to stderr instead.
+          if [ "${{ matrix.debugging }}" = "on" ]; then
+            "$READELF" -d build/libuvc.so | grep -q 'NEEDED.*liblog\.so' || {
+              echo "expected liblog.so to be linked with UVC debugging on" >&2
+              "$READELF" -d build/libuvc.so >&2
+              exit 1
+            }
+          fi
