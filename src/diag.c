@@ -291,10 +291,8 @@ void uvc_print_frameformats(uvc_device_handle_t *devh) {
 
   if (devh->info->ctrl_if.bcdUVC) {
     uvc_streaming_interface_t *stream_if;
-    int stream_idx = 0;
     DL_FOREACH(devh->info->stream_ifs, stream_if) {
       uvc_format_desc_t *fmt_desc;
-      ++stream_idx;
 
       DL_FOREACH(stream_if->format_descs, fmt_desc) {
         uvc_frame_desc_t *frame_desc;

@@ -8,7 +8,6 @@
 void cb(uvc_frame_t *frame, void *ptr) {
   uvc_frame_t *bgr;
   uvc_error_t ret;
-  enum uvc_frame_format *frame_format = (enum uvc_frame_format *)ptr;
   /* FILE *fp;
    * static int jpeg_count = 0;
    * static const char *H264_FILE = "iOSDevLog.h264";

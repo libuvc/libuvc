@@ -25,6 +25,21 @@ option(BUILD_EXAMPLE "Build example program" ON)
 option(BUILD_TEST "Build test program" OFF)
 option(ENABLE_UVC_DEBUGGING "Enable UVC debugging" OFF)
 option(DISABLE_JPEG "Disable JPEG support" OFF)
+option(ENABLE_WARNINGS "Build with a common set of compiler warnings enabled" ON)
+option(WARNINGS_AS_ERRORS "Turn compiler warnings into errors (used by CI)" OFF)
+
+# Applied to every target defined below, including the example and test
+# programs. Kept off for MSVC, which does not understand these flags.
+if(ENABLE_WARNINGS AND NOT MSVC)
+  add_compile_options(-Wall)
+endif()
+if(WARNINGS_AS_ERRORS)
+  if(MSVC)
+    add_compile_options(/WX)
+  else()
+    add_compile_options(-Werror)
+  endif()
+endif()
 
 set(libuvc_DESCRIPTION "A cross-platform library for USB video devices")
 set(libuvc_URL "https://github.com/libuvc/libuvc")

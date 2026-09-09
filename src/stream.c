@@ -1262,7 +1262,7 @@ uvc_error_t uvc_stream_start(
   for (transfer_id = 0; transfer_id < LIBUVC_NUM_TRANSFER_BUFS;
       transfer_id++) {
     ret = libusb_submit_transfer(strmh->transfers[transfer_id]);
-    if (ret != LIBUSB_SUCCESS) {
+    if (ret != UVC_SUCCESS) {
       UVC_DEBUG("libusb_submit_transfer failed: %d",ret);
       break;
     }

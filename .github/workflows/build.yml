@@ -43,7 +43,8 @@ jobs:
             -DCMAKE_BUILD_TARGET=${{ matrix.target }} \
             -DLibUVC_STATIC=${{ matrix.target == 'Static' && 'ON' || 'OFF' }} \
             -DBUILD_EXAMPLE=ON \
-            -DDISABLE_JPEG=${{ matrix.jpeg == 'off' && 'ON' || 'OFF' }}
+            -DDISABLE_JPEG=${{ matrix.jpeg == 'off' && 'ON' || 'OFF' }} \
+            -DWARNINGS_AS_ERRORS=ON
 
       - name: Build
         run: cmake --build build
@@ -81,7 +82,7 @@ jobs:
           }
 
       - name: Configure
-        run: cmake -B build
+        run: cmake -B build -DWARNINGS_AS_ERRORS=ON
 
       - name: Build
         run: cmake --build build
@@ -118,7 +119,8 @@ jobs:
             -DCMAKE_BUILD_TARGET=${{ matrix.target }} \
             -DLibUVC_STATIC=${{ matrix.target == 'Static' && 'ON' || 'OFF' }} \
             -DBUILD_EXAMPLE=ON \
-            -DDISABLE_JPEG=${{ matrix.jpeg == 'off' && 'ON' || 'OFF' }}
+            -DDISABLE_JPEG=${{ matrix.jpeg == 'off' && 'ON' || 'OFF' }} \
+            -DWARNINGS_AS_ERRORS=ON
 
       - name: Build
         run: cmake --build build
@@ -193,7 +195,7 @@ jobs:
           sudo apt-get install -y libusb-1.0-0-dev libjpeg-dev libopencv-dev
 
       - name: Configure
-        run: cmake -B build -DBUILD_TEST=ON
+        run: cmake -B build -DBUILD_TEST=ON -DWARNINGS_AS_ERRORS=ON
 
       - name: Build
         run: cmake --build build
@@ -226,7 +228,7 @@ jobs:
           }
 
       - name: Configure
-        run: cmake -B build -DBUILD_TEST=ON
+        run: cmake -B build -DBUILD_TEST=ON -DWARNINGS_AS_ERRORS=ON
 
       - name: Build
         run: cmake --build build
