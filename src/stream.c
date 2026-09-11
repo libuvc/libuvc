@@ -103,10 +103,11 @@ struct format_table_entry *_get_format_entry(enum uvc_frame_format format) {
     ABS_FMT(UVC_FRAME_FORMAT_ANY, 2,
       {UVC_FRAME_FORMAT_UNCOMPRESSED, UVC_FRAME_FORMAT_COMPRESSED})
 
-    ABS_FMT(UVC_FRAME_FORMAT_UNCOMPRESSED, 8,
+    ABS_FMT(UVC_FRAME_FORMAT_UNCOMPRESSED, 10,
       {UVC_FRAME_FORMAT_YUYV, UVC_FRAME_FORMAT_UYVY, UVC_FRAME_FORMAT_GRAY8,
        UVC_FRAME_FORMAT_GRAY16, UVC_FRAME_FORMAT_NV12, UVC_FRAME_FORMAT_P010,
-       UVC_FRAME_FORMAT_BGR, UVC_FRAME_FORMAT_RGB})
+       UVC_FRAME_FORMAT_BGR, UVC_FRAME_FORMAT_RGB,
+       UVC_FRAME_FORMAT_I420, UVC_FRAME_FORMAT_NV21})
     FMT(UVC_FRAME_FORMAT_YUYV,
       {'Y',  'U',  'Y',  '2', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
     FMT(UVC_FRAME_FORMAT_UYVY,
@@ -119,6 +120,10 @@ struct format_table_entry *_get_format_entry(enum uvc_frame_format format) {
       {'N',  'V',  '1',  '2', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
     FMT(UVC_FRAME_FORMAT_P010,
       {'P',  '0',  '1',  '0', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+    FMT(UVC_FRAME_FORMAT_I420,
+      {'I',  '4',  '2',  '0', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+    FMT(UVC_FRAME_FORMAT_NV21,
+      {'N',  'V',  '2',  '1', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
     FMT(UVC_FRAME_FORMAT_BGR,
       {0x7d, 0xeb, 0x36, 0xe4, 0x4f, 0x52, 0xce, 0x11, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70})
     FMT(UVC_FRAME_FORMAT_RGB,
@@ -169,7 +174,14 @@ static uint8_t _uvc_frame_format_matches_guid(enum uvc_frame_format fmt, uint8_t
   return 0;
 }
 
-static enum uvc_frame_format uvc_frame_format_for_guid(uint8_t guid[16]) {
+/** Look up the frame format matching a UVC format GUID.
+ * @ingroup streaming
+ *
+ * @param guid 16-byte format GUID, as found in a format descriptor
+ * @return The matching frame format, or UVC_FRAME_FORMAT_UNKNOWN if the GUID
+ * is not one libuvc knows about
+ */
+enum uvc_frame_format uvc_frame_format_for_guid(uint8_t guid[16]) {
   struct format_table_entry *format;
   enum uvc_frame_format fmt;
 
@@ -1366,6 +1378,8 @@ void _uvc_populate_frame(uvc_stream_handle_t *strmh) {
     frame->step = frame->width * 2;
     break;
   case UVC_FRAME_FORMAT_NV12:
+  case UVC_FRAME_FORMAT_NV21:
+  case UVC_FRAME_FORMAT_I420:
     frame->step = frame->width;
     break;
   case UVC_FRAME_FORMAT_P010:
