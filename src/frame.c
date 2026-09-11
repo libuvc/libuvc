@@ -175,7 +175,10 @@ uvc_error_t uvc_yuyv2rgb(uvc_frame_t *in, uvc_frame_t *out) {
   if (in->frame_format != UVC_FRAME_FORMAT_YUYV)
     return UVC_ERROR_INVALID_PARAM;
 
-  if (uvc_ensure_frame_size(out, in->width * in->height * 3) < 0)
+  if (in->data_bytes < (size_t)in->width * in->height * 2)
+    return UVC_ERROR_INVALID_PARAM;
+
+  if (uvc_ensure_frame_size(out, (size_t)in->width * in->height * 3) < 0)
     return UVC_ERROR_NO_MEM;
 
   out->width = in->width;
@@ -189,7 +192,20 @@ uvc_error_t uvc_yuyv2rgb(uvc_frame_t *in, uvc_frame_t *out) {
 
   uint8_t *pyuv = in->data;
   uint8_t *prgb = out->data;
-  uint8_t *prgb_end = prgb + out->data_bytes;
+
+  /* The 8-pixel unrolled loop below drops any pixels past the last full
+     group, so flag the geometries where that silently loses a tail. */
+  if ((size_t)in->width * in->height % 8 != 0)
+    UVC_DEBUG("%ux%u is not a multiple of 8 pixels, %zu trailing pixel(s) "
+              "left unconverted", in->width, in->height,
+              (size_t)in->width * in->height % 8);
+
+  /* Derive the end from the geometry, which both buffers were checked
+     against above, rather than from out->data_bytes -- a caller supplied
+     buffer may be larger than the frame needs. Converts 8 pixels at a
+     time; a width that is not a multiple of 8 leaves the few trailing
+     pixels unconverted, as before. */
+  uint8_t *prgb_end = prgb + (size_t)in->width * in->height / 8 * (3 * 8);
 
   while (prgb < prgb_end) {
     IYUYV2RGB_8(pyuv, prgb);
@@ -226,7 +242,10 @@ uvc_error_t uvc_yuyv2bgr(uvc_frame_t *in, uvc_frame_t *out) {
   if (in->frame_format != UVC_FRAME_FORMAT_YUYV)
     return UVC_ERROR_INVALID_PARAM;
 
-  if (uvc_ensure_frame_size(out, in->width * in->height * 3) < 0)
+  if (in->data_bytes < (size_t)in->width * in->height * 2)
+    return UVC_ERROR_INVALID_PARAM;
+
+  if (uvc_ensure_frame_size(out, (size_t)in->width * in->height * 3) < 0)
     return UVC_ERROR_NO_MEM;
 
   out->width = in->width;
@@ -240,7 +259,15 @@ uvc_error_t uvc_yuyv2bgr(uvc_frame_t *in, uvc_frame_t *out) {
 
   uint8_t *pyuv = in->data;
   uint8_t *pbgr = out->data;
-  uint8_t *pbgr_end = pbgr + out->data_bytes;
+
+  /* See uvc_yuyv2rgb(): a trailing partial group of 8 is not converted. */
+  if ((size_t)in->width * in->height % 8 != 0)
+    UVC_DEBUG("%ux%u is not a multiple of 8 pixels, %zu trailing pixel(s) "
+              "left unconverted", in->width, in->height,
+              (size_t)in->width * in->height % 8);
+
+  /* See uvc_yuyv2rgb(): the end comes from the geometry, not data_bytes. */
+  uint8_t *pbgr_end = pbgr + (size_t)in->width * in->height / 8 * (3 * 8);
 
   while (pbgr < pbgr_end) {
     IYUYV2BGR_8(pyuv, pbgr);
@@ -266,7 +293,10 @@ uvc_error_t uvc_yuyv2y(uvc_frame_t *in, uvc_frame_t *out) {
   if (in->frame_format != UVC_FRAME_FORMAT_YUYV)
     return UVC_ERROR_INVALID_PARAM;
 
-  if (uvc_ensure_frame_size(out, in->width * in->height) < 0)
+  if (in->data_bytes < (size_t)in->width * in->height * 2)
+    return UVC_ERROR_INVALID_PARAM;
+
+  if (uvc_ensure_frame_size(out, (size_t)in->width * in->height) < 0)
     return UVC_ERROR_NO_MEM;
 
   out->width = in->width;
@@ -280,7 +310,9 @@ uvc_error_t uvc_yuyv2y(uvc_frame_t *in, uvc_frame_t *out) {
 
   uint8_t *pyuv = in->data;
   uint8_t *py = out->data;
-  uint8_t *py_end = py + out->data_bytes;
+
+  /* See uvc_yuyv2rgb(): the end comes from the geometry, not data_bytes. */
+  uint8_t *py_end = py + (size_t)in->width * in->height;
 
   while (py < py_end) {
     IYUYV2Y(pyuv, py);
@@ -306,7 +338,10 @@ uvc_error_t uvc_yuyv2uv(uvc_frame_t *in, uvc_frame_t *out) {
   if (in->frame_format != UVC_FRAME_FORMAT_YUYV)
     return UVC_ERROR_INVALID_PARAM;
 
-  if (uvc_ensure_frame_size(out, in->width * in->height) < 0)
+  if (in->data_bytes < (size_t)in->width * in->height * 2)
+    return UVC_ERROR_INVALID_PARAM;
+
+  if (uvc_ensure_frame_size(out, (size_t)in->width * in->height) < 0)
     return UVC_ERROR_NO_MEM;
 
   out->width = in->width;
@@ -320,7 +355,9 @@ uvc_error_t uvc_yuyv2uv(uvc_frame_t *in, uvc_frame_t *out) {
 
   uint8_t *pyuv = in->data;
   uint8_t *puv = out->data;
-  uint8_t *puv_end = puv + out->data_bytes;
+
+  /* See uvc_yuyv2rgb(): the end comes from the geometry, not data_bytes. */
+  uint8_t *puv_end = puv + (size_t)in->width * in->height;
 
   while (puv < puv_end) {
     IYUYV2UV(pyuv, puv);
@@ -356,7 +393,10 @@ uvc_error_t uvc_uyvy2rgb(uvc_frame_t *in, uvc_frame_t *out) {
   if (in->frame_format != UVC_FRAME_FORMAT_UYVY)
     return UVC_ERROR_INVALID_PARAM;
 
-  if (uvc_ensure_frame_size(out, in->width * in->height * 3) < 0)
+  if (in->data_bytes < (size_t)in->width * in->height * 2)
+    return UVC_ERROR_INVALID_PARAM;
+
+  if (uvc_ensure_frame_size(out, (size_t)in->width * in->height * 3) < 0)
     return UVC_ERROR_NO_MEM;
 
   out->width = in->width;
@@ -370,7 +410,15 @@ uvc_error_t uvc_uyvy2rgb(uvc_frame_t *in, uvc_frame_t *out) {
 
   uint8_t *pyuv = in->data;
   uint8_t *prgb = out->data;
-  uint8_t *prgb_end = prgb + out->data_bytes;
+
+  /* See uvc_yuyv2rgb(): a trailing partial group of 8 is not converted. */
+  if ((size_t)in->width * in->height % 8 != 0)
+    UVC_DEBUG("%ux%u is not a multiple of 8 pixels, %zu trailing pixel(s) "
+              "left unconverted", in->width, in->height,
+              (size_t)in->width * in->height % 8);
+
+  /* See uvc_yuyv2rgb(): the end comes from the geometry, not data_bytes. */
+  uint8_t *prgb_end = prgb + (size_t)in->width * in->height / 8 * (3 * 8);
 
   while (prgb < prgb_end) {
     IUYVY2RGB_8(pyuv, prgb);
@@ -406,7 +454,10 @@ uvc_error_t uvc_uyvy2bgr(uvc_frame_t *in, uvc_frame_t *out) {
   if (in->frame_format != UVC_FRAME_FORMAT_UYVY)
     return UVC_ERROR_INVALID_PARAM;
 
-  if (uvc_ensure_frame_size(out, in->width * in->height * 3) < 0)
+  if (in->data_bytes < (size_t)in->width * in->height * 2)
+    return UVC_ERROR_INVALID_PARAM;
+
+  if (uvc_ensure_frame_size(out, (size_t)in->width * in->height * 3) < 0)
     return UVC_ERROR_NO_MEM;
 
   out->width = in->width;
@@ -420,7 +471,15 @@ uvc_error_t uvc_uyvy2bgr(uvc_frame_t *in, uvc_frame_t *out) {
 
   uint8_t *pyuv = in->data;
   uint8_t *pbgr = out->data;
-  uint8_t *pbgr_end = pbgr + out->data_bytes;
+
+  /* See uvc_yuyv2rgb(): a trailing partial group of 8 is not converted. */
+  if ((size_t)in->width * in->height % 8 != 0)
+    UVC_DEBUG("%ux%u is not a multiple of 8 pixels, %zu trailing pixel(s) "
+              "left unconverted", in->width, in->height,
+              (size_t)in->width * in->height % 8);
+
+  /* See uvc_yuyv2rgb(): the end comes from the geometry, not data_bytes. */
+  uint8_t *pbgr_end = pbgr + (size_t)in->width * in->height / 8 * (3 * 8);
 
   while (pbgr < pbgr_end) {
     IUYVY2BGR_8(pyuv, pbgr);
