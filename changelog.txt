@@ -1,3 +1,53 @@
+Changes in 0.0.8 (2026-09-11)
+----------------
+
+New features:
+  - Basic UVC 1.5 support #187
+  - Support for the NV21 and I420 frame formats #314
+    - Publish uvc_frame_format_for_guid() as part of the public API #314
+  - MJPEG to BGR conversion, uvc_mjpeg2bgr() #318 (revives #236)
+  - uvc_get_spec_version(), an accessor for the device's UVC version #319
+    - The public bcdUVC field of uvc_device_descriptor_t was never populated
+      and always read back as 0; it is replaced with reserved padding, which
+      keeps the struct layout unchanged. Use uvc_get_spec_version() instead.
+  - uvc_stream_get_current_ctrl(), to read a stream's current control block #202
+  - New DISABLE_JPEG cmake option, to build without libjpeg #306 (revives #287)
+  - New cmake options to enable warnings and warnings-as-errors #311
+  - Route logging through UVC_DEBUG instead of fprintf #308 (revives #237)
+
+Bug fixes:
+  - Out-of-bounds reads in the YUYV and UYVY frame converters #309 (revives #211)
+    - uvc_yuyv2rgb() and uvc_yuyv2bgr() bounded the conversion loop only on the
+      output buffer, so a short input frame read past the end of it. The same
+      bug was present in uvc_yuyv2y(), uvc_yuyv2uv(), uvc_uyvy2rgb() and
+      uvc_uyvy2bgr(), which had no input size check at all. Output for valid
+      frames is unchanged.
+  - Populate frames from the correct streaming interface #202
+    - _uvc_populate_frame() looked up the frame descriptor across every
+      streaming interface and took the first match, so a device with several
+      interfaces could describe a frame using the wrong one.
+  - Do not reject a successfully negotiated dwMaxPayloadTransferSize #292
+  - Accept payload sizes smaller than requested #273
+  - Memory leak of frame.metadata in uvc_stream_close() #275
+  - Wrong libdir and includedir paths in the pkg-config file #269
+  - Fix warnings reported by -Wall #311
+  - Print frame data_bytes with %zu, which was undefined on 32-bit targets #321
+  - Check the return code of get_device_descriptor() in uvc_scan_control() #266
+  - Set the minimum required cmake version to 3.5, for CMake 4 compatibility #294
+
+Miscellaneous improvements:
+  - Replaced Travis CI with GitHub Actions #304
+    - Build matrix over library type, JPEG support, macOS and CMake 4
+    - Build for Android, across three ABIs, with debugging on and off #321
+    - Build with -Wall -Werror #311
+    - Check that the generated control accessors are up to date #305
+    - Run the frame converter unit tests #309
+  - Unit tests for the frame converters, covering short and truncated input
+    frames across both frame ownership modes #309
+  - Ported the OpenCV test program to the C++ API, and covered OpenCV 5 #307
+  - ctrl-gen.py now runs on Python 3 and PyYAML 6 #305
+  - Updated the bundled utlist.h to version 2.0.2 #202
+
 Changes in 0.0.7 (2023-03-31)
 ----------------
 

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
 project(libuvc
-  VERSION 0.0.7
+  VERSION 0.0.8
   LANGUAGES C
 )
 
