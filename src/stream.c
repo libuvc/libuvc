@@ -1281,10 +1281,21 @@ uvc_error_t uvc_stream_start(
   }
 
   if ( ret != UVC_SUCCESS && transfer_id >= 0 ) {
+    int num_submitted = transfer_id;
+
     for ( ; transfer_id < LIBUVC_NUM_TRANSFER_BUFS; transfer_id++) {
       free ( strmh->transfers[transfer_id]->buffer );
       libusb_free_transfer ( strmh->transfers[transfer_id]);
       strmh->transfers[transfer_id] = 0;
+    }
+
+    /* If no transfer could be submitted, the stream would never deliver a
+     * frame: stop it (this also ends the callback thread) and report the
+     * error. Otherwise carry on with the transfers that are in flight. */
+    if (num_submitted == 0) {
+      uvc_stream_stop(strmh);
+      UVC_EXIT(ret);
+      return ret;
     }
     ret = UVC_SUCCESS;
   }
