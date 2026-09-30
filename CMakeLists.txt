@@ -29,6 +29,10 @@ option(ENABLE_WARNINGS "Build with a common set of compiler warnings enabled" ON
 option(WARNINGS_AS_ERRORS "Turn compiler warnings into errors (used by CI)" OFF)
 option(BUILD_TESTING "Build the unit tests" OFF)
 option(ENABLE_SANITIZERS "Build with AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
+set(LIBUVC_NUM_TRANSFER_BUFS "" CACHE STRING
+  "Number of transfers queued per stream (empty: 100, or 20 on macOS)")
+set(LIBUVC_PACKETS_PER_TRANSFER_MAX "" CACHE STRING
+  "Maximum isochronous packets per transfer (empty: 32); lower it if streaming fails with ENOMEM, e.g. on Android")
 
 # Applied to every target defined below, including the example and test
 # programs. Kept off for MSVC, which does not understand these flags.
@@ -156,6 +160,14 @@ foreach(target_name IN LISTS UVC_TARGETS)
   set_target_properties(${target_name} PROPERTIES
       PUBLIC_HEADER "include/libuvc/libuvc.h;${CMAKE_CURRENT_BINARY_DIR}/include/libuvc/libuvc_config.h"
   )
+  foreach(tuning IN ITEMS LIBUVC_NUM_TRANSFER_BUFS LIBUVC_PACKETS_PER_TRANSFER_MAX)
+    if(NOT "${${tuning}}" STREQUAL "")
+      target_compile_definitions(${target_name}
+        PRIVATE
+          ${tuning}=${${tuning}}
+      )
+    endif()
+  endforeach()
   if(ENABLE_UVC_DEBUGGING)
     target_compile_definitions(${target_name}
       PRIVATE

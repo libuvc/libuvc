@@ -1210,8 +1210,8 @@ uvc_error_t uvc_stream_start(
                                 endpoint_bytes_per_packet - 1) / endpoint_bytes_per_packet;
 
         /* But keep a reasonable limit: Otherwise we start dropping data */
-        if (packets_per_transfer > 32)
-          packets_per_transfer = 32;
+        if (packets_per_transfer > LIBUVC_PACKETS_PER_TRANSFER_MAX)
+          packets_per_transfer = LIBUVC_PACKETS_PER_TRANSFER_MAX;
         
         total_transfer_size = packets_per_transfer * endpoint_bytes_per_packet;
         break;
