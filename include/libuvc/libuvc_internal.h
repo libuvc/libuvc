@@ -231,6 +231,30 @@ typedef struct uvc_device_info {
 #endif
 #endif
 
+/*
+  Maximum number of isochronous packets per transfer. Each transfer is
+  submitted as a single usbfs URB. Some Android devices reject large ones:
+  with a high-bandwidth endpoint (e.g. 3072 bytes per packet), 32 packets
+  (96 KB) makes libusb_submit_transfer fail with ENOMEM (errno=12), while
+  8 packets works. The exact kernel limit is not understood. Lowering this
+  value costs more transfer completions per second. Some MediaTek MUSB
+  controllers need 4 or fewer.
+  See https://github.com/libuvc/libuvc/issues/299 and
+  https://github.com/libuvc/libuvc/issues/326.
+  Can be overridden by defining this macro.
+ */
+#ifndef LIBUVC_PACKETS_PER_TRANSFER_MAX
+#define LIBUVC_PACKETS_PER_TRANSFER_MAX 32
+#endif
+
+#if LIBUVC_PACKETS_PER_TRANSFER_MAX < 1
+#error "LIBUVC_PACKETS_PER_TRANSFER_MAX must be at least 1"
+#endif
+
+#if LIBUVC_NUM_TRANSFER_BUFS < 1
+#error "LIBUVC_NUM_TRANSFER_BUFS must be at least 1"
+#endif
+
 #define LIBUVC_XFER_META_BUF_SIZE ( 4 * 1024 )
 
 struct uvc_stream_handle {
