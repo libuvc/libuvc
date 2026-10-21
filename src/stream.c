@@ -855,10 +855,17 @@ void LIBUSB_CALL _uvc_stream_callback(struct libusb_transfer *transfer)
 
     if (strmh->running)
     {
+      int submit_status;
       UVC_DEBUG("Submitting ransfer %p", transfer);
-      libusb_submit_transfer(transfer);
+      submit_status = libusb_submit_transfer(transfer);
+      if (submit_status != LIBUSB_SUCCESS)
+        UVC_DEBUG("libusb_submit_transfer failed: %d", submit_status);
+      resubmit = (submit_status == LIBUSB_SUCCESS || submit_status == LIBUSB_ERROR_BUSY);
     }
     else
+      resubmit = 0;
+
+    if (!resubmit)
     {
       int i;
       /* Mark transfer as deleted. */
@@ -871,6 +878,7 @@ void LIBUSB_CALL _uvc_stream_callback(struct libusb_transfer *transfer)
           libusb_free_transfer(transfer);
           strmh->transfers[i] = NULL;
           strmh->flying_xfers--;
+          break;
         }
       }
       if (i == LIBUVC_NUM_TRANSFER_BUFS)
