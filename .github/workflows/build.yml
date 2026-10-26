@@ -19,8 +19,17 @@ jobs:
         compiler: [ gcc, clang ]
         target: [ Both, Shared, Static ]
         jpeg: [ on, off ]
+        debug: [ off ]
+        include:
+          # One build with UVC_DEBUGGING outside Android, so the UVC_DEBUG
+          # calls are compiled with -Werror and the library links without
+          # liblog.
+          - compiler: gcc
+            target: Both
+            jpeg: on
+            debug: on
 
-    name: ${{ matrix.compiler }}, ${{ matrix.target }}${{ matrix.jpeg == 'off' && ', no jpeg' || '' }}
+    name: ${{ matrix.compiler }}, ${{ matrix.target }}${{ matrix.jpeg == 'off' && ', no jpeg' || '' }}${{ matrix.debug == 'on' && ', debugging' || '' }}
 
     steps:
       - uses: actions/checkout@v5
@@ -44,6 +53,7 @@ jobs:
             -DLibUVC_STATIC=${{ matrix.target == 'Static' && 'ON' || 'OFF' }} \
             -DBUILD_EXAMPLE=ON \
             -DDISABLE_JPEG=${{ matrix.jpeg == 'off' && 'ON' || 'OFF' }} \
+            -DENABLE_UVC_DEBUGGING=${{ matrix.debug == 'on' && 'ON' || 'OFF' }} \
             -DWARNINGS_AS_ERRORS=ON
 
       - name: Build
