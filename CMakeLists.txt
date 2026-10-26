@@ -28,6 +28,7 @@ option(DISABLE_JPEG "Disable JPEG support" OFF)
 option(ENABLE_WARNINGS "Build with a common set of compiler warnings enabled" ON)
 option(WARNINGS_AS_ERRORS "Turn compiler warnings into errors (used by CI)" OFF)
 option(BUILD_TESTING "Build the unit tests" OFF)
+option(BUILD_FUZZERS "Build the libFuzzer targets (requires clang)" OFF)
 option(ENABLE_SANITIZERS "Build with AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
 set(LIBUVC_NUM_TRANSFER_BUFS "" CACHE STRING
   "Number of transfers queued per stream (empty: 100, or 20 on macOS)")
