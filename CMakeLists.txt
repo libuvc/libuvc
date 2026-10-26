@@ -174,15 +174,20 @@ foreach(target_name IN LISTS UVC_TARGETS)
       PRIVATE
         UVC_DEBUGGING
     )
-    find_library(
-            log-lib
-            log
-    )
-    target_link_libraries(
-            ${target_name}
-            PRIVATE
-            ${log-lib}
-    )
+    # UVC_DEBUG goes to logcat on Android and to stderr elsewhere, so only
+    # Android needs liblog. Looking it up unconditionally left non-Android
+    # builds linking against log-lib-NOTFOUND.
+    if(ANDROID)
+      find_library(
+              log-lib
+              log
+      )
+      target_link_libraries(
+              ${target_name}
+              PRIVATE
+              ${log-lib}
+      )
+    endif()
   endif()
 endforeach()
 
