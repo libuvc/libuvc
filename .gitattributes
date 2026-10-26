@@ -2,3 +2,9 @@
 # source-package generated via 'git archive'
 .git*      	export-ignore
 /.*		export-ignore
+
+# Test fixtures are raw pixel data and JPEGs; never apply line-ending
+# conversion. Matched by directory rather than by extension so that a new
+# fixture cannot be added without it.
+test/data/**	binary
+test/data/generate.py	-binary text=auto
