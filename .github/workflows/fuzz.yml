@@ -24,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [ fuzz_descriptor ]
+        target: [ fuzz_descriptor, fuzz_payload ]
 
     name: ${{ matrix.target }}
 
@@ -51,9 +51,13 @@ jobs:
 
       # Seeded from the checked-in corpus, and copied rather than used in
       # place so libFuzzer's new inputs do not show up as repository changes.
+      # Same reasoning as the unit test job: UBSan exits 0 unless told to
+      # halt, which would let a violation pass as a clean fuzzing run.
       - name: Fuzz
         env:
           DURATION: ${{ github.event.inputs.duration || '600' }}
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+          ASAN_OPTIONS: detect_leaks=1
         run: |
           mkdir -p corpus artifacts
           cp test/corpus/${{ matrix.target }}/* corpus/ 2>/dev/null || true

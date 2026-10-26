@@ -278,5 +278,13 @@ jobs:
 
       # --output-on-failure so a failing case shows its sanitizer report in
       # the log rather than just a test name.
+      #
+      # UBSan prints and continues by default, exiting 0, so a violation would
+      # scroll past in a green run: halt_on_error makes it abort and
+      # print_stacktrace makes the report usable. LeakSanitizer is on by
+      # default inside ASan and is left that way -- the suite is leak-clean.
       - name: Run tests
+        env:
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+          ASAN_OPTIONS: detect_leaks=1
         run: ctest --test-dir build --output-on-failure
