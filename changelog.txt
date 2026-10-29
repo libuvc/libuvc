@@ -1,17 +1,54 @@
-Unreleased
+Changes in 0.0.9 (2026-10-29)
 ----------------
 
+Behaviour changes:
+  - Malformed descriptors are now rejected #316
+    - uvc_open() fails with UVC_ERROR_INVALID_DEVICE when a device's
+      VideoControl or VideoStreaming descriptors are truncated or
+      inconsistent: a block shorter than its fixed fields or than the counts
+      it declares, a bLength below 3 or past the end of the descriptor, a
+      frame descriptor with no format before it, or a VideoControl header
+      naming an interface that does not exist. These used to be read past
+      the end of the buffer, or crash (#300). Well-formed descriptors parse
+      as before.
+  - Payload packets with a short header are now dropped #317
+    - A packet whose header sets the PTS or SCR flag but whose bLength does
+      not cover that field is discarded. Previously the field was read from
+      past the end of the packet.
+  - MJPEG frames that do not match the negotiated format are rejected #323
+    - uvc_mjpeg2rgb(), uvc_mjpeg2bgr() and uvc_mjpeg2gray() return an error
+      for a JPEG whose dimensions differ from the negotiated width and
+      height, in either direction, instead of decoding it. A camera that
+      sends frames of a different size than it advertised will see its MJPEG
+      conversions fail.
+  - uvc_stream_start() returns an error when no transfer could be submitted
+    at all, instead of reporting success for a stream that never delivers a
+    frame #328
+
+New features:
+  - LIBUVC_PACKETS_PER_TRANSFER_MAX and LIBUVC_NUM_TRANSFER_BUFS are now
+    CMake cache variables, to work around isochronous transfers rejected
+    with ENOMEM on some Android devices #327
+
 Bug fixes:
+  - Out-of-bounds reads and infinite loops in the descriptor parsers #316
+  - Out-of-bounds reads of the payload header, and two length clamps that
+    underflowed once a frame or the metadata buffer filled exactly #317
   - Heap buffer overflow in the MJPEG decoder on a mismatched frame size #323
-    - uvc_mjpeg2rgb(), uvc_mjpeg2bgr() and uvc_mjpeg2gray() sized the output
-      from the frame's negotiated width and height, but decoded as many
-      scanlines as the JPEG itself declared. A JPEG larger than the
-      negotiated format wrote past the end of the output buffer and still
-      returned UVC_SUCCESS.
-    - Behaviour change: a JPEG whose dimensions do not match the negotiated
-      format, in either direction, is now rejected with an error instead of
-      being decoded. A camera that sends frames of a different size than it
-      advertised will see its MJPEG conversions fail.
+    - The output was sized from the negotiated width and height, but libjpeg
+      decoded as many scanlines as the JPEG itself declared, so a larger
+      JPEG wrote past the end of the buffer and still returned UVC_SUCCESS.
+  - Memory leak of the selector unit descriptors in uvc_close() #317
+  - Undefined behaviour (signed left shift) when decoding 32-bit
+    little-endian fields, hit on the streaming path by any camera whose PTS
+    or SCR has the high bit set, and by the 32-bit control getters #331
+
+Miscellaneous improvements:
+  - Unit tests and libFuzzer targets for the descriptor parsers #316 and the
+    payload parser #317, with a nightly fuzzing job #317 #331
+  - MJPEG decoder tests, and converter output checked against reference
+    images #323
+  - CI fails on UndefinedBehaviorSanitizer errors and leaks #317
 
 Changes in 0.0.8 (2026-09-11)
 ----------------
