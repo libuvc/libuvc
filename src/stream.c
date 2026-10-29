@@ -236,7 +236,7 @@ uvc_error_t uvc_query_stream_ctrl(
     INT_TO_DW(ctrl->dwMaxPayloadTransferSize, buf + 22);
 
     if (len >= 34) {
-      INT_TO_DW ( ctrl->dwClockFrequency, buf + 26 );
+      INT_TO_DW(ctrl->dwClockFrequency, buf + 26);
       buf[30] = ctrl->bmFramingInfo;
       buf[31] = ctrl->bPreferredVersion;
       buf[32] = ctrl->bMinVersion;
@@ -264,17 +264,17 @@ uvc_error_t uvc_query_stream_ctrl(
     ctrl->bmHint = SW_TO_SHORT(buf);
     ctrl->bFormatIndex = buf[2];
     ctrl->bFrameIndex = buf[3];
-    ctrl->dwFrameInterval = DW_TO_INT(buf + 4);
+    ctrl->dwFrameInterval = DW_TO_UINT32(buf + 4);
     ctrl->wKeyFrameRate = SW_TO_SHORT(buf + 8);
     ctrl->wPFrameRate = SW_TO_SHORT(buf + 10);
     ctrl->wCompQuality = SW_TO_SHORT(buf + 12);
     ctrl->wCompWindowSize = SW_TO_SHORT(buf + 14);
     ctrl->wDelay = SW_TO_SHORT(buf + 16);
-    ctrl->dwMaxVideoFrameSize = DW_TO_INT(buf + 18);
-    ctrl->dwMaxPayloadTransferSize = DW_TO_INT(buf + 22);
+    ctrl->dwMaxVideoFrameSize = DW_TO_UINT32(buf + 18);
+    ctrl->dwMaxPayloadTransferSize = DW_TO_UINT32(buf + 22);
 
     if (len >= 34) {
-      ctrl->dwClockFrequency = DW_TO_INT ( buf + 26 );
+      ctrl->dwClockFrequency = DW_TO_UINT32(buf + 26);
       ctrl->bmFramingInfo = buf[30];
       ctrl->bPreferredVersion = buf[31];
       ctrl->bMinVersion = buf[32];
@@ -344,8 +344,8 @@ uvc_error_t uvc_query_still_ctrl(
     still_ctrl->bFormatIndex = buf[0];
     still_ctrl->bFrameIndex = buf[1];
     still_ctrl->bCompressionIndex = buf[2];
-    still_ctrl->dwMaxVideoFrameSize = DW_TO_INT(buf + 3);
-    still_ctrl->dwMaxPayloadTransferSize = DW_TO_INT(buf + 7);
+    still_ctrl->dwMaxVideoFrameSize = DW_TO_UINT32(buf + 3);
+    still_ctrl->dwMaxPayloadTransferSize = DW_TO_UINT32(buf + 7);
   }
 
   return UVC_SUCCESS;
@@ -797,7 +797,7 @@ void _uvc_process_payload(uvc_stream_handle_t *strmh, uint8_t *payload, size_t p
         UVC_DEBUG("bogus packet: PTS flag set but header_len=%zd", header_len);
         return;
       }
-      strmh->pts = DW_TO_INT(payload + variable_offset);
+      strmh->pts = DW_TO_UINT32(payload + variable_offset);
       variable_offset += 4;
     }
 
@@ -807,7 +807,7 @@ void _uvc_process_payload(uvc_stream_handle_t *strmh, uint8_t *payload, size_t p
         UVC_DEBUG("bogus packet: SCR flag set but header_len=%zd", header_len);
         return;
       }
-      strmh->last_scr = DW_TO_INT(payload + variable_offset);
+      strmh->last_scr = DW_TO_UINT32(payload + variable_offset);
       variable_offset += 6;
     }
 

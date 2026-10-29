@@ -46,7 +46,7 @@ class IntField(object):
         elif self.length == 2:
             return "*{0} = SW_TO_SHORT(data + {1});".format(self.name, self.position)
         elif self.length == 4:
-            return "*{0} = DW_TO_INT(data + {1});".format(self.name, self.position)
+            return "*{0} = DW_TO_UINT32(data + {1});".format(self.name, self.position)
 
     def setter_sig(self):
         return "{0} {1}".format(self.user_type, self.name)
