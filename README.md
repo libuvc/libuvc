@@ -22,6 +22,10 @@ in the build directory, or use a CMake GUI to make the desired changes.
 There is also `BUILD_EXAMPLE` and `BUILD_TEST` options to enable the compilation of `example` and `uvc_test` programs. To use them, replace the `cmake ..` command above with `cmake .. -DBUILD_TEST=ON -DBUILD_EXAMPLE=ON`.
 Then you can start them with `./example` and `./uvc_test` respectively. Note that you need OpenCV to build the later (for displaying image).
 
+`LIBUVC_INSTALL` (on by default) generates the install rules. A project that uses libuvc with
+`add_subdirectory()` and builds libusb itself, providing it as a target of its own, has to turn
+it off: libuvc's installed CMake package could not refer to that target.
+
 Two tuning options control how much data is queued for a stream, and are left at their
 defaults when unset:
 
