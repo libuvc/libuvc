@@ -35,10 +35,8 @@ set(LIBUVC_INSTALL OFF)
 # MJPEG is decoded with the platform's AImageDecoder instead of libjpeg.
 set(DISABLE_JPEG ON)
 # Phones often fail large isochronous transfers with ENOMEM (see libuvc's
-# README); smaller ones cost CPU instead. A cache variable, because libuvc
-# declares it as one, which would hide a plain variable on the first
-# configure: FORCE it, or a value cached by an earlier build would stick.
-set(LIBUVC_PACKETS_PER_TRANSFER_MAX 8 CACHE STRING "" FORCE)
+# README); smaller ones cost CPU instead.
+set(LIBUVC_PACKETS_PER_TRANSFER_MAX 8)
 add_subdirectory(${LIBUVC_SOURCE_DIR} libuvc EXCLUDE_FROM_ALL)
 
 # The JNI library -------------------------------------------------------------
