@@ -34,6 +34,11 @@ defaults when unset:
   as is common on Android, lower it, e.g. `cmake .. -DLIBUVC_PACKETS_PER_TRANSFER_MAX=8`.
 - `LIBUVC_NUM_TRANSFER_BUFS` (default 100, 20 on macOS): number of transfers queued at once.
 
+## Android
+
+[examples/android](examples/android) is an example app that streams from a USB camera
+on an Android phone, with notes on what integrating libuvc there involves.
+
 ## Developing with libuvc
 
 The documentation for `libuvc` can currently be found at https://libuvc.github.io/.
