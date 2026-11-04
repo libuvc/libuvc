@@ -13,12 +13,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <android/imagedecoder.h>
 #include <android/log.h>
 #include <android/native_window_jni.h>
 #include <libusb.h>
 #include <libuvc/libuvc.h>
-
-#include "convert.h"
 
 #define TAG "libuvc-example"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
@@ -44,6 +43,7 @@ struct camera {
   pthread_mutex_t lock;
   ANativeWindow *window;
   int window_width, window_height;
+  uvc_frame_t *rgb;
   unsigned errors;
   atomic_uint frames;
 };
@@ -84,6 +84,21 @@ static uint32_t pick_interval(const uvc_frame_desc_t *frame) {
   return frame->intervals[0];
 }
 
+/* MJPEG is decoded by the platform's AImageDecoder, the rest converted by
+ * libuvc's uvc_any2rgb(). Nearly every webcam offers one of these; H.264, or
+ * the greyscale formats of thermal cameras, are not handled. */
+static int is_supported(enum uvc_frame_format format) {
+  switch (format) {
+  case UVC_FRAME_FORMAT_MJPEG:
+  case UVC_FRAME_FORMAT_YUYV:
+  case UVC_FRAME_FORMAT_UYVY:
+  case UVC_FRAME_FORMAT_RGB:
+    return 1;
+  default:
+    return 0;
+  }
+}
+
 /* List every frame size of every format the camera offers and this example
  * can show. The default is the first such format's default frame size, the
  * mode the camera itself suggests. */
@@ -107,7 +122,7 @@ static void find_modes(struct camera *cam) {
     }
     fourcc[4] = '\0';
 
-    if (!convert_supported(frame_format)) {
+    if (!is_supported(frame_format)) {
       LOGI("Skipping format %s: not supported by this example", fourcc);
       continue;
     }
@@ -150,6 +165,59 @@ out:
     cam->default_mode = 0;
 }
 
+/* Decode into the window buffer, which has the frame's size. AImageDecoder
+ * copes with the Huffman tables that UVC cameras usually leave out of their
+ * MJPEG frames. */
+static int decode_mjpeg(uvc_frame_t *frame, const ANativeWindow_Buffer *buffer) {
+  const size_t stride = (size_t) buffer->stride * 4;
+  const AImageDecoderHeaderInfo *info;
+  AImageDecoder *decoder;
+  int ret;
+
+  ret = AImageDecoder_createFromBuffer(frame->data, frame->data_bytes,
+                                       &decoder);
+  if (ret != ANDROID_IMAGE_DECODER_SUCCESS)
+    return ret;
+
+  /* A frame of another size than negotiated would overrun the buffer. */
+  info = AImageDecoder_getHeaderInfo(decoder);
+  if (AImageDecoderHeaderInfo_getWidth(info) != buffer->width ||
+      AImageDecoderHeaderInfo_getHeight(info) != buffer->height)
+    ret = ANDROID_IMAGE_DECODER_BAD_PARAMETER;
+  else
+    ret = AImageDecoder_decodeImage(decoder, buffer->bits, stride,
+                                    stride * buffer->height);
+
+  AImageDecoder_delete(decoder);
+  return ret;
+}
+
+/* Convert with libuvc, then copy the RGB pixels to the window buffer, which
+ * has an X byte after each of them. */
+static int convert_rgb(struct camera *cam, uvc_frame_t *frame,
+                       const ANativeWindow_Buffer *buffer) {
+  uvc_error_t res = uvc_any2rgb(frame, cam->rgb);
+
+  if (res < 0)
+    return res;
+  /* RGB frames are only copied, not checked against their size. */
+  if (cam->rgb->data_bytes < (size_t) buffer->width * buffer->height * 3)
+    return UVC_ERROR_OTHER;
+
+  for (int y = 0; y < buffer->height; y++) {
+    const uint8_t *src =
+        (uint8_t *) cam->rgb->data + (size_t) y * buffer->width * 3;
+    uint8_t *dst = (uint8_t *) buffer->bits + (size_t) y * buffer->stride * 4;
+
+    for (int x = 0; x < buffer->width; x++, src += 3, dst += 4) {
+      dst[0] = src[0];
+      dst[1] = src[1];
+      dst[2] = src[2];
+    }
+  }
+  return 0;
+}
+
 /* Called by libuvc, on its own thread, for every complete frame. */
 static void frame_callback(uvc_frame_t *frame, void *user_ptr) {
   struct camera *cam = user_ptr;
@@ -176,11 +244,13 @@ static void frame_callback(uvc_frame_t *frame, void *user_ptr) {
 
   if (ANativeWindow_lock(cam->window, &buffer, NULL))
     goto out;
-  if (buffer.width == (int32_t) frame->width &&
-      buffer.height == (int32_t) frame->height)
-    ret = convert_frame(frame, buffer.bits, (size_t) buffer.stride * 4);
+  if (buffer.width != (int32_t) frame->width ||
+      buffer.height != (int32_t) frame->height)
+    ret = UVC_ERROR_OTHER;
+  else if (frame->frame_format == UVC_FRAME_FORMAT_MJPEG)
+    ret = decode_mjpeg(frame, &buffer);
   else
-    ret = -1;
+    ret = convert_rgb(cam, frame, &buffer);
   ANativeWindow_unlockAndPost(cam->window);
 
   if (ret && cam->errors++ % 100 == 0)
@@ -195,7 +265,11 @@ static jlong camera_open(JNIEnv *env, jclass clazz, jint fd) {
   struct camera *cam = calloc(1, sizeof(*cam));
   uvc_error_t res;
 
-  if (!cam) {
+  /* Empty: uvc_any2rgb() sizes it for the frames. */
+  if (cam)
+    cam->rgb = uvc_allocate_frame(0);
+  if (!cam || !cam->rgb) {
+    free(cam);
     throw_exception(env, "java/lang/OutOfMemoryError", "struct camera");
     return 0;
   }
@@ -226,6 +300,7 @@ fail_exit:
   uvc_exit(cam->ctx);
 fail:
   pthread_mutex_destroy(&cam->lock);
+  uvc_free_frame(cam->rgb);
   free(cam);
   return 0;
 }
@@ -336,6 +411,7 @@ static void camera_close(JNIEnv *env, jclass clazz, jlong handle) {
   if (cam->window)
     ANativeWindow_release(cam->window);
   pthread_mutex_destroy(&cam->lock);
+  uvc_free_frame(cam->rgb);
   free(cam);
 }
 

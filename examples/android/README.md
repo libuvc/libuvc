@@ -7,10 +7,8 @@ an Android phone, using libuvc and libusb from this tree. It lists the formats
 and frame sizes the camera offers, starts with the camera's default and lets
 you pick another.
 
-It shows MJPEG (Android 11 and later) and the uncompressed formats libuvc
-knows: YUYV, UYVY, NV12, NV21, I420, P010, 8 and 16-bit grey, RGB, BGR, and
-raw Bayer, in grey. Nearly every webcam offers one of those; a camera that only
-streams H.264 is not handled.
+It shows MJPEG, and YUYV, UYVY and RGB through libuvc's `uvc_any2rgb()`:
+nearly every webcam offers one of those. It needs Android 11 or later.
 
 ## Building and running
 
@@ -58,7 +56,7 @@ The parts that differ from desktop Linux:
 - libuvc only decodes MJPEG when built with libjpeg. On Android 11 and later,
   `AImageDecoder` from the NDK does it with no library to ship, including the
   usual UVC frames without Huffman tables; see
-  [`convert.c`](app/src/main/cpp/convert.c).
+  [`uvc_jni.c`](app/src/main/cpp/uvc_jni.c).
 
 ### Getting the device
 

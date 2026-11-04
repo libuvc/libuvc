@@ -40,10 +40,7 @@ set(LIBUVC_PACKETS_PER_TRANSFER_MAX 8)
 add_subdirectory(${LIBUVC_SOURCE_DIR} libuvc EXCLUDE_FROM_ALL)
 
 # The JNI library -------------------------------------------------------------
-add_library(uvcexample SHARED
-  convert.c
-  uvc_jni.c
-)
+add_library(uvcexample SHARED uvc_jni.c)
 target_compile_options(uvcexample PRIVATE
   -Wall -Wextra -Wno-unused-parameter
   # Only JNI_OnLoad needs exporting: the native methods are registered by it.
