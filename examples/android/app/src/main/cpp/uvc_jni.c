@@ -6,6 +6,7 @@
  * wraps that descriptor (uvc_wrap) instead of opening the device itself,
  * which an app cannot do on Android.
  */
+#include <ctype.h>
 #include <jni.h>
 #include <pthread.h>
 #include <stdatomic.h>
@@ -118,7 +119,7 @@ static void find_modes(struct camera *cam) {
     for (int i = 0; i < 4; i++) {
       uint8_t c = format->fourccFormat[i];
 
-      fourcc[i] = c >= ' ' && c <= '~' ? c : '?';
+      fourcc[i] = isprint(c) ? c : '?';
     }
     fourcc[4] = '\0';
 
@@ -128,7 +129,7 @@ static void find_modes(struct camera *cam) {
     }
 
     for (frame = format->frame_descs; frame; frame = frame->next) {
-      uint32_t interval = pick_interval(frame), tenths;
+      uint32_t interval = pick_interval(frame);
       struct mode *mode;
 
       if (!interval)
@@ -143,14 +144,8 @@ static void find_modes(struct camera *cam) {
       /* Intervals are in 100 ns units. Rounded down, as
        * uvc_get_stream_ctrl_format_size() compares it. */
       mode->fps = 10000000 / interval;
-      /* For the label, rounded to a tenth: 333333 is 30 fps, not 30.0000. */
-      tenths = (100000000 + interval / 2) / interval;
-      if (tenths % 10)
-        snprintf(mode->label, sizeof(mode->label), "%s %dx%d, %u.%u fps",
-                 fourcc, mode->width, mode->height, tenths / 10, tenths % 10);
-      else
-        snprintf(mode->label, sizeof(mode->label), "%s %dx%d, %u fps",
-                 fourcc, mode->width, mode->height, tenths / 10);
+      snprintf(mode->label, sizeof(mode->label), "%s %dx%d, %.1f fps", fourcc,
+               mode->width, mode->height, 10000000.0 / interval);
       LOGI("Mode %d: %s", cam->num_modes, mode->label);
 
       if (cam->default_mode < 0 &&
