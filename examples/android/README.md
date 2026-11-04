@@ -38,14 +38,18 @@ The parts that differ from desktop Linux:
 
 ### Getting libusb and libuvc built
 
-- libusb has no CMake build. Compile its sources with its
-  `android/config.h`, as [`CMakeLists.txt`](app/src/main/cpp/CMakeLists.txt)
-  does (or include its `android/jni/libusb.mk` with ndk-build). Keeping
-  libusb a shared library of its own is the simple way to meet its license,
-  the LGPL, which requires that users can replace it.
-- Use libuvc with `add_subdirectory()`, after providing libusb as an
-  IMPORTED `LibUSB::LibUSB` target: libuvc then uses it rather than look for
-  libusb with pkg-config, which does not work when cross-compiling.
+- libusb itself builds with autotools, or with ndk-build from its
+  `android/jni/libusb.mk`. With CMake, use
+  [libusb-cmake](https://github.com/libusb/libusb-cmake), the CMake build the
+  libusb project maintains, which handles Android: fetch it, as
+  [`CMakeLists.txt`](app/src/main/cpp/CMakeLists.txt) does. Keeping libusb a
+  shared library of its own is the simple way to meet its license, the LGPL,
+  which requires that users can replace it.
+- Use libuvc with `add_subdirectory()`, after making libusb available as
+  `LibUSB::LibUSB`, here an alias of libusb-cmake's target: libuvc then uses
+  it rather than look for libusb with pkg-config, which does not work when
+  cross-compiling. Turn `LIBUVC_INSTALL` off, as libuvc's install rules
+  cannot refer to such a target.
 - Set `LIBUVC_PACKETS_PER_TRANSFER_MAX` to 8 or so: phones often refuse
   libuvc's default isochronous transfer size with `ENOMEM` (even a Pixel 8,
   now and then), losing frames or all of them. Smaller transfers cost CPU,

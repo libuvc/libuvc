@@ -5,41 +5,20 @@ include(FetchContent)
 
 # libusb ----------------------------------------------------------------------
 #
-# libusb does not build with CMake, so compile its Linux backend directly, as
-# its own android/jni/libusb.mk does. Keep it a shared library: libusb is
-# LGPL-2.1, and shipping it as its own .so is the simple way to let users
-# replace it.
+# The libusb project maintains a CMake build of libusb, libusb-cmake, which
+# handles Android. Keep libusb a shared library: it is LGPL-2.1, and shipping
+# it as its own .so is the simple way to let users replace it.
+set(LIBUSB_BUILD_SHARED_LIBS ON)
+set(LIBUSB_INSTALL_TARGETS OFF)
 FetchContent_Declare(libusb
-  URL https://github.com/libusb/libusb/releases/download/v1.0.30/libusb-1.0.30.tar.bz2
-  URL_HASH SHA256=fea36f34f9156400209595e300840767ab1a385ede1dc7ee893015aea9c6dbaf
+  URL https://github.com/libusb/libusb-cmake/archive/refs/tags/v1.0.30-0.tar.gz
+  URL_HASH SHA256=c8143ceba42b7b93d484ccd09db7be261bb9b15f61dae5fdc605a01a6913bada
 )
 FetchContent_MakeAvailable(libusb)
 
-add_library(usb-1.0 SHARED
-  ${libusb_SOURCE_DIR}/libusb/core.c
-  ${libusb_SOURCE_DIR}/libusb/descriptor.c
-  ${libusb_SOURCE_DIR}/libusb/hotplug.c
-  ${libusb_SOURCE_DIR}/libusb/io.c
-  ${libusb_SOURCE_DIR}/libusb/strerror.c
-  ${libusb_SOURCE_DIR}/libusb/sync.c
-  ${libusb_SOURCE_DIR}/libusb/os/events_posix.c
-  ${libusb_SOURCE_DIR}/libusb/os/linux_netlink.c
-  ${libusb_SOURCE_DIR}/libusb/os/linux_usbfs.c
-  ${libusb_SOURCE_DIR}/libusb/os/threads_posix.c
-)
-target_include_directories(usb-1.0
-  PUBLIC ${libusb_SOURCE_DIR}/libusb
-  # android/config.h stands in for the config.h that ./configure writes.
-  PRIVATE ${libusb_SOURCE_DIR}/android ${libusb_SOURCE_DIR}/libusb/os
-)
-target_compile_options(usb-1.0 PRIVATE -fvisibility=hidden)
-target_link_libraries(usb-1.0 PRIVATE log)
-
 # libuvc only looks for libusb with pkg-config when there is no LibUSB::LibUSB
-# target yet. Provide one, as an IMPORTED target: libuvc's install(EXPORT)
-# rejects a dependency on a plain target that is not exported with it.
-add_library(LibUSB::LibUSB INTERFACE IMPORTED)
-target_link_libraries(LibUSB::LibUSB INTERFACE usb-1.0)
+# target yet.
+add_library(LibUSB::LibUSB ALIAS usb-1.0)
 
 # libuvc ----------------------------------------------------------------------
 #
@@ -50,6 +29,9 @@ set(LIBUVC_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../..
 
 set(CMAKE_BUILD_TARGET Static)
 set(BUILD_EXAMPLE OFF)
+# An app installs nothing, and libuvc's install rules could not refer to the
+# libusb target above anyway.
+set(LIBUVC_INSTALL OFF)
 # MJPEG is decoded with the platform's AImageDecoder instead of libjpeg.
 set(DISABLE_JPEG ON)
 # Phones often fail large isochronous transfers with ENOMEM (see libuvc's
