@@ -1,6 +1,9 @@
 # libuvc on Android
 
-**AI disclaimer: this example was put together by Claude, reviewed by human (`drinkcat`), there's often more than one way to integrate libraries into apps, so this is only one of multiple possible ways, but it looks simpler enough.**
+**AI disclaimer: this example (and this README) was put together by Claude
+and reviewed by a human (`drinkcat`). There is often more than one way to
+integrate a library into an app, so this is only one of several possible ways,
+but it looks simple enough.**
 
 A small Kotlin app that shows the picture of a USB (UVC) camera plugged into
 an Android phone, using libuvc and libusb from this tree. It lists the formats
