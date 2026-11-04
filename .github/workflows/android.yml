@@ -154,3 +154,38 @@ jobs:
               exit 1
             }
           fi
+
+  # The example app in examples/android: Gradle builds libusb and this tree
+  # of libuvc into it, the way an app would. Besides the example itself, this
+  # covers using libuvc from a parent CMake project with add_subdirectory().
+  # The APK is kept, to try on a phone.
+  build-example:
+    runs-on: ubuntu-latest
+
+    name: android, example app
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # Only the open source caching: setup-gradle defaults to a proprietary
+      # provider.
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+
+      # gradlew runs the gradle-wrapper.jar checked in next to it: make sure
+      # that is the one Gradle released.
+      - uses: gradle/actions/wrapper-validation@v6
+
+      - name: Build
+        working-directory: examples/android
+        run: ./gradlew assembleDebug assembleRelease lintDebug
+
+      # The release APK: its native code is optimised, unlike the debug one's.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: libuvc-example
+          path: examples/android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
