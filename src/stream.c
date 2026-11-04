@@ -493,7 +493,8 @@ uvc_frame_desc_t *uvc_find_frame_desc(uvc_device_handle_t *devh,
  * @param[in] format_class Type of streaming format
  * @param[in] width Desired frame width
  * @param[in] height Desired frame height
- * @param[in] fps Frame rate, frames per second
+ * @param[in] fps Frame rate, frames per second, or 0 for the highest rate
+ *                the camera offers (the first it lists)
  */
 uvc_error_t uvc_get_stream_ctrl_format_size(
     uvc_device_handle_t *devh,
@@ -539,12 +540,17 @@ uvc_error_t uvc_get_stream_ctrl_format_size(
             }
           }
         } else {
-          uint32_t interval_100ns = 10000000 / fps;
+          /* A range of intervals, of which fps 0 takes the first, as above:
+           * the shortest. */
+          uint32_t interval_100ns =
+              fps ? 10000000 / fps : frame->dwMinFrameInterval;
           uint32_t interval_offset = interval_100ns - frame->dwMinFrameInterval;
 
+          /* A zero step, from a broken descriptor, allows the whole range
+           * rather than divide by zero. */
           if (interval_100ns >= frame->dwMinFrameInterval
               && interval_100ns <= frame->dwMaxFrameInterval
-              && !(interval_offset
+              && !(interval_offset && frame->dwFrameIntervalStep
                    && (interval_offset % frame->dwFrameIntervalStep))) {
 
             ctrl->bmHint = (1 << 0);
