@@ -88,9 +88,10 @@ devices. Everything goes through `UsbManager`, in Kotlin or Java
 ([`uvc_jni.c`](app/src/main/cpp/uvc_jni.c))
 
 - Set `LIBUSB_OPTION_NO_DEVICE_DISCOVERY` before any libusb context exists:
-  `libusb_set_option(NULL, LIBUSB_OPTION_NO_DEVICE_DISCOVERY)`. Otherwise
-  libusb tries to scan the devices and watch for new ones, which an app may
-  not do.
+  `libusb_set_option(NULL, LIBUSB_OPTION_NO_DEVICE_DISCOVERY)` makes it a
+  default for every context created afterwards, including libuvc's own.
+  Otherwise libusb tries to scan the devices and watch for new ones, which
+  an app may not do.
 - `uvc_init(&ctx, NULL)` makes libuvc create its own libusb context and run
   the thread that handles its events. With a context of your own instead,
   your code has to call `libusb_handle_events()` itself.

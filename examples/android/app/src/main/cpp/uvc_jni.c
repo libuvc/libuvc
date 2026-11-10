@@ -273,7 +273,10 @@ static jlong camera_open(JNIEnv *env, jclass clazz, jint fd) {
 
   /* With a NULL libusb context, libuvc creates its own, and runs the thread
    * that handles its events from the first uvc_wrap() to the last
-   * uvc_close(). */
+   * uvc_close(). That context does not scan for devices: JNI_OnLoad() set
+   * LIBUSB_OPTION_NO_DEVICE_DISCOVERY as a default for every new context.
+   * Passing a context of our own instead, created with that option, would
+   * leave handling its events to us. */
   res = uvc_init(&cam->ctx, NULL);
   if (res < 0) {
     throw_uvc_error(env, "uvc_init", res);
