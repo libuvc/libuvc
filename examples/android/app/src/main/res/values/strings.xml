@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">libuvc example</string>
+    <string name="no_camera">Connect a UVC camera.</string>
+    <string name="camera_permission_denied">The camera permission is needed to use a USB camera.</string>
+    <string name="waiting_for_permission">Waiting for permission to use %1$s…</string>
+    <string name="usb_permission_denied">USB permission denied.</string>
+    <string name="opening">Opening %1$s…</string>
+    <string name="open_failed">Cannot open the camera: %1$s</string>
+    <string name="no_modes">The camera offers no format this example can show.</string>
+    <string name="starting">Starting %1$s…</string>
+    <string name="start_failed">Cannot start %1$s: %2$s</string>
+    <string name="streaming">%1$s: %2$.1f fps</string>
+</resources>

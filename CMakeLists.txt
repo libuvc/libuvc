@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.21)
 project(libuvc
   VERSION 0.0.9
   LANGUAGES C
@@ -30,6 +30,7 @@ option(WARNINGS_AS_ERRORS "Turn compiler warnings into errors (used by CI)" OFF)
 option(BUILD_TESTING "Build the unit tests" OFF)
 option(BUILD_FUZZERS "Build the libFuzzer targets (requires clang)" OFF)
 option(ENABLE_SANITIZERS "Build with AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
+option(LIBUVC_INSTALL "Generate the install rules" ON)
 set(LIBUVC_NUM_TRANSFER_BUFS "" CACHE STRING
   "Number of transfers queued per stream (empty: 100, or 20 on macOS)")
 set(LIBUVC_PACKETS_PER_TRANSFER_MAX "" CACHE STRING
@@ -231,59 +232,63 @@ if(BUILD_TESTING)
 endif()
 
 
-include(GNUInstallDirs)
-set(CMAKE_INSTALL_CMAKEDIR ${CMAKE_INSTALL_LIBDIR}/cmake/libuvc)
+# A parent project that uses libuvc with add_subdirectory() and builds libusb
+# itself, providing it as a target of its own, has to turn LIBUVC_INSTALL off:
+# the exported targets can only depend on IMPORTED targets, like the ones the
+# find modules create, and CMake refuses to generate the build otherwise.
+if(LIBUVC_INSTALL)
+  include(GNUInstallDirs)
+  set(CMAKE_INSTALL_CMAKEDIR ${CMAKE_INSTALL_LIBDIR}/cmake/libuvc)
 
-install(
-  TARGETS ${UVC_TARGETS}
-  EXPORT libuvcTargets
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-  INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-  PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libuvc
-)
+  install(
+    TARGETS ${UVC_TARGETS}
+    EXPORT libuvcTargets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libuvc
+  )
 
-install(EXPORT libuvcTargets
-  FILE libuvcTargets.cmake
-  NAMESPACE LibUVC::
-  DESTINATION ${CMAKE_INSTALL_CMAKEDIR}
-)
+  install(EXPORT libuvcTargets
+    FILE libuvcTargets.cmake
+    NAMESPACE LibUVC::
+    DESTINATION ${CMAKE_INSTALL_CMAKEDIR}
+  )
 
-install(FILES 
-    cmake/FindLibUSB.cmake
-    cmake/FindJpegPkg.cmake
-  DESTINATION ${CMAKE_INSTALL_CMAKEDIR}
-)
+  install(FILES 
+      cmake/FindLibUSB.cmake
+      cmake/FindJpegPkg.cmake
+    DESTINATION ${CMAKE_INSTALL_CMAKEDIR}
+  )
 
-include(CMakePackageConfigHelpers)
-write_basic_package_version_file(libuvcConfigVersion.cmake
-  COMPATIBILITY AnyNewerVersion
-)
+  include(CMakePackageConfigHelpers)
+  write_basic_package_version_file(libuvcConfigVersion.cmake
+    COMPATIBILITY AnyNewerVersion
+  )
 
-install(FILES
-  ${CMAKE_CURRENT_BINARY_DIR}/libuvcConfigVersion.cmake
-  DESTINATION ${CMAKE_INSTALL_CMAKEDIR}
-)
+  install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/libuvcConfigVersion.cmake
+    DESTINATION ${CMAKE_INSTALL_CMAKEDIR}
+  )
 
-if(JPEG_FOUND)
-  # If we have used JPEG library we need to 
-  # add linker flag for it in config file for pkgconfig
-  set(PKGCONFIG_JPEG_LDFLAG "-ljpeg")
+  if(JPEG_FOUND)
+    # If we have used JPEG library we need to 
+    # add linker flag for it in config file for pkgconfig
+    set(PKGCONFIG_JPEG_LDFLAG "-ljpeg")
+  endif()
+
+  configure_file(libuvc.pc.in
+    ${PROJECT_BINARY_DIR}/libuvc.pc
+    @ONLY
+  )
+
+  install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/libuvc.pc
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
+  )
+
+  install(FILES libuvcConfig.cmake
+    DESTINATION ${CMAKE_INSTALL_CMAKEDIR}
+  )
 endif()
-
-configure_file(libuvc.pc.in
-  ${PROJECT_BINARY_DIR}/libuvc.pc
-  @ONLY
-)
-
-install(FILES
-  ${CMAKE_CURRENT_BINARY_DIR}/libuvc.pc
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
-)
-
-install(FILES libuvcConfig.cmake
-  DESTINATION ${CMAKE_INSTALL_CMAKEDIR}
-)
-
-

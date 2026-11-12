@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Any device with a video interface (USB_CLASS_VIDEO). A class filter
+         also matches interfaces, which matters: most webcams are composite
+         devices (class 239), with video and audio interfaces. -->
+    <usb-device class="14" />
+</resources>
