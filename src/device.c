@@ -255,7 +255,7 @@ uint8_t uvc_get_device_address(uvc_device_t *dev) {
   return libusb_get_device_address(dev->usb_dev);
 }
 
-static uvc_error_t uvc_open_internal(uvc_device_t *dev, struct libusb_device_handle *usb_devh, uvc_device_handle_t **devh);
+static uvc_error_t uvc_open_internal(uvc_device_t *dev, struct libusb_device_handle *usb_devh, uvc_device_handle_t **devh, enum uvc_kernel_driver_mode kernel_driver_mode);
 
 #if LIBUSB_API_VERSION >= 0x01000107
 /** @brief Wrap a platform-specific system device handle and obtain a UVC device handle.
@@ -275,6 +275,14 @@ uvc_error_t uvc_wrap(
     int sys_dev,
     uvc_context_t *context,
     uvc_device_handle_t **devh) {
+  return uvc_wrap_with_driver_mode(sys_dev, context, devh, UVC_KERNEL_DRIVER_MODE_DETACH_ON);
+}
+
+uvc_error_t uvc_wrap_with_driver_mode(
+    int sys_dev,
+    uvc_context_t *context,
+    uvc_device_handle_t **devh,
+    enum uvc_kernel_driver_mode kernel_driver_mode) {
   uvc_error_t ret;
   struct libusb_device_handle *usb_devh;
 
@@ -292,7 +300,7 @@ uvc_error_t uvc_wrap(
   dev->ctx = context;
   dev->usb_dev = libusb_get_device(usb_devh);
 
-  ret = uvc_open_internal(dev, usb_devh, devh);
+  ret = uvc_open_internal(dev, usb_devh, devh, kernel_driver_mode);
   UVC_EXIT(ret);
   return ret;
 }
@@ -308,6 +316,22 @@ uvc_error_t uvc_wrap(
 uvc_error_t uvc_open(
     uvc_device_t *dev,
     uvc_device_handle_t **devh) {
+  return uvc_open_with_driver_mode(dev, devh, UVC_KERNEL_DRIVER_MODE_DETACH_ON);
+}
+
+/** @brief Open a UVC device
+ * @ingroup device
+ *
+ * @param dev Device to open
+ * @param[out] devh Handle on opened device
+ * @param[in] kernel_driver_mode detach/ignore kernel driver
+ * @return Error opening device or SUCCESS
+ */
+uvc_error_t uvc_open_with_driver_mode(
+    uvc_device_t *dev,
+    uvc_device_handle_t **devh,
+    enum uvc_kernel_driver_mode kernel_driver_mode) {
+
   uvc_error_t ret;
   struct libusb_device_handle *usb_devh;
 
@@ -321,7 +345,15 @@ uvc_error_t uvc_open(
     return ret;
   }
 
-  ret = uvc_open_internal(dev, usb_devh, devh);
+  ret = libusb_open(dev->usb_dev, &usb_devh);
+  UVC_DEBUG("libusb_open() = %d", ret);
+    
+  if (ret != UVC_SUCCESS) {
+    UVC_EXIT(ret);
+    return ret;
+  }
+
+  ret = uvc_open_internal(dev, usb_devh, devh, kernel_driver_mode);
   UVC_EXIT(ret);
   return ret;
 }
@@ -329,7 +361,8 @@ uvc_error_t uvc_open(
 static uvc_error_t uvc_open_internal(
     uvc_device_t *dev,
     struct libusb_device_handle *usb_devh,
-    uvc_device_handle_t **devh) {
+    uvc_device_handle_t **devh,
+    enum uvc_kernel_driver_mode kernel_driver_mode) {
   uvc_error_t ret;
   uvc_device_handle_t *internal_devh;
   struct libusb_device_descriptor desc;
@@ -341,6 +374,7 @@ static uvc_error_t uvc_open_internal(
   internal_devh = calloc(1, sizeof(*internal_devh));
   internal_devh->dev = dev;
   internal_devh->usb_devh = usb_devh;
+  internal_devh->should_detach = kernel_driver_mode == UVC_KERNEL_DRIVER_MODE_DETACH_ON;
 
   ret = uvc_get_device_info(internal_devh, &(internal_devh->info));
 
@@ -1004,9 +1038,14 @@ uvc_error_t uvc_claim_if(uvc_device_handle_t *devh, int idx) {
     return ret;
   }
 
-  /* Tell libusb to detach any active kernel drivers. libusb will keep track of whether
-   * it found a kernel driver for this interface. */
-  ret = libusb_detach_kernel_driver(devh->usb_devh, idx);
+  if (devh->should_detach) {
+    /* Tell libusb to detach any active kernel drivers. libusb will keep track of whether
+     * it found a kernel driver for this interface. */
+    ret = libusb_detach_kernel_driver(devh->usb_devh, idx);
+    if (ret == UVC_SUCCESS) {
+      devh->detached |= ( 1 << idx );
+    }
+  }
 
   if (ret == UVC_SUCCESS || ret == LIBUSB_ERROR_NOT_FOUND || ret == LIBUSB_ERROR_NOT_SUPPORTED) {
     UVC_DEBUG("claiming interface %d", idx);
@@ -1048,8 +1087,11 @@ uvc_error_t uvc_release_if(uvc_device_handle_t *devh, int idx) {
 
   if (UVC_SUCCESS == ret) {
     devh->claimed &= ~( 1 << idx );
-    /* Reattach any kernel drivers that were disabled when we claimed this interface */
-    ret = libusb_attach_kernel_driver(devh->usb_devh, idx);
+    if (devh->detached & ( 1 << idx )) {
+      /* Reattach any kernel drivers that were disabled when we claimed this interface */
+      ret = libusb_attach_kernel_driver(devh->usb_devh, idx);
+      devh->detached &= ~( 1 << idx );
+    }
 
     if (ret == UVC_SUCCESS) {
       UVC_DEBUG("reattached kernel driver to interface %d", idx);
