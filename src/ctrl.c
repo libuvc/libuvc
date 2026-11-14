@@ -123,16 +123,14 @@ int uvc_set_ctrl(uvc_device_handle_t *devh, uint8_t unit, uint8_t ctrl, void *da
 
 /***** INTERFACE CONTROLS *****/
 
-/* bDevicePowerMode (UVC 1.5, 4.2.1.1): D3..0 is the power mode, D7..4 are
- * read-only flags (vendor-dependent mode supported, power source). */
-#define UVC_POWER_MODE_MASK 0x0f
-
-/** @brief Reads the device power mode
+/** @brief Reads the whole bDevicePowerMode bitmap (UVC 1.5, 4.2.1.1)
  *
- * Only the power mode (D3..0) is returned; the read-only flags in D7..4 are
- * dropped.
+ * D3..0 is the power mode (UVC_VC_VIDEO_POWER_MODE_MASK); D7..4 are the
+ * read-only flags of enum uvc_device_power_mode_bitmap: whether
+ * UVC_VC_VIDEO_POWER_MODE_DEVICE_DEPENDENT is supported, and the power
+ * source. For UVC_GET_INFO, the GET_INFO bitmap is returned instead.
  */
-uvc_error_t uvc_get_power_mode(uvc_device_handle_t *devh, enum uvc_device_power_mode *mode, enum uvc_req_code req_code) {
+uvc_error_t uvc_get_power_mode_bitmap(uvc_device_handle_t *devh, uint8_t *bitmap, enum uvc_req_code req_code) {
   uint8_t mode_char;
   uvc_error_t ret;
 
@@ -145,12 +143,34 @@ uvc_error_t uvc_get_power_mode(uvc_device_handle_t *devh, enum uvc_device_power_
     sizeof(mode_char),
     0);
 
-  if (ret == 1) {
-    *mode = mode_char & UVC_POWER_MODE_MASK;
-    return UVC_SUCCESS;
-  } else {
+  if (ret < 0)
     return ret;
-  }
+  if (ret != 1)
+    return UVC_ERROR_IO;
+
+  *bitmap = mode_char;
+  return UVC_SUCCESS;
+}
+
+/** @brief Reads the device power mode
+ *
+ * Only the power mode (D3..0) is returned; the read-only flags in D7..4 are
+ * dropped.
+ *
+ * @deprecated Use uvc_get_power_mode_bitmap(), which also returns the
+ * read-only flags in D7..4 (including whether
+ * UVC_VC_VIDEO_POWER_MODE_DEVICE_DEPENDENT is supported).
+ */
+uvc_error_t uvc_get_power_mode(uvc_device_handle_t *devh, enum uvc_device_power_mode *mode, enum uvc_req_code req_code) {
+  uint8_t bitmap;
+  uvc_error_t ret;
+
+  ret = uvc_get_power_mode_bitmap(devh, &bitmap, req_code);
+  if (ret != UVC_SUCCESS)
+    return ret;
+
+  *mode = bitmap & UVC_VC_VIDEO_POWER_MODE_MASK;
+  return UVC_SUCCESS;
 }
 
 /** @brief Sets the device power mode
@@ -159,7 +179,7 @@ uvc_error_t uvc_get_power_mode(uvc_device_handle_t *devh, enum uvc_device_power_
  * spec requires.
  */
 uvc_error_t uvc_set_power_mode(uvc_device_handle_t *devh, enum uvc_device_power_mode mode) {
-  uint8_t mode_char = mode & UVC_POWER_MODE_MASK;
+  uint8_t mode_char = mode & UVC_VC_VIDEO_POWER_MODE_MASK;
   uvc_error_t ret;
 
   ret = libusb_control_transfer(
