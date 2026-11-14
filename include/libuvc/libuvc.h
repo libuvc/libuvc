@@ -242,9 +242,25 @@ enum uvc_req_code {
   UVC_GET_DEF = 0x87
 };
 
+/** Device power mode (UVC 1.5, 4.2.1.1, bDevicePowerMode D3..0) */
 enum uvc_device_power_mode {
-  UVC_VC_VIDEO_POWER_MODE_FULL = 0x000b,
-  UVC_VC_VIDEO_POWER_MODE_DEVICE_DEPENDENT = 0x001b,
+  UVC_VC_VIDEO_POWER_MODE_FULL = 0x00,
+  UVC_VC_VIDEO_POWER_MODE_DEVICE_DEPENDENT = 0x01,
+};
+
+/** Fields of bDevicePowerMode (UVC 1.5, 4.2.1.1), as returned by
+ * uvc_get_power_mode_bitmap(). D7..4 are read-only. */
+enum uvc_device_power_mode_bitmap {
+  /** D3..0: the power mode, an enum uvc_device_power_mode */
+  UVC_VC_VIDEO_POWER_MODE_MASK = 0x0f,
+  /** D4: the device supports UVC_VC_VIDEO_POWER_MODE_DEVICE_DEPENDENT */
+  UVC_VC_VIDEO_POWER_MODE_DEVICE_DEPENDENT_SUPPORTED = 0x10,
+  /** D5: the device uses power supplied by USB */
+  UVC_VC_VIDEO_POWER_SOURCE_USB = 0x20,
+  /** D6: the device uses power supplied by a battery */
+  UVC_VC_VIDEO_POWER_SOURCE_BATTERY = 0x40,
+  /** D7: the device uses power supplied by AC */
+  UVC_VC_VIDEO_POWER_SOURCE_AC = 0x80,
 };
 
 /** Camera terminal control selector (A.9.4) */
@@ -667,6 +683,7 @@ int uvc_get_ctrl(uvc_device_handle_t *devh, uint8_t unit, uint8_t ctrl, void *da
 int uvc_set_ctrl(uvc_device_handle_t *devh, uint8_t unit, uint8_t ctrl, void *data, int len);
 
 uvc_error_t uvc_get_power_mode(uvc_device_handle_t *devh, enum uvc_device_power_mode *mode, enum uvc_req_code req_code);
+uvc_error_t uvc_get_power_mode_bitmap(uvc_device_handle_t *devh, uint8_t *bitmap, enum uvc_req_code req_code);
 uvc_error_t uvc_set_power_mode(uvc_device_handle_t *devh, enum uvc_device_power_mode mode);
 
 /* AUTO-GENERATED control accessors! Update them with the output of `ctrl-gen.py decl`. */
