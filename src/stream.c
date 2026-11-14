@@ -82,6 +82,8 @@ struct format_table_entry {
   uint8_t guid[16];
   int children_count;
   enum uvc_frame_format *children;
+  /* Alternative GUID some devices report for the same format, or NULL */
+  const uint8_t *alt_guid;
 };
 
 struct format_table_entry *_get_format_entry(enum uvc_frame_format format) {
@@ -98,6 +100,16 @@ struct format_table_entry *_get_format_entry(enum uvc_frame_format format) {
       _fmt, 0, __VA_ARGS__, 0, NULL }; \
     return &_fmt##_entry; }
 
+  /* Format also known under an alternative GUID. Both GUIDs are wrapped in
+   * parentheses so their commas do not split the macro arguments. */
+  #define UNPAREN(...) __VA_ARGS__
+  #define FMT_ALT(_fmt, _guid, _alt) \
+    case _fmt: { \
+    static const uint8_t _fmt##_alt_guid[16] = UNPAREN _alt; \
+    static struct format_table_entry _fmt##_entry = { \
+      _fmt, 0, UNPAREN _guid, 0, NULL, _fmt##_alt_guid }; \
+    return &_fmt##_entry; }
+
   switch(format) {
     /* Define new formats here */
     ABS_FMT(UVC_FRAME_FORMAT_ANY, 2,
@@ -112,8 +124,10 @@ struct format_table_entry *_get_format_entry(enum uvc_frame_format format) {
       {'Y',  'U',  'Y',  '2', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
     FMT(UVC_FRAME_FORMAT_UYVY,
       {'U',  'Y',  'V',  'Y', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
-    FMT(UVC_FRAME_FORMAT_GRAY8,
-      {'Y',  '8',  '0',  '0', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+    /* Y800 is the canonical FourCC, but many devices report "Y8  " instead */
+    FMT_ALT(UVC_FRAME_FORMAT_GRAY8,
+      ({'Y',  '8',  '0',  '0', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71}),
+      ({'Y',  '8',  ' ',  ' ', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71}))
     FMT(UVC_FRAME_FORMAT_GRAY16,
       {'Y',  '1',  '6',  ' ', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
     FMT(UVC_FRAME_FORMAT_NV12,
@@ -153,6 +167,17 @@ struct format_table_entry *_get_format_entry(enum uvc_frame_format format) {
 
   #undef ABS_FMT
   #undef FMT
+  #undef FMT_ALT
+  #undef UNPAREN
+}
+
+static int _uvc_format_entry_has_guid(const struct format_table_entry *format,
+                                      const uint8_t guid[16]) {
+  if (format->abstract_fmt)
+    return 0;
+  if (!memcmp(guid, format->guid, 16))
+    return 1;
+  return format->alt_guid && !memcmp(guid, format->alt_guid, 16);
 }
 
 static uint8_t _uvc_frame_format_matches_guid(enum uvc_frame_format fmt, uint8_t guid[16]) {
@@ -163,7 +188,7 @@ static uint8_t _uvc_frame_format_matches_guid(enum uvc_frame_format fmt, uint8_t
   if (!format)
     return 0;
 
-  if (!format->abstract_fmt && !memcmp(guid, format->guid, 16))
+  if (_uvc_format_entry_has_guid(format, guid))
     return 1;
 
   for (child_idx = 0; child_idx < format->children_count; child_idx++) {
@@ -187,9 +212,7 @@ enum uvc_frame_format uvc_frame_format_for_guid(uint8_t guid[16]) {
 
   for (fmt = 0; fmt < UVC_FRAME_FORMAT_COUNT; ++fmt) {
     format = _get_format_entry(fmt);
-    if (!format || format->abstract_fmt)
-      continue;
-    if (!memcmp(format->guid, guid, 16))
+    if (format && _uvc_format_entry_has_guid(format, guid))
       return format->format;
   }
 

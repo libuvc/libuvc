@@ -213,3 +213,12 @@ TEST(PopulateFrame, SourceIsTheDeviceHandle) {
 }
 
 }  // namespace
+
+TEST(FrameFormatForGuid, Gray8MatchesY800AndY8) {
+  uint8_t y800[16] = {'Y', '8', '0', '0', 0x00, 0x00, 0x10, 0x00,
+                      0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71};
+  uint8_t y8[16] = {'Y', '8', ' ', ' ', 0x00, 0x00, 0x10, 0x00,
+                    0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71};
+  EXPECT_EQ(UVC_FRAME_FORMAT_GRAY8, uvc_frame_format_for_guid(y800));
+  EXPECT_EQ(UVC_FRAME_FORMAT_GRAY8, uvc_frame_format_for_guid(y8));
+}
