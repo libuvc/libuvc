@@ -87,6 +87,8 @@ TEST(MjpegDecode, MatchesReferenceImage) {
     { "uvc_mjpeg2rgb", uvc_mjpeg2rgb, "plasma_64x32.jpg.rgb", 3, false },
     { "uvc_mjpeg2bgr", uvc_mjpeg2bgr, "plasma_64x32.jpg.rgb", 3, true },
     { "uvc_mjpeg2gray", uvc_mjpeg2gray, "plasma_64x32.jpg.gray", 1, false },
+    { "uvc_any2rgb", uvc_any2rgb, "plasma_64x32.jpg.rgb", 3, false },
+    { "uvc_any2bgr", uvc_any2bgr, "plasma_64x32.jpg.rgb", 3, true },
   };
 
   std::vector<uint8_t> jpeg = ReadFixture("plasma_64x32.jpg");
