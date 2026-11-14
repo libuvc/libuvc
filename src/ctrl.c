@@ -122,6 +122,16 @@ int uvc_set_ctrl(uvc_device_handle_t *devh, uint8_t unit, uint8_t ctrl, void *da
 }
 
 /***** INTERFACE CONTROLS *****/
+
+/* bDevicePowerMode (UVC 1.5, 4.2.1.1): D3..0 is the power mode, D7..4 are
+ * read-only flags (vendor-dependent mode supported, power source). */
+#define UVC_POWER_MODE_MASK 0x0f
+
+/** @brief Reads the device power mode
+ *
+ * Only the power mode (D3..0) is returned; the read-only flags in D7..4 are
+ * dropped.
+ */
 uvc_error_t uvc_get_power_mode(uvc_device_handle_t *devh, enum uvc_device_power_mode *mode, enum uvc_req_code req_code) {
   uint8_t mode_char;
   uvc_error_t ret;
@@ -136,15 +146,20 @@ uvc_error_t uvc_get_power_mode(uvc_device_handle_t *devh, enum uvc_device_power_
     0);
 
   if (ret == 1) {
-    *mode = mode_char;
+    *mode = mode_char & UVC_POWER_MODE_MASK;
     return UVC_SUCCESS;
   } else {
     return ret;
   }
 }
 
+/** @brief Sets the device power mode
+ *
+ * Only D3..0 is written; the read-only bits D7..4 are sent as 0, as the
+ * spec requires.
+ */
 uvc_error_t uvc_set_power_mode(uvc_device_handle_t *devh, enum uvc_device_power_mode mode) {
-  uint8_t mode_char = mode;
+  uint8_t mode_char = mode & UVC_POWER_MODE_MASK;
   uvc_error_t ret;
 
   ret = libusb_control_transfer(

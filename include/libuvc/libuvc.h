@@ -242,9 +242,10 @@ enum uvc_req_code {
   UVC_GET_DEF = 0x87
 };
 
+/** Device power mode (UVC 1.5, 4.2.1.1, bDevicePowerMode D3..0) */
 enum uvc_device_power_mode {
-  UVC_VC_VIDEO_POWER_MODE_FULL = 0x000b,
-  UVC_VC_VIDEO_POWER_MODE_DEVICE_DEPENDENT = 0x001b,
+  UVC_VC_VIDEO_POWER_MODE_FULL = 0x00,
+  UVC_VC_VIDEO_POWER_MODE_DEVICE_DEPENDENT = 0x01,
 };
 
 /** Camera terminal control selector (A.9.4) */
