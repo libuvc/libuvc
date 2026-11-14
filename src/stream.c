@@ -1230,6 +1230,11 @@ uvc_error_t uvc_stream_start(
         }
       }
 
+      /* Skip altsettings without bandwidth, like the zero-bandwidth alt 0.
+       * Picking one would divide by zero below. */
+      if (endpoint_bytes_per_packet == 0)
+        continue;
+
       if (endpoint_bytes_per_packet >= config_bytes_per_packet) {
         /* Transfers will be at most one frame long: Divide the maximum frame size
          * by the size of the endpoint and round up */
