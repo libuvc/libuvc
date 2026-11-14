@@ -566,7 +566,43 @@ TEST_F(DescriptorTest, VsFormatThenFrameParses) {
   ASSERT_NE(info_.stream_ifs, nullptr);
   ASSERT_NE(info_.stream_ifs->format_descs, nullptr);
   EXPECT_EQ(info_.stream_ifs->format_descs->bFormatIndex, 1);
+  EXPECT_EQ(info_.stream_ifs->format_descs->bNumFrameDescriptors, 1);
   EXPECT_NE(info_.stream_ifs->format_descs->frame_descs, nullptr);
+}
+
+/** The MJPEG format parser fills bNumFrameDescriptors from the device. */
+TEST_F(DescriptorTest, VsMjpegFormatReportsFrameCount) {
+  static const unsigned char extra[] = {
+    /* VS input header */
+    0x0e, 0x24, 0x01, 0x01, 0x00, 0x00, 0x81, 0x00,
+    0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+    /* MJPEG format, bFormatIndex 1, 2 frame descriptors */
+    0x0b, 0x24, 0x06, 0x01, 0x02, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00,
+    /* MJPEG frame 1, 640x480, one discrete interval */
+    0x1e, 0x24, 0x07, 0x01, 0x00, 0x80, 0x02, 0xe0, 0x01,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x09, 0x00, 0x15, 0x16, 0x05, 0x00,
+    0x01, 0x15, 0x16, 0x05, 0x00,
+    /* MJPEG frame 2, 320x240, one discrete interval */
+    0x1e, 0x24, 0x07, 0x02, 0x00, 0x40, 0x01, 0xf0, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x09, 0x00, 0x15, 0x16, 0x05, 0x00,
+    0x01, 0x15, 0x16, 0x05, 0x00
+  };
+
+  SetUpConfig(1);
+  uvc_test_config_set_extra(&tc_, 0, extra, sizeof(extra));
+
+  EXPECT_EQ(uvc_scan_streaming(&info_, 0), UVC_SUCCESS);
+  ASSERT_NE(info_.stream_ifs, nullptr);
+  const uvc_format_desc_t *format = info_.stream_ifs->format_descs;
+  ASSERT_NE(format, nullptr);
+  EXPECT_EQ(format->bNumFrameDescriptors, 2);
+
+  int frames = 0;
+  for (const uvc_frame_desc_t *f = format->frame_descs; f; f = f->next)
+    frames++;
+  EXPECT_EQ(frames, 2);
 }
 
 }  // namespace
