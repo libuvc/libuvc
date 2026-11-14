@@ -728,10 +728,10 @@ uvc_error_t uvc_get_device_list(
   while ((usb_dev = usb_dev_list[++dev_idx]) != NULL) {
     got_interface = 0;
 
-    if (libusb_get_config_descriptor(usb_dev, 0, &config) != 0)
+    if (libusb_get_device_descriptor(usb_dev, &desc) != LIBUSB_SUCCESS)
       continue;
 
-    if ( libusb_get_device_descriptor ( usb_dev, &desc ) != LIBUSB_SUCCESS )
+    if (libusb_get_config_descriptor(usb_dev, 0, &config) != 0)
       continue;
 
     for (interface_idx = 0;
