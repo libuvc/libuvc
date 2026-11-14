@@ -2043,7 +2043,20 @@ void uvc_process_control_status(uvc_device_handle_t *devh, unsigned char *data, 
     return;
   }
 
-  attribute = data[4];
+  switch (data[4]) {
+  case UVC_STATUS_ATTRIBUTE_VALUE_CHANGE:
+  case UVC_STATUS_ATTRIBUTE_INFO_CHANGE:
+  case UVC_STATUS_ATTRIBUTE_FAILURE_CHANGE:
+  case UVC_STATUS_ATTRIBUTE_MIN_CHANGE:
+  case UVC_STATUS_ATTRIBUTE_MAX_CHANGE:
+    attribute = data[4];
+    break;
+  default:
+    /* Reserved by UVC 1.5 section 2.4.2.2. */
+    UVC_DEBUG("Reserved VC status attribute %d", (int) data[4]);
+    attribute = UVC_STATUS_ATTRIBUTE_UNKNOWN;
+    break;
+  }
   content = data + 5;
   content_len = len - 5;
 
@@ -2088,7 +2101,9 @@ void uvc_process_streaming_status(uvc_device_handle_t *devh, unsigned char *data
                       devh->button_user_ptr);
     }
   } else {
-    UVC_DEBUG("Stream %u error event %02x %02x len %d.\n", data[1], data[2], data[3], len);
+    /* bValue is only present when the device sends it. */
+    UVC_DEBUG("Stream %u error event %02x %02x len %d.\n", data[1], data[2],
+              len >= 4 ? data[3] : 0, len);
   }
 
   UVC_EXIT_VOID();
