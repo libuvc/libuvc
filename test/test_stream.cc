@@ -69,6 +69,52 @@ class StreamFixture {
   std::vector<uint8_t> outbuf_, holdbuf_, meta_outbuf_, meta_holdbuf_;
 };
 
+/* ABS_FMT entries (ANY, UNCOMPRESSED, COMPRESSED) are groups, not real
+ * formats, and their GUID is all zeros. They used to be flagged as concrete
+ * formats, so a format descriptor with an all-zero GUID matched them all and
+ * uvc_get_stream_ctrl_format_size() went on to claim the interface and
+ * negotiate it. No match means it returns before any USB traffic, so a
+ * hand-built handle is enough. */
+TEST(FrameFormatMatch, NullGuidDoesNotMatchAbstractFormats) {
+  uint32_t intervals[] = {333333, 0};
+  uvc_frame_desc_t frame;
+  std::memset(&frame, 0, sizeof(frame));
+  frame.prev = &frame;
+  frame.wWidth = 640;
+  frame.wHeight = 480;
+  frame.intervals = intervals;
+
+  uvc_format_desc_t format;
+  std::memset(&format, 0, sizeof(format));
+  format.prev = &format;
+  format.bDescriptorSubtype = UVC_VS_FORMAT_UNCOMPRESSED;
+  format.frame_descs = &frame;
+  frame.parent = &format;
+
+  uvc_streaming_interface_t stream_if;
+  std::memset(&stream_if, 0, sizeof(stream_if));
+  stream_if.prev = &stream_if;
+  stream_if.format_descs = &format;
+  format.parent = &stream_if;
+
+  uvc_device_info_t info;
+  std::memset(&info, 0, sizeof(info));
+  info.stream_ifs = &stream_if;
+
+  uvc_device_handle_t devh;
+  std::memset(&devh, 0, sizeof(devh));
+  devh.info = &info;
+
+  for (enum uvc_frame_format cf :
+       {UVC_FRAME_FORMAT_ANY, UVC_FRAME_FORMAT_UNCOMPRESSED,
+        UVC_FRAME_FORMAT_COMPRESSED}) {
+    uvc_stream_ctrl_t ctrl;
+    EXPECT_EQ(UVC_ERROR_INVALID_MODE,
+              uvc_get_stream_ctrl_format_size(&devh, &ctrl, cf, 640, 480, 0))
+        << "format " << cf;
+  }
+}
+
 /* The PTS and SCR flags announce fields that follow the two-byte header, but
  * setting a flag does not make the bytes exist: bLength has to cover them.
  * The parser checked header_len against payload_len and then read the fields
