@@ -570,7 +570,8 @@ TEST_F(DescriptorTest, VsFormatThenFrameParses) {
   EXPECT_NE(info_.stream_ifs->format_descs->frame_descs, nullptr);
 }
 
-/** The MJPEG format parser fills bNumFrameDescriptors from the device. */
+/** The MJPEG format parser fills bNumFrameDescriptors and bmFlags from the
+ * device. */
 TEST_F(DescriptorTest, VsMjpegFormatReportsFrameCount) {
   static const unsigned char extra[] = {
     /* VS input header */
@@ -598,6 +599,7 @@ TEST_F(DescriptorTest, VsMjpegFormatReportsFrameCount) {
   const uvc_format_desc_t *format = info_.stream_ifs->format_descs;
   ASSERT_NE(format, nullptr);
   EXPECT_EQ(format->bNumFrameDescriptors, 2);
+  EXPECT_EQ(format->bmFlags, 0x01);  /* FixedSizeSamples */
 
   int frames = 0;
   for (const uvc_frame_desc_t *f = format->frame_descs; f; f = f->next)
