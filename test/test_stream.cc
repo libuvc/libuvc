@@ -20,6 +20,7 @@
 
 extern "C" void _uvc_process_payload(uvc_stream_handle_t *strmh,
                                      uint8_t *payload, size_t payload_len);
+extern "C" void _uvc_populate_frame(uvc_stream_handle_t *strmh);
 
 namespace {
 
@@ -178,6 +179,37 @@ TEST(PayloadHeader, IsightShortPayloadIsSafe) {
   f.Process({0x02, UVC_STREAM_SCR});
   f.Process({0x02, uint8_t(UVC_STREAM_PTS | UVC_STREAM_SCR)});
   EXPECT_LE(f.handle()->got_bytes, kFrameBytes);
+}
+
+/* uvc_frame_t documents source as the device that produced the image, so
+ * one callback serving several cameras can tell their frames apart, but
+ * nothing ever set it: callbacks always saw NULL (libuvc/libuvc#268). */
+TEST(PopulateFrame, SourceIsTheDeviceHandle) {
+  StreamFixture f;
+  uvc_stream_handle_t *strmh = f.handle();
+
+  uvc_frame_desc_t frame_desc{};
+  frame_desc.bFrameIndex = 1;
+  frame_desc.wWidth = 4;
+  frame_desc.wHeight = 2;
+  uvc_format_desc_t format_desc{};
+  format_desc.bFormatIndex = 1;
+  format_desc.frame_descs = &frame_desc;
+  uvc_streaming_interface_t stream_if{};
+  stream_if.format_descs = &format_desc;
+
+  strmh->stream_if = &stream_if;
+  strmh->cur_ctrl.bFormatIndex = 1;
+  strmh->cur_ctrl.bFrameIndex = 1;
+  strmh->frame_format = UVC_FRAME_FORMAT_YUYV;
+  strmh->hold_bytes = 16;
+
+  _uvc_populate_frame(strmh);
+
+  EXPECT_EQ(strmh->frame.source, strmh->devh);
+  EXPECT_NE(strmh->frame.source, nullptr);
+  EXPECT_EQ(strmh->frame.width, 4u);
+  free(strmh->frame.data);
 }
 
 }  // namespace
