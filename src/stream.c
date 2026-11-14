@@ -89,7 +89,7 @@ struct format_table_entry *_get_format_entry(enum uvc_frame_format format) {
     case _fmt: { \
     static enum uvc_frame_format _fmt##_children[] = __VA_ARGS__; \
     static struct format_table_entry _fmt##_entry = { \
-      _fmt, 0, {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, _num, _fmt##_children }; \
+      _fmt, 1, {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, _num, _fmt##_children }; \
     return &_fmt##_entry; }
 
   #define FMT(_fmt, ...) \
