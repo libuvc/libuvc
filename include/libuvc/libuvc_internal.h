@@ -305,6 +305,12 @@ struct uvc_device_handle {
   struct uvc_device_info *info;
   struct libusb_transfer *status_xfer;
   uint8_t status_buf[32];
+  /** Held to resubmit status_xfer, and to stop it in uvc_close() */
+  pthread_mutex_t status_mutex;
+  /** Set by uvc_close(): status_xfer must not be resubmitted */
+  int status_closing;
+  /** Set once status_xfer is no longer submitted, nor will be again */
+  int status_stopped;
   /** Function to call when we receive status updates from the camera */
   uvc_status_callback_t *status_cb;
   void *status_user_ptr;

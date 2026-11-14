@@ -345,6 +345,7 @@ static uvc_error_t uvc_open_internal(
   internal_devh = calloc(1, sizeof(*internal_devh));
   internal_devh->dev = dev;
   internal_devh->usb_devh = usb_devh;
+  pthread_mutex_init(&internal_devh->status_mutex, NULL);
 
   ret = uvc_get_device_info(internal_devh, &(internal_devh->info));
 
@@ -1921,6 +1922,7 @@ void uvc_free_devh(uvc_device_handle_t *devh) {
   if (devh->status_xfer)
     libusb_free_transfer(devh->status_xfer);
 
+  pthread_mutex_destroy(&devh->status_mutex);
   free(devh);
 
   UVC_EXIT_VOID();
@@ -1940,6 +1942,25 @@ void uvc_close(uvc_device_handle_t *devh) {
 
   if (devh->streams)
     uvc_stop_streaming(devh);
+
+  /* Releasing the interface makes the kernel kill the status transfer, which
+   * libusb then reports as completed: the callback would resubmit it, to an
+   * interface that is no longer claimed. So cancel it first, and wait for it
+   * to come back. */
+  if (devh->status_xfer) {
+    pthread_mutex_lock(&devh->status_mutex);
+    devh->status_closing = 1;
+    if (!devh->status_stopped)
+      libusb_cancel_transfer(devh->status_xfer);
+    pthread_mutex_unlock(&devh->status_mutex);
+
+    while (!devh->status_stopped) {
+      int ret = libusb_handle_events_completed(ctx->usb_ctx,
+                                               &devh->status_stopped);
+      if (ret < 0 && ret != LIBUSB_ERROR_INTERRUPTED)
+        break;
+    }
+  }
 
   uvc_release_if(devh, devh->info->ctrl_if.bInterfaceNumber);
 
@@ -2121,14 +2142,16 @@ void LIBUSB_CALL _uvc_status_callback(struct libusb_transfer *transfer) {
   UVC_ENTER();
 
   uvc_device_handle_t *devh = (uvc_device_handle_t *) transfer->user_data;
+  int resubmit = 1;
+  int ret;
 
   switch (transfer->status) {
   case LIBUSB_TRANSFER_ERROR:
   case LIBUSB_TRANSFER_CANCELLED:
   case LIBUSB_TRANSFER_NO_DEVICE:
     UVC_DEBUG("not processing/resubmitting, status = %d", transfer->status);
-    UVC_EXIT_VOID();
-    return;
+    resubmit = 0;
+    break;
   case LIBUSB_TRANSFER_COMPLETED:
     uvc_process_status_xfer(devh, transfer);
     break;
@@ -2139,11 +2162,19 @@ void LIBUSB_CALL _uvc_status_callback(struct libusb_transfer *transfer) {
     break;
   }
 
-#ifdef UVC_DEBUGGING
-  uvc_error_t ret =
-#endif
-      libusb_submit_transfer(transfer);
-  UVC_DEBUG("libusb_submit_transfer() = %d", ret);
+  /* uvc_close() sets status_closing under the same lock, then cancels the
+   * transfer if it is still going: it either finds the transfer resubmitted,
+   * and cancels it, or the transfer is not resubmitted at all. */
+  pthread_mutex_lock(&devh->status_mutex);
+  if (resubmit && !devh->status_closing) {
+    ret = libusb_submit_transfer(transfer);
+    UVC_DEBUG("libusb_submit_transfer() = %d", ret);
+    if (ret < 0)
+      devh->status_stopped = 1;
+  } else {
+    devh->status_stopped = 1;
+  }
+  pthread_mutex_unlock(&devh->status_mutex);
 
   UVC_EXIT_VOID();
 }
