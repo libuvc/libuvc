@@ -1507,8 +1507,7 @@ uvc_error_t uvc_parse_vs_format_uncompressed(uvc_streaming_interface_t *stream_i
   format->parent = stream_if;
   format->bDescriptorSubtype = block[2];
   format->bFormatIndex = block[3];
-  //format->bmCapabilities = block[4];
-  //format->bmFlags = block[5];
+  format->bNumFrameDescriptors = block[4];
   memcpy(format->guidFormat, &block[5], 16);
   format->bBitsPerPixel = block[21];
   format->bDefaultFrameIndex = block[22];
@@ -1579,9 +1578,9 @@ uvc_error_t uvc_parse_vs_format_mjpeg(uvc_streaming_interface_t *stream_if,
   format->parent = stream_if;
   format->bDescriptorSubtype = block[2];
   format->bFormatIndex = block[3];
+  format->bNumFrameDescriptors = block[4];
   memcpy(format->fourccFormat, "MJPG", 4);
   format->bmFlags = block[5];
-  format->bBitsPerPixel = 0;
   format->bDefaultFrameIndex = block[6];
   format->bAspectRatioX = block[7];
   format->bAspectRatioY = block[8];
