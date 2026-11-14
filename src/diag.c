@@ -149,13 +149,16 @@ void uvc_print_diag(uvc_device_handle_t *devh, FILE *stream) {
     int stream_idx = 0;
 
     uvc_device_descriptor_t *desc;
-    uvc_get_device_descriptor(devh->dev, &desc);
 
-    fprintf(stream, "DEVICE CONFIGURATION (%04x:%04x/%s) ---\n",
-        desc->idVendor, desc->idProduct,
-        desc->serialNumber ? desc->serialNumber : "[none]");
+    if (uvc_get_device_descriptor(devh->dev, &desc) == UVC_SUCCESS) {
+      fprintf(stream, "DEVICE CONFIGURATION (%04x:%04x/%s) ---\n",
+          desc->idVendor, desc->idProduct,
+          desc->serialNumber ? desc->serialNumber : "[none]");
 
-    uvc_free_device_descriptor(desc);
+      uvc_free_device_descriptor(desc);
+    } else {
+      fprintf(stream, "DEVICE CONFIGURATION (unknown device) ---\n");
+    }
 
     fprintf(stream, "Status: %s\n", devh->streams ? "streaming" : "idle");
 
