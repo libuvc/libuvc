@@ -1617,8 +1617,8 @@ uvc_error_t uvc_parse_vs_frame_frame(uvc_streaming_interface_t *stream_if,
     return UVC_ERROR_INVALID_DEVICE;
   }
 
-  /* Fixed part up to and including bFrameIntervalType. */
-  if (block_size < 22) {
+  /* Fixed part up to and including dwBytesPerLine. */
+  if (block_size < 26) {
     UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
     return UVC_ERROR_INVALID_DEVICE;
   }
@@ -1627,13 +1627,18 @@ uvc_error_t uvc_parse_vs_frame_frame(uvc_streaming_interface_t *stream_if,
      Otherwise it counts the discrete intervals that follow, four bytes
      each. Either way the device chooses how much it claims is there. */
   if (block[21] == 0) {
-    if (block_size < 34) {
+    /* dwMinFrameInterval, dwMaxFrameInterval, dwFrameIntervalStep
+       (4 bytes each). */
+    if (block_size < 26 + 3 * 4) {
       UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
       return UVC_ERROR_INVALID_DEVICE;
     }
-  } else if (block_size < (size_t)22 + (size_t)block[21] * 4) {
-    UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
-    return UVC_ERROR_INVALID_DEVICE;
+  } else {
+    /* 4 bytes per entry. */
+    if (block_size < (size_t)26 + (size_t)block[21] * 4) {
+      UVC_EXIT(UVC_ERROR_INVALID_DEVICE);
+      return UVC_ERROR_INVALID_DEVICE;
+    }
   }
 
   format = stream_if->format_descs->prev;

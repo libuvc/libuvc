@@ -511,6 +511,66 @@ TEST_F(DescriptorTest, VsFrameOversizedIntervalCountIsRejected) {
   });
 }
 
+/* The frame-based frame layout differs from the uncompressed one: it has no
+ * dwMaxVideoFrameBufferSize, so bFrameIntervalType sits at offset 21, and
+ * dwBytesPerLine (22..25) comes before the intervals. The size checks were
+ * shifted for the first difference but not the second, so each one was four
+ * bytes short: a block one interval (or the last continuous dword) short
+ * passed and was read past its end. The same blocks four bytes longer are
+ * well-formed and must still parse. */
+TEST_F(DescriptorTest, VsFrameBasedFrameShortBlocksStayInBounds) {
+  unsigned char format[28] = {};
+  format[0] = sizeof(format);
+  format[1] = 0x24;
+  format[2] = UVC_VS_FORMAT_FRAME_BASED;
+  format[3] = 1;              /* bFormatIndex */
+  format[4] = 1;              /* bNumFrameDescriptors */
+
+  struct {
+    size_t len;               /* the full, well-formed length */
+    unsigned char interval_type;
+  } cases[] = {
+    {30, 1},  /* one discrete interval */
+    {38, 0},  /* continuous range */
+  };
+
+  for (const auto &c : cases) {
+    for (bool truncated : {true, false}) {
+      size_t len = truncated ? c.len - 4 : c.len;
+      unsigned char block[38] = {};
+      block[0] = (unsigned char)len;
+      block[1] = 0x24;
+      block[2] = UVC_VS_FRAME_FRAME_BASED;
+      block[3] = 1;           /* bFrameIndex */
+      block[21] = c.interval_type;
+
+      unsigned char extra[sizeof(format) + sizeof(block)];
+      memcpy(extra, format, sizeof(format));
+      memcpy(extra + sizeof(format), block, len);
+
+      EXPECT_MEMORY_SAFE({
+        uvc_test_config_t tc;
+        uvc_device_info_t info;
+        uvc_test_config_init(&tc, 1);
+        uvc_test_config_set_extra(&tc, 0, extra,
+                                  (int)(sizeof(format) + len));
+        uvc_test_info_init(&info, &tc);
+        uvc_error_t ret = uvc_scan_streaming(&info, 0);
+        if (truncated) {
+          REQUIRE_IN_CHILD(ret != UVC_SUCCESS);
+        } else {
+          REQUIRE_IN_CHILD(ret == UVC_SUCCESS);
+          REQUIRE_IN_CHILD(info.stream_ifs->format_descs->frame_descs
+                           != NULL);
+        }
+        uvc_test_info_free(&info);
+        uvc_test_config_free(&tc);
+      }) << "length " << len << " bFrameIntervalType "
+         << int(c.interval_type);
+    }
+  }
+}
+
 /* Still-image frames carry two device-supplied counts: bNumImageSizePatterns
  * (four bytes each) and, after them, bNumCompressionPattern (one each). Both
  * indexed into the block unchecked. */
