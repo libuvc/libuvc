@@ -2101,7 +2101,9 @@ void uvc_process_streaming_status(uvc_device_handle_t *devh, unsigned char *data
                       devh->button_user_ptr);
     }
   } else {
-    UVC_DEBUG("Stream %u error event %02x %02x len %d.\n", data[1], data[2], data[3], len);
+    /* bValue is only present when the device sends it. */
+    UVC_DEBUG("Stream %u error event %02x %02x len %d.\n", data[1], data[2],
+              len >= 4 ? data[3] : 0, len);
   }
 
   UVC_EXIT_VOID();
