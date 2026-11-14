@@ -1439,6 +1439,7 @@ void _uvc_populate_frame(uvc_stream_handle_t *strmh) {
     break;
   }
 
+  frame->source = strmh->devh;
   frame->sequence = strmh->hold_seq;
   frame->capture_time_finished = strmh->capture_time_finished;
 
