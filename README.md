@@ -34,10 +34,20 @@ defaults when unset:
   as is common on Android, lower it, e.g. `cmake .. -DLIBUVC_PACKETS_PER_TRANSFER_MAX=8`.
 - `LIBUVC_NUM_TRANSFER_BUFS` (default 100, 20 on macOS): number of transfers queued at once.
 
-## Android
+## Examples
 
-[examples/android](examples/android) is an example app that streams from a USB camera
-on an Android phone, with notes on what integrating libuvc there involves.
+Linux/macOS:
+  - [`src/example.c`](src/example.c) finds the first UVC camera, prints its descriptors
+    and streams from it for 10 seconds. Built by default
+    (`BUILD_EXAMPLE`).
+  - [`src/test.cxx`](src/test.cxx) shows the camera's frames in an OpenCV window (Linux
+    only, broken on macOS). Built with `-DBUILD_TEST=ON`; needs OpenCV.
+
+Android:
+  - [`examples/android`](examples/android) shows the camera's frames in an app. It uses
+    Android APIs to find the camera, request permission and get a file
+    descriptor, then opens the camera with `uvc_wrap()`. See
+    [its README](examples/android/README.md) for what integrating libuvc there involves.
 
 ## Developing with libuvc
 
