@@ -171,8 +171,11 @@ uvc_error_t uvc_find_device(
 /** @brief Finds all cameras identified by vendor, product and/or serial number
  * @ingroup device
  *
+ * @note On success, free the list with uvc_free_device_list(devs, 1) when
+ * you're done: the list holds a reference to each device.
+ *
  * @param[in] ctx UVC context in which to search for the camera
- * @param[out] devs List of matching cameras
+ * @param[out] devs List of matching cameras, set only on success
  * @param[in] vid Vendor ID number, optional
  * @param[in] pid Product ID number, optional
  * @param[in] sn Serial number or NULL
@@ -236,6 +239,7 @@ uvc_error_t uvc_find_devices(
     UVC_EXIT(UVC_SUCCESS);
     return UVC_SUCCESS;
   } else {
+    free(list_internal);
     UVC_EXIT(UVC_ERROR_NO_DEVICE);
     return UVC_ERROR_NO_DEVICE;
   }
