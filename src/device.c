@@ -1400,6 +1400,12 @@ uvc_error_t uvc_parse_vc(
   case UVC_VC_EXTENSION_UNIT:
     ret = uvc_parse_vc_extension_unit(info, block, block_size);
     break;
+  case UVC_VC_ENCODING_UNIT:
+    /* UVC 1.5 encoding unit. Skip it rather than reject the whole device,
+       so the formats that don't use it still work.
+       TODO: parse it and expose its controls, see
+       https://github.com/libuvc/libuvc/issues/359 */
+    break;
   default:
     ret = UVC_ERROR_INVALID_DEVICE;
   }
