@@ -70,8 +70,10 @@ int uvc_get_ctrl_len(uvc_device_handle_t *devh, uint8_t unit, uint8_t ctrl) {
 
   if (ret < 0)
     return ret;
-  else
-    return (unsigned short)SW_TO_SHORT(buf);
+  if (ret != sizeof(buf))
+    return UVC_ERROR_IO;
+
+  return (unsigned short)SW_TO_SHORT(buf);
 }
 
 /**
@@ -191,10 +193,12 @@ uvc_error_t uvc_set_power_mode(uvc_device_handle_t *devh, enum uvc_device_power_
     sizeof(mode_char),
     0);
 
-  if (ret == 1)
-    return UVC_SUCCESS;
-  else
+  if (ret < 0)
     return ret;
+  if (ret != 1)
+    return UVC_ERROR_IO;
+
+  return UVC_SUCCESS;
 }
 
 /** @todo Request Error Code Control (UVC 1.5, 4.2.1.2) */
