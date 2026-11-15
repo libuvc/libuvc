@@ -79,23 +79,28 @@ GETTER_TEMPLATE = """/** @ingroup ctrl
  */
 uvc_error_t uvc_get_{control_name}(uvc_device_handle_t *devh, {args_signature}, enum uvc_req_code req_code) {{
   uint8_t data[{control_length}];
-  uvc_error_t ret;
+  const {unit_type} *unit = {unit_getter}(devh);
+  int ret;
+
+  if (!unit)
+    return UVC_ERROR_NOT_SUPPORTED;
 
   ret = libusb_control_transfer(
     devh->usb_devh,
     REQ_TYPE_GET, req_code,
     {control_code} << 8,
-    {unit_fn} << 8 | devh->info->ctrl_if.bInterfaceNumber,
+    unit->{unit_id} << 8 | devh->info->ctrl_if.bInterfaceNumber,
     data,
     sizeof(data),
     0);
 
-  if (ret == sizeof(data)) {{
-    {unpack}
-    return UVC_SUCCESS;
-  }} else {{
+  if (ret < 0)
     return ret;
-  }}
+  if (ret != sizeof(data))
+    return UVC_ERROR_IO;
+
+  {unpack}
+  return UVC_SUCCESS;
 }}
 """
 
@@ -106,7 +111,11 @@ SETTER_TEMPLATE = """/** @ingroup ctrl
  */
 uvc_error_t uvc_set_{control_name}(uvc_device_handle_t *devh, {args_signature}) {{
   uint8_t data[{control_length}];
-  uvc_error_t ret;
+  const {unit_type} *unit = {unit_getter}(devh);
+  int ret;
+
+  if (!unit)
+    return UVC_ERROR_NOT_SUPPORTED;
 
   {pack}
 
@@ -114,15 +123,17 @@ uvc_error_t uvc_set_{control_name}(uvc_device_handle_t *devh, {args_signature}) 
     devh->usb_devh,
     REQ_TYPE_SET, UVC_SET_CUR,
     {control_code} << 8,
-    {unit_fn} << 8 | devh->info->ctrl_if.bInterfaceNumber,
+    unit->{unit_id} << 8 | devh->info->ctrl_if.bInterfaceNumber,
     data,
     sizeof(data),
     0);
 
-  if (ret == sizeof(data))
-    return UVC_SUCCESS;
-  else
+  if (ret < 0)
     return ret;
+  if (ret != sizeof(data))
+    return UVC_ERROR_IO;
+
+  return UVC_SUCCESS;
 }}
 """
 
@@ -145,7 +156,7 @@ def gen_ctrl(unit_name, unit, control_name, control):
 
     get_args_signature = ', '.join([field.getter_sig() for (field, desc) in fields])
     set_args_signature = ', '.join([field.setter_sig() for (field, desc) in fields])
-    unpack = "\n    ".join([field.unpack() for (field, desc) in fields])
+    unpack = "\n  ".join([field.unpack() for (field, desc) in fields])
     pack = "\n  ".join([field.pack() for (field, desc) in fields])
 
     get_gen_doc_raw = None
@@ -178,11 +189,20 @@ def gen_ctrl(unit_name, unit, control_name, control):
 
     control_code = 'UVC_' + unit['control_prefix'] + '_' + control['control'] + '_CONTROL'
 
-    unit_fn = "uvc_get_camera_terminal(devh)->bTerminalID" if (unit_name == "camera_terminal") else ("uvc_get_" + unit_name + "s(devh)->bUnitID")
+    if unit_name == "camera_terminal":
+        unit_type = "uvc_input_terminal_t"
+        unit_getter = "uvc_get_camera_terminal"
+        unit_id = "bTerminalID"
+    else:
+        unit_type = "uvc_" + unit_name + "_t"
+        unit_getter = "uvc_get_" + unit_name + "s"
+        unit_id = "bUnitID"
 
     return GETTER_TEMPLATE.format(
         unit=unit,
-        unit_fn=unit_fn,
+        unit_type=unit_type,
+        unit_getter=unit_getter,
+        unit_id=unit_id,
         control_name=control_name,
         control_code=control_code,
         control_length=control['length'],
@@ -191,7 +211,9 @@ def gen_ctrl(unit_name, unit, control_name, control):
         gen_doc=get_gen_doc,
         unpack=unpack) + "\n\n" + SETTER_TEMPLATE.format(
             unit=unit,
-            unit_fn=unit_fn,
+            unit_type=unit_type,
+            unit_getter=unit_getter,
+            unit_id=unit_id,
             control_name=control_name,
             control_code=control_code,
             control_length=control['length'],
