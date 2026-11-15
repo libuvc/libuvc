@@ -136,9 +136,9 @@ uvc_error_t uvc_init(uvc_context_t **pctx, struct libusb_context *usb_ctx) {
  * @param ctx UVC context to shut down
  */
 void uvc_exit(uvc_context_t *ctx) {
-  uvc_device_handle_t *devh;
+  uvc_device_handle_t *devh, *tmp;
 
-  DL_FOREACH(ctx->open_devices, devh) {
+  DL_FOREACH_SAFE(ctx->open_devices, devh, tmp) {
     uvc_close(devh);
   }
 
