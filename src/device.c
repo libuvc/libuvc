@@ -1671,7 +1671,10 @@ uvc_error_t uvc_parse_vs_frame_frame(uvc_streaming_interface_t *stream_if,
     p = &block[26];
 
     for (i = 0; i < block[21]; ++i) {
-      frame->intervals[i] = DW_TO_UINT32(p);
+      /* A 0 interval is invalid and would end the 0-terminated list
+         early, hiding the intervals after it: map it to 1, as the Linux
+         uvcvideo driver does. */
+      frame->intervals[i] = DW_TO_UINT32(p) ? DW_TO_UINT32(p) : 1;
       p += 4;
     }
     frame->intervals[block[21]] = 0;
@@ -1750,7 +1753,10 @@ uvc_error_t uvc_parse_vs_frame_uncompressed(uvc_streaming_interface_t *stream_if
     p = &block[26];
 
     for (i = 0; i < block[25]; ++i) {
-      frame->intervals[i] = DW_TO_UINT32(p);
+      /* A 0 interval is invalid and would end the 0-terminated list
+         early, hiding the intervals after it: map it to 1, as the Linux
+         uvcvideo driver does. */
+      frame->intervals[i] = DW_TO_UINT32(p) ? DW_TO_UINT32(p) : 1;
       p += 4;
     }
     frame->intervals[block[25]] = 0;
