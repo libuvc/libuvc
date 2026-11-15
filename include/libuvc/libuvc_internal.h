@@ -96,7 +96,8 @@ enum uvc_vc_desc_subtype {
   UVC_VC_OUTPUT_TERMINAL = 0x03,
   UVC_VC_SELECTOR_UNIT = 0x04,
   UVC_VC_PROCESSING_UNIT = 0x05,
-  UVC_VC_EXTENSION_UNIT = 0x06
+  UVC_VC_EXTENSION_UNIT = 0x06,
+  UVC_VC_ENCODING_UNIT = 0x07
 };
 
 /** UVC endpoint descriptor subtype (A.7) */
